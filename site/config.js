@@ -1,4 +1,5 @@
-// Set mode to "firebase" only after configuring Firebase and deploying security rules.
+// Local preview defaults. Netlify builds read UNFRAME_DATA_MODE and FIREBASE_* variables.
+// Enable firebase mode only after deploying rules and authorizing Google sign-in.
 export const CONFIG = {
   mode: 'demo',
   homeUrl: '/',

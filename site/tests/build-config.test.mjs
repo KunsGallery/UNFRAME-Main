@@ -1,0 +1,7 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {resolveBuildConfig,FIREBASE_ENV_KEYS} from '../scripts/build-config.mjs';
+const source={mode:'demo',homeUrl:'/',firebase:{apiKey:'',authDomain:'',projectId:'',storageBucket:'',messagingSenderId:'',appId:''},menuLinks:[{label:'EXHIBITION',url:'/exhibition'}]};
+test('no environment settings preserves local demo and navigation',()=>{const output=resolveBuildConfig(source);assert.equal(output.mode,'demo');assert.deepEqual(output.menuLinks,source.menuLinks);});
+test('Firebase operating mode fails build when a required value is missing',()=>{assert.throws(()=>resolveBuildConfig(source,{UNFRAME_DATA_MODE:'firebase',FIREBASE_API_KEY:'test-public-key'}),/FIREBASE_PROJECT_ID/);});
+test('Firebase variables generate public configuration without copying private environment values',()=>{const env={UNFRAME_DATA_MODE:'firebase',UNRELATED_PRIVATE_KEY:'must-not-ship'};for(const key of Object.values(FIREBASE_ENV_KEYS))env[key]='sample-'+key;const output=resolveBuildConfig(source,env);assert.equal(output.mode,'firebase');assert.equal(output.firebase.projectId,'sample-FIREBASE_PROJECT_ID');assert.ok(!JSON.stringify(output).includes('must-not-ship'));assert.equal(source.mode,'demo');});
+test('unknown mode is rejected instead of silently falling back to sample data',()=>{assert.throws(()=>resolveBuildConfig(source,{UNFRAME_DATA_MODE:'firebsae'}),/must be demo or firebase/);});

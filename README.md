@@ -22,3 +22,5 @@ Netlify 배포 단위는 `site`이며, `npm run build`로 만든 `site/dist`를 
 
 GitHub 저장소: https://github.com/KunsGallery/UNFRAME-Main
 기본 브랜치: main. Netlify는 루트 netlify.toml 설정으로 site 폴더를 빌드합니다.
+
+Netlify Firebase 설정값 입력: `docs/Netlify-Firebase환경변수.md`를 참고하세요.
