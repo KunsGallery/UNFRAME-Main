@@ -2,6 +2,7 @@
 // Enable firebase mode only after deploying rules and authorizing Google sign-in.
 export const CONFIG = {
   mode: 'demo',
+  mediaBaseUrl: 'https://unframe-media.gallerykuns.workers.dev',
   homeUrl: '/',
   siteUrl: 'https://unframe.kr',
   firebase: {

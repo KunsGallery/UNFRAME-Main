@@ -1,0 +1,10 @@
+{
+ "name":"unframe-media",
+ "main":"index.mjs",
+ "account_id":"5552aa657a9a7d983be94dd9ad8b2b33",
+ "compatibility_date":"2026-10-12",
+ "workers_dev":true,
+ "r2_buckets":[{"binding":"MEDIA","bucket_name":"unframe-media"}],
+ "vars":{"FIREBASE_PROJECT_ID":"unframe-main","ALLOWED_ORIGINS":"https://unframe-main.netlify.app,https://unframe.kr,https://www.unframe.kr,http://localhost:4173,http://127.0.0.1:4173"},
+ "observability":{"enabled":true,"traces":{"enabled":true,"head_sampling_rate":0.1}}
+}

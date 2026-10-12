@@ -1,16 +1,17 @@
 // Prototype model: exhibitions contain public editorial content when published=true.
 // staff/{uid}: email + active, readable only by that user, managed outside client apps.
 // All exhibition writes require verified Google sign-in plus a matching active staff record.
-// Image paths are scoped to the exhibition; uploads are handled by Storage rules.
+// staffEmails/{email}: email + active, managed by trusted project administrators.
+// Image paths are scoped to the exhibition; uploads are handled by the R2 Worker.
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
   function staff() {
    return request.auth != null && request.auth.token.email_verified == true
     && request.auth.token.firebase.sign_in_provider == 'google.com'
-    && exists(/databases/$(database)/documents/staff/$(request.auth.uid))
-    && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.active == true
-    && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.email == request.auth.token.email;
+    && exists(/databases/$(database)/documents/staffEmails/$(request.auth.token.email))
+    && get(/databases/$(database)/documents/staffEmails/$(request.auth.token.email)).data.active == true
+    && get(/databases/$(database)/documents/staffEmails/$(request.auth.token.email)).data.email == request.auth.token.email;
   }
   function validImage(image,id) {
    return image is map && image.keys().hasAll(['url','path','alt'])
@@ -112,6 +113,11 @@ service cloud.firestore {
     && validPaths(data.imagePaths)
     && data.updatedAt is string && data.updatedAt.size()<=50
     && (!data.published || (data.description.size()>0 && data.cover.path.matches('^exhibitions/'+id+'/[^/]+$')));
+  }
+  match /staffEmails/{email} {
+   allow get: if request.auth != null && request.auth.token.email_verified == true
+    && request.auth.token.firebase.sign_in_provider == 'google.com' && request.auth.token.email == email;
+   allow list, create, update, delete: if false;
   }
   match /staff/{uid} {
    allow get: if request.auth != null && request.auth.uid == uid;

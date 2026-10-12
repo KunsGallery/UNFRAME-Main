@@ -7,13 +7,16 @@ export const FIREBASE_ENV_KEYS = {
  appId: 'FIREBASE_APP_ID'
 };
 export function resolveBuildConfig(source,env={}) {
+ const clean=value=>value.trim().replace(/,$/,'').trim().replace(/^([\"'])(.*)\1$/,'$2');
  const mode=env.UNFRAME_DATA_MODE?.trim() || source.mode;
  if(!['demo','firebase'].includes(mode))throw new Error('UNFRAME_DATA_MODE must be demo or firebase.');
  const firebase={...source.firebase};
- for(const [field,key]of Object.entries(FIREBASE_ENV_KEYS))if(env[key]?.trim())firebase[field]=env[key].trim();
+ for(const [field,key]of Object.entries(FIREBASE_ENV_KEYS))if(env[key]?.trim())firebase[field]=clean(env[key]);
  if(mode==='firebase'){
-  const missing=Object.entries(FIREBASE_ENV_KEYS).filter(([field])=>!firebase[field]).map(([,key])=>key);
+  const missing=Object.entries(FIREBASE_ENV_KEYS).filter(([field])=>field!=='storageBucket'&&!firebase[field]).map(([,key])=>key);
   if(missing.length)throw new Error('Missing Firebase build settings: '+missing.join(', '));
  }
- return {...source,mode,firebase};
+ const mediaBaseUrl=env.UNFRAME_MEDIA_BASE_URL?.trim()||source.mediaBaseUrl||'';
+ if(mediaBaseUrl&&!/^https:\/\/[^/]+$/.test(mediaBaseUrl))throw new Error('UNFRAME_MEDIA_BASE_URL must be an HTTPS origin.');
+ return {...source,mode,firebase,mediaBaseUrl};
 }

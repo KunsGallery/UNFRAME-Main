@@ -5,3 +5,6 @@ site/dist/
 *-debug.log
 work/
 .env*
+
+.wrangler/
+.dev.vars*
