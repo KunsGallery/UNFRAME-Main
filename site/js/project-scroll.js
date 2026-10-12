@@ -1,13 +1,25 @@
 const frames=[...document.querySelectorAll('.study-frame')],reduced=matchMedia('(prefers-reduced-motion: reduce)'),button=document.querySelector('#motion-toggle');let active=frames[0],paused=reduced.matches,raf=0,last=0;const pointer={x:.5,y:.5,inside:false};
 const canvases=[...document.querySelectorAll('canvas')].map(canvas=>({canvas,ctx:canvas.getContext('2d'),w:0,h:0}));
-function resize(){for(const item of canvases){const rect=item.canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio,1.5);if(item.points&&item.w&&item.h)for(const point of item.points){point.x*=rect.width/item.w;point.y*=rect.height/item.h;}item.w=rect.width;item.h=rect.height;item.canvas.width=Math.round(rect.width*ratio);item.canvas.height=Math.round(rect.height*ratio);item.ctx?.setTransform(ratio,0,0,ratio,0,0);}render(performance.now());}
-function wave(item,time){const {ctx,w,h}=item;if(!ctx)return;ctx.clearRect(0,0,w,h);const t=time/2200;for(let row=0;row<27;row++){const depth=(row+1)/27,scale=depth*depth;for(let col=0;col<45;col++){const x=w/2+(col-22)*w/25*scale;const height=Math.sin(col*.23+t-row*.3)*18+Math.cos(col*.12-t*.7)*12;const y=h*.47+scale*h*.59+height*(.3+scale);ctx.fillStyle=`rgba(215,236,255,${.12+scale*.65})`;ctx.beginPath();ctx.arc(x,y,.4+scale*1.7,0,Math.PI*2);ctx.fill();}}}
+function resize(){for(const item of canvases){const rect=item.canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio,1.5);if(item.points&&item.w&&item.h)for(const point of item.points){point.x*=rect.width/item.w;point.y*=rect.height/item.h;point.homeX*=rect.width/item.w;point.homeY*=rect.height/item.h;}item.w=rect.width;item.h=rect.height;item.canvas.width=Math.round(rect.width*ratio);item.canvas.height=Math.round(rect.height*ratio);item.ctx?.setTransform(ratio,0,0,ratio,0,0);}render(performance.now());}
+function wave(item,time){const {ctx,w,h}=item;if(!ctx)return;ctx.clearRect(0,0,w,h);const t=time/2400;
+ for(let row=0;row<38;row++){const depth=(row+1)/38,scale=.28+depth*.95;
+  for(let col=0;col<48;col++){const x=w/2+(col-23.5)*w/29*scale;const ridge=Math.sin(col*.2+t-row*.22)*h*.055+Math.cos(col*.13-t*.8+row*.12)*h*.035;const y=h*.03+depth*h*.95+ridge;
+   ctx.fillStyle=`rgba(215,236,255,${.12+depth*.36})`;ctx.beginPath();ctx.arc(x,y,.65+depth*1.5,0,Math.PI*2);ctx.fill();}}
+}
 function particles(item,time){
  const {ctx,w,h}=item;if(!ctx)return;
- if(!item.points){const count=w<650?65:115;item.points=Array.from({length:count},(_,i)=>({x:((i*0.61803398875+.17)%1)*w,y:((i*0.41421356237+.23)%1)*h,speed:12+(i%13),phase:i*.73}));}
+ if(!item.points){const count=w<650?65:115;item.points=Array.from({length:count},(_,i)=>({x:((i*0.61803398875+.17)%1)*w,y:((i*0.41421356237+.23)%1)*h,speed:12+(i%13),phase:i*.73,vx:0,vy:0})).map(point=>({...point,homeX:point.x,homeY:point.y}));}
  const dt=paused||document.hidden?0:Math.min(Math.max((time-(item.particleTime||time))/1000,0),.05);item.particleTime=time;
  const points=item.points,range=Math.min(185,w*.27),mouse={x:pointer.x*w,y:pointer.y*h};ctx.clearRect(0,0,w,h);
- for(const point of points){point.y+=point.speed*dt;point.x+=Math.sin(time/9000+point.phase)*dt*5;if(point.y>h+3){point.y=-3;point.x=(point.x+w*.381966)%w;}point.x=(point.x+w)%w;}
+ for(const point of points){
+  const dx=mouse.x-point.x,dy=mouse.y-point.y,distance=Math.hypot(dx,dy),radius=Math.min(290,w*.65);
+  if(pointer.inside&&distance<radius&&distance>12){const pull=(1-distance/radius)*75;point.vx+=dx/distance*pull*dt;point.vy+=dy/distance*pull*dt;}
+  point.homeX+=Math.sin(time/9000+point.phase)*dt*5;point.homeY+=point.speed*dt;
+  point.vx+=(point.homeX-point.x)*1.6*dt;point.vy+=(point.homeY-point.y)*1.6*dt;
+  const damping=Math.exp(-2.1*dt);point.vx*=damping;point.vy*=damping;
+  point.y+=point.vy*dt;point.x+=point.vx*dt;
+  if(point.homeY>h+3){point.homeY=-3;point.homeX=(point.homeX+w*.381966)%w;point.y=point.homeY;point.x=point.homeX;point.vx=0;point.vy=0;}if(point.homeX<0||point.homeX>w){point.homeX=(point.homeX+w)%w;point.x=point.homeX;}
+ }
  for(let i=0;i<points.length;i++){const point=points[i];
   for(let j=i+1;j<points.length;j++){const other=points[j],distance=Math.hypot(point.x-other.x,point.y-other.y);if(distance<range){ctx.beginPath();ctx.moveTo(point.x,point.y);ctx.lineTo(other.x,other.y);ctx.strokeStyle=`rgba(210,222,238,${(1-distance/range)*.22})`;ctx.lineWidth=.65;ctx.stroke();}}
   const distance=pointer.inside?Math.hypot(point.x-mouse.x,point.y-mouse.y):Infinity,near=distance<180;
@@ -25,3 +37,7 @@ button.onclick=()=>{paused=!paused;sync();};document.addEventListener('visibilit
 addEventListener('pageshow',event=>{if(event.persisted){frames.forEach(frame=>observer.observe(frame));resize();const closest=frames.reduce((a,b)=>Math.abs(a.getBoundingClientRect().top)<Math.abs(b.getBoundingClientRect().top)?a:b);select(closest);}});
 
 document.addEventListener('pointerleave',()=>{pointer.inside=false;});addEventListener('pointerup',event=>{if(event.pointerType==='touch')pointer.inside=false;});
+
+const magazineCopy=document.querySelector('#magazine-copy'),magazineNumber=document.querySelector('#magazine-number'),leafTitle=document.querySelector('#leaf-title');
+const spreads=[['완성된 결과 뒤에 머물렀던 질문과 감각. 전시의 과정과 그 이면의 생각을 기록합니다.','전시가 끝나도,<br>다시 펼치는 시간.'],['질문과 감각들이 서로 엮이며 하나의 흐름을 이룹니다. 기록은 관객과 이어지는 또 다른 대화가 됩니다.','질문과 감각이,<br>하나의 흐름으로.'],['관람객 방명록을 리캡 형식으로 남겨 전시 현장의 경험을 간직합니다. 다시 읽고 참고할 수 있는 기록을 쌓아갑니다.','다시 읽고,<br>간직할 수 있도록.']];let spread=0;
+document.querySelector('.magazine-leaf').addEventListener('animationiteration',()=>{spread=(spread+1)%spreads.length;magazineCopy.textContent=spreads[spread][0];leafTitle.innerHTML=spreads[spread][1];magazineNumber.textContent=String(spread+1).padStart(2,'0');});
