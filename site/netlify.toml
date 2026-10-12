@@ -1,0 +1,38 @@
+[build]
+  publish = "dist"
+  command = "npm run check && npm test && npm run build"
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+[[redirects]]
+  from = "/exhibition/:id"
+  to = "/detail.html"
+  status = 200
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
+[[headers]]
+  for = "/admin*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/config.js"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[redirects]]
+  from = "/exhibition"
+  to = "/exhibition.html"
+  status = 200
+[[redirects]]
+  from = "/exhibition/"
+  to = "/exhibition.html"
+  status = 200
+[[redirects]]
+  from = "/exhibitions/:id"
+  to = "/exhibition/:id"
+  status = 301
