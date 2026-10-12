@@ -1,1 +1,21 @@
-[{"origin":["https://unframe.kr","https://www.unframe.kr","https://exhibition.unframe.kr","http://127.0.0.1:4173","http://localhost:4173"],"method":["GET"],"responseHeader":["Content-Type","Authorization","Range"],"maxAgeSeconds":3600}]
+[
+  {
+    "origin": [
+      "https://unframe.kr",
+      "https://www.unframe.kr",
+      "https://exhibition.unframe.kr",
+      "http://127.0.0.1:4173",
+      "http://localhost:4173",
+      "https://unframe-main.netlify.app"
+    ],
+    "method": [
+      "GET"
+    ],
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "Range"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

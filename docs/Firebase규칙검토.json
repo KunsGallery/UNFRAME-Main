@@ -1,0 +1,18 @@
+{
+  "score": 4,
+  "summary": "Prototype rules compile and are deployed; real staff, anonymous, draft and upload scenarios still require end-to-end verification.",
+  "findings": [
+    {
+      "check": "calendar validity",
+      "severity": "minor",
+      "issue": "Rules check date format and ordering, while actual calendar validity is enforced by the web client. A trusted staff API write can still supply a nonexistent calendar date.",
+      "recommendation": "Consider timestamp-based dates or a trusted publishing endpoint if direct staff API writes become part of the workflow."
+    },
+    {
+      "check": "image manifest consistency",
+      "severity": "minor",
+      "issue": "Public image path manifests are bounded and storage-scoped, but trusted staff can list extra files from the same exhibition folder.",
+      "recommendation": "For a stricter editorial publishing workflow, derive image manifests in a trusted publishing endpoint."
+    }
+  ]
+}

@@ -11,7 +11,7 @@ function authView(message='') {
  if(demo)$('#demo-enter').onclick=()=>{demoEntered=true;dashboard();};
  else $('#google-login').onclick=async()=>{const button=$('#google-login');button.disabled=true;try{user=await login();if(await isStaff(user))await dashboard();else{await logout();user=null;authView('이 계정은 관리자 권한이 없습니다. 운영자에게 계정 승인을 요청해주세요.');}}catch(error){authView(authError(error));}};
 }
-function authError(error){if(error.code==='auth/popup-closed-by-user')return '로그인 창을 닫았습니다. 다시 로그인해주세요.';if(error.code==='auth/popup-blocked')return '브라우저의 팝업 차단을 해제하고 다시 로그인해주세요.';return '로그인에 실패했습니다. Firebase 설정과 승인 도메인을 확인해주세요.';}
+function authError(error){if(error.code==='auth/unauthorized-domain')return '이 사이트 주소는 Google 로그인이 아직 승인되지 않았습니다. 운영자에게 사이트 주소 등록을 요청해주세요.';if(error.code==='auth/operation-not-allowed')return 'Google 로그인이 아직 활성화되지 않았습니다. 운영자에게 로그인 설정을 요청해주세요.';if(error.code==='auth/invalid-api-key')return '사이트의 Firebase 연결 설정을 확인해주세요.';if(error.code==='auth/popup-closed-by-user')return '로그인 창을 닫았습니다. 다시 로그인해주세요.';if(error.code==='auth/popup-blocked')return '브라우저의 팝업 차단을 해제하고 다시 로그인해주세요.';return '로그인에 실패했습니다. Firebase 설정과 승인 도메인을 확인해주세요.';}
 async function dashboard() {
  try{records=await hydrateImages(await listExhibitions(true),false);}catch(error){authView('전시를 불러오지 못했습니다. 계정 권한과 Firebase 설정을 확인해주세요.');return;}
  current=null;dirty=false;

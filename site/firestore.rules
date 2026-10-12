@@ -1,3 +1,7 @@
+// Prototype model: exhibitions contain public editorial content when published=true.
+// staff/{uid}: email + active, readable only by that user, managed outside client apps.
+// All exhibition writes require verified Google sign-in plus a matching active staff record.
+// Image paths are scoped to the exhibition; uploads are handled by Storage rules.
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
@@ -8,10 +12,84 @@ service cloud.firestore {
     && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.active == true
     && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.email == request.auth.token.email;
   }
-  function validImage(image) {
+  function validImage(image,id) {
    return image is map && image.keys().hasAll(['url','path','alt'])
-    && image.url is string && image.path is string && image.alt is string
-    && image.alt.size() <= 1000;
+    && image.keys().hasOnly(['url','path','alt','caption'])
+    && image.url == '' && image.path is string && image.path.size()<=512
+    && (image.path == '' || image.path.matches('^exhibitions/'+id+'/[^/]+$'))
+    && image.alt is string && image.alt.size()<=1000
+    && (!('caption' in image) || (image.caption is string && image.caption.size()<=2000));
+  }
+  function galleryItem(items,i,id) { return items.size()<=i || validImage(items[i],id); }
+  function imagePath(items,i) { return items.size()<=i || (items[i] is string && items[i].size()<=512); }
+  function validGallery(items,id) {
+   return items is list && items.size()<=30
+    && galleryItem(items,0,id)
+    && galleryItem(items,1,id)
+    && galleryItem(items,2,id)
+    && galleryItem(items,3,id)
+    && galleryItem(items,4,id)
+    && galleryItem(items,5,id)
+    && galleryItem(items,6,id)
+    && galleryItem(items,7,id)
+    && galleryItem(items,8,id)
+    && galleryItem(items,9,id)
+    && galleryItem(items,10,id)
+    && galleryItem(items,11,id)
+    && galleryItem(items,12,id)
+    && galleryItem(items,13,id)
+    && galleryItem(items,14,id)
+    && galleryItem(items,15,id)
+    && galleryItem(items,16,id)
+    && galleryItem(items,17,id)
+    && galleryItem(items,18,id)
+    && galleryItem(items,19,id)
+    && galleryItem(items,20,id)
+    && galleryItem(items,21,id)
+    && galleryItem(items,22,id)
+    && galleryItem(items,23,id)
+    && galleryItem(items,24,id)
+    && galleryItem(items,25,id)
+    && galleryItem(items,26,id)
+    && galleryItem(items,27,id)
+    && galleryItem(items,28,id)
+    && galleryItem(items,29,id)
+   ;
+  }
+  function validPaths(items) {
+   return items is list && items.size()<=31
+    && imagePath(items,0)
+    && imagePath(items,1)
+    && imagePath(items,2)
+    && imagePath(items,3)
+    && imagePath(items,4)
+    && imagePath(items,5)
+    && imagePath(items,6)
+    && imagePath(items,7)
+    && imagePath(items,8)
+    && imagePath(items,9)
+    && imagePath(items,10)
+    && imagePath(items,11)
+    && imagePath(items,12)
+    && imagePath(items,13)
+    && imagePath(items,14)
+    && imagePath(items,15)
+    && imagePath(items,16)
+    && imagePath(items,17)
+    && imagePath(items,18)
+    && imagePath(items,19)
+    && imagePath(items,20)
+    && imagePath(items,21)
+    && imagePath(items,22)
+    && imagePath(items,23)
+    && imagePath(items,24)
+    && imagePath(items,25)
+    && imagePath(items,26)
+    && imagePath(items,27)
+    && imagePath(items,28)
+    && imagePath(items,29)
+    && imagePath(items,30)
+   ;
   }
   function valid(data,id) {
    return data.keys().hasAll(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths'])
@@ -29,9 +107,9 @@ service cloud.firestore {
     && data.address is string && data.address.size()<=1000
     && data.mapUrl is string && data.mapUrl.size()<=2000
     && data.bookingUrl is string && data.bookingUrl.size()<=2000
-    && validImage(data.cover) && data.gallery is list && data.gallery.size()<=30
-    && data.published is bool && data.order is int && data.order>=0
-    && data.imagePaths is list && data.imagePaths.size()<=31
+    && validImage(data.cover,id) && validGallery(data.gallery,id)
+    && data.published is bool && data.order is int && data.order>=0 && data.order<=1000000
+    && validPaths(data.imagePaths)
     && data.updatedAt is string && data.updatedAt.size()<=50
     && (!data.published || (data.description.size()>0 && data.cover.path.matches('^exhibitions/'+id+'/[^/]+$')));
   }

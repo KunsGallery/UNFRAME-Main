@@ -7,3 +7,5 @@ test('drafts can omit images and body, published entries cannot',()=>{const x={.
 test('HTML and dangerous URL inputs do not become active content',()=>{assert.equal(escapeHTML('<img onerror="x">'),'&lt;img onerror=&quot;x&quot;&gt;');assert.equal(safeURL('javascript:alert(1)'),'');assert.equal(safeURL('https://unframe.kr'),'https://unframe.kr');});
 
 test('Firebase image blobs remain displayable while executable schemes are rejected',()=>{assert.equal(imageURL('blob:https://exhibition.unframe.kr/123'),'blob:https://exhibition.unframe.kr/123');assert.equal(imageURL('javascript:alert(1)'),'');});
+
+test('editor ordering respects the same upper bound as deployed rules',()=>{assert.doesNotThrow(()=>validateExhibition({...DEMO_EXHIBITIONS[0],order:1000000}));assert.throws(()=>validateExhibition({...DEMO_EXHIBITIONS[0],order:1000001}));});
