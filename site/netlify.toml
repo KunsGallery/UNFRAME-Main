@@ -45,3 +45,16 @@
   from = "/project/"
   to = "/project.html"
   status = 200
+
+[[redirects]]
+  from = "/project-lab"
+  to = "/project-lab.html"
+  status = 200
+[[redirects]]
+  from = "/project-lab/"
+  to = "/project-lab.html"
+  status = 200
+[[headers]]
+  for = "/project-lab*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
