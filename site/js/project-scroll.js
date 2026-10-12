@@ -37,7 +37,3 @@ button.onclick=()=>{paused=!paused;sync();};document.addEventListener('visibilit
 addEventListener('pageshow',event=>{if(event.persisted){frames.forEach(frame=>observer.observe(frame));resize();const closest=frames.reduce((a,b)=>Math.abs(a.getBoundingClientRect().top)<Math.abs(b.getBoundingClientRect().top)?a:b);select(closest);}});
 
 document.addEventListener('pointerleave',()=>{pointer.inside=false;});addEventListener('pointerup',event=>{if(event.pointerType==='touch')pointer.inside=false;});
-
-const magazineCopy=document.querySelector('#magazine-copy'),magazineNumber=document.querySelector('#magazine-number'),leafTitle=document.querySelector('#leaf-title');
-const spreads=[['완성된 결과 뒤에 머물렀던 질문과 감각. 전시의 과정과 그 이면의 생각을 기록합니다.','전시가 끝나도,<br>다시 펼치는 시간.'],['질문과 감각들이 서로 엮이며 하나의 흐름을 이룹니다. 기록은 관객과 이어지는 또 다른 대화가 됩니다.','질문과 감각이,<br>하나의 흐름으로.'],['관람객 방명록을 리캡 형식으로 남겨 전시 현장의 경험을 간직합니다. 다시 읽고 참고할 수 있는 기록을 쌓아갑니다.','다시 읽고,<br>간직할 수 있도록.']];let spread=0;
-document.querySelector('.magazine-leaf').addEventListener('animationiteration',()=>{spread=(spread+1)%spreads.length;magazineCopy.textContent=spreads[spread][0];leafTitle.innerHTML=spreads[spread][1];magazineNumber.textContent=String(spread+1).padStart(2,'0');});
