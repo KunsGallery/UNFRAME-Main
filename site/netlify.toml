@@ -36,3 +36,12 @@
   from = "/exhibitions/:id"
   to = "/exhibition/:id"
   status = 301
+
+[[redirects]]
+  from = "/project"
+  to = "/project.html"
+  status = 200
+[[redirects]]
+  from = "/project/"
+  to = "/project.html"
+  status = 200

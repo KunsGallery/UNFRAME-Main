@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <!-- 
+       [기본 설정 구역] 
+       이곳은 건드리지 않아도 괜찮아요! 페이지가 작동하는 데 필요한 도구들을 불러옵니다.
+    -->
+    <meta charset="UTF-8">
+    <!-- 모바일에서 화면이 제멋대로 확대되거나 깨지는 것을 막아주는 설정이에요. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UNFRAME Projects</title>
+    
+    <!-- [도구 1] Tailwind CSS: 간편하게 디자인을 입혀주는 도구 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- [도구 2] Lucide Icons: 예쁜 아이콘(화살표, 인스타그램 등)을 가져오는 도구 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- [도구 3] 폰트 설정: Pretendard(본문용)와 기타 영문 폰트를 불러와요. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&family=Noto+Sans+KR:wght@300;400;700;900&display=swap');
+    </style>
+
+    <style>
+        /* =================================================================
+           [🎛️ 통합 디자인 제어판] 
+           ★ 여기 있는 숫자만 바꾸면 홈페이지 디자인이 마법처럼 바뀝니다! ★
+           (px 단위로 자유롭게 수정해보세요)
+           ================================================================= */
+        
+        /* [1. 데스크탑(PC) 화면 설정] - 화면이 넓을 때 적용돼요 */
+        :root {
+            /* --- [레이아웃 크기 조절] --- */
+            /* 전체 내용이 들어가는 최대 가로 폭 (기본: 1200px) */
+            --pc-container-width: 1200px;
+            
+            /* 글자 설명 박스의 최대 가로 폭 (기본: 600px) */
+            --pc-text-box-width: 600px;
+            
+            /* 사진과 설명 사이의 가로 간격 (기본: 100px) */
+            --pc-content-gap: 100px;
+            
+            /* 위아래 프로젝트 사이의 세로 간격 (기본: 220px) */
+            --pc-vertical-gap: 220px;
+
+            /* --- [글자 크기 조절] --- */
+            /* 큰 제목 크기 (기본: 32px) */
+            --pc-title-size: 32px;
+            
+            /* 본문 설명 크기 (기본: 16px) */
+            --pc-desc-size: 16px;
+        }
+
+        /* 기본 문서 설정 */
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #fdfbf7; /* 배경색: 연한 크림색 */
+            color: #111111;            /* 기본 글자색: 진한 검정 */
+            word-break: keep-all;      /* 단어가 중간에 끊기지 않게 함 */
+            overflow-x: hidden;        /* 가로 스크롤 생김 방지 */
+            margin: 0; padding: 0;
+        }
+
+        /* -----------------------------------------------------------------
+           [2. 모바일(Mobile) 화면 설정] - 화면 폭이 960px 이하일 때 적용돼요 
+           ----------------------------------------------------------------- */
+        @media (max-width: 960px) {
+            :root {
+                /* --- [모바일 레이아웃] --- */
+                /* 모바일 내용 박스의 최대 폭 (기본: 420px) */
+                --m-content-width: 420px;
+                
+                /* 화면 양옆 여백 (기본: 24px) */
+                --m-side-padding: 24px;
+                
+                /* --- [모바일 카드 크기] --- */
+                --m-card-width: 220px;    /* 카드 가로 */
+                --m-card-height: 300px;   /* 카드 세로 */
+
+                /* --- [모바일 글자 크기] --- */
+                --m-title-size: 24px;     /* 제목 크기 */
+                --m-desc-size: 13px;      /* 설명 크기 */
+                
+                /* --- [모바일 색상] --- */
+                --point-color: #004aad;   /* 포인트 색상 (파란색) */
+                --text-sub: #555555;      /* 보조 글자색 (회색) */
+            }
+        }
+
+
+        /* =================================================================
+           [💻 데스크탑 스타일 상세 구현]
+           여기서부터는 PC 화면을 위한 꾸미기 규칙들이에요.
+           ================================================================= */
+        
+        /* [스르륵 등장 효과] */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px); /* 아래에서 위로 살짝 올라오며 등장 */
+            transition: all 0.8s ease-out;
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* [전체 레이아웃] 제어판에서 설정한 변수(--pc-...)를 여기서 사용해요 */
+        .unframe-project-section {
+            width: 100%;
+            max-width: var(--pc-container-width); /* ★ 제어판 값 적용 */
+            margin: 0 auto;
+            padding: 80px 20px;
+        }
+
+        .crane-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: var(--pc-vertical-gap); /* ★ 제어판 값 적용 */
+        }
+
+        /* [개별 프로젝트 아이템] 사진과 글을 나란히 배치 */
+        .project-item { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            width: 100%; 
+            gap: var(--pc-content-gap); /* ★ 제어판 값 적용 */
+        }
+        
+        /* [글자 박스] */
+        .text-box {
+            flex: 1;
+            max-width: var(--pc-text-box-width); /* ★ 제어판 값 적용 */
+        }
+
+        /* [배치 방향] 왼쪽 사진 / 오른쪽 사진 번갈아 배치 */
+        .project-item.type-left { flex-direction: row; }
+        .project-item.type-right { flex-direction: row-reverse; }
+
+        /* [크레인 애니메이션] 줄에 매달려 살랑거리는 효과 */
+        .card-crane-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: craneSway 4s ease-in-out infinite alternate; /* 4초 동안 왔다갔다 */
+            transform-origin: top center;
+            flex-shrink: 0; 
+        }
+        .crane-line {
+            width: 2px;
+            height: 100px;
+            background: #004aad; /* 줄 색상 */
+            margin-bottom: -5px;
+            z-index: 2;
+        }
+
+        /* [뒤집히는 카드] */
+        .flip-card {
+            width: 260px;
+            height: 350px;
+            perspective: 1000px; /* 3D 입체감 */
+            cursor: pointer;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .flip-card:hover .flip-card-inner { transform: rotateY(180deg); } /* 마우스 올리면 회전 */
+        
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%; height: 100%;
+            backface-visibility: hidden; /* 뒷면 안 보이게 */
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); /* 그림자 */
+        }
+        .flip-card-front { background-color: #fff; border: 4px solid #fff; }
+        .flip-card-front img { width: 100%; height: 100%; object-fit: cover; }
+
+        .flip-card-back {
+            background: #004aad; /* 뒷면 배경색 */
+            color: #fff;
+            transform: rotateY(180deg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            text-align: center;
+        }
+
+        /* [집게 모양 장식] */
+        .claw-decoration {
+            position: absolute;
+            top: -2px; left: 50%;
+            transform: translateX(-50%);
+            width: 50px; height: 25px;
+            background: #004aad;
+            clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+            z-index: 10;
+        }
+
+        /* [자세히 보기 버튼] */
+        .btn-more:hover {
+            background-color: #111111 !important; 
+            transform: translateY(-4px); /* 살짝 떠오름 */
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+
+        @keyframes craneSway {
+            0% { transform: rotate(-1.5deg); }
+            100% { transform: rotate(1.5deg); }
+        }
+
+        /* [뷰 제어] 데스크탑 뷰는 기본적으로 보임 */
+        #desktop-view { display: block; }
+        #mobile-view { display: none; }
+
+
+        /* =================================================================
+           [📱 모바일 스타일 상세 구현] 
+           화면 폭이 960px 이하일 때, 데스크탑 스타일을 덮어쓰고 이 스타일이 적용돼요.
+           ================================================================= */
+        @media (max-width: 960px) {
+            
+            /* [뷰 전환] 데스크탑 숨김 / 모바일 보임 */
+            #desktop-view { display: none !important; }
+            #mobile-view { display: block !important; }
+
+            /* 모바일에서는 스크롤이 딱딱 끊기게(Snap) 하기 위해 body를 고정해요 */
+            html, body {
+                width: 100%; height: 100%;
+                overflow: hidden; 
+                position: fixed; top: 0; left: 0;
+            }
+
+            /* [풀프레임 스크롤 컨테이너] 모바일 전용 스크롤 영역 */
+            .snap-container {
+                position: fixed; 
+                top: 0; left: 0; width: 100%; height: 100%;
+                background-color: #fdfbf7;
+                z-index: 999; 
+                overflow-y: scroll; 
+                overflow-x: hidden;
+                -webkit-overflow-scrolling: touch; 
+                scroll-snap-type: y mandatory;     /* 스크롤이 섹션 단위로 딱딱 붙게 함 */
+                scroll-behavior: smooth;
+                -ms-overflow-style: none; scrollbar-width: none; /* 스크롤바 숨김 */
+            }
+            .snap-container::-webkit-scrollbar { display: none; }
+
+            /* [모바일 섹션 공통] */
+            .mobile-section {
+                position: relative; width: 100%;
+                min-height: 100dvh; /* 화면 높이에 꽉 차게 */
+                height: auto; 
+                display: flex; flex-direction: column; justify-content: center; align-items: center;
+                /* 상단 여백(100px)은 홈페이지 자체 메뉴바가 가리지 않도록 넉넉히 주었어요.
+                   만약 메뉴바가 더 얇다면 100px를 줄이셔도 됩니다.
+                */
+                padding: 100px var(--m-side-padding) 80px;
+                scroll-snap-align: start; 
+                scroll-snap-stop: always;
+                box-sizing: border-box;
+            }
+
+            /* [모바일 내용 박스] */
+            .content-box {
+                width: 100%; 
+                max-width: var(--m-content-width); /* ★ 제어판 값 적용 */
+                margin: 0 auto; position: relative;
+                display: flex; flex-direction: column; align-items: center; text-align: center;
+            }
+
+            /* [모바일용 크레인 & 카드 재조정] */
+            .card-crane-group {
+                margin-bottom: 30px;
+                animation: craneSwayMobile 4s ease-in-out infinite alternate;
+            }
+            .crane-line { height: 60px; } /* 줄 길이 */
+            .claw-decoration { width: 40px; height: 20px; } /* 집게 크기 */
+            
+            /* 카드 크기도 제어판 변수로 적용 */
+            .flip-card { width: var(--m-card-width); height: var(--m-card-height); }
+            
+            .flip-card-front, .flip-card-back {
+                border-radius: 16px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            }
+            .flip-card-front { border: 3px solid #fff; }
+            .flip-card-back { padding: 20px; }
+
+            /* [모바일 텍스트 & 버튼] 제어판 변수 적용 */
+            .proj-title {
+                font-size: var(--m-title-size); /* ★ 제어판 값 적용 */
+                font-weight: 900; line-height: 1.3;
+                color: #111; margin-bottom: 12px; word-break: keep-all;
+            }
+            .proj-desc {
+                font-size: var(--m-desc-size); /* ★ 제어판 값 적용 */
+                font-weight: 400; line-height: 1.6;
+                color: var(--text-sub); margin-bottom: 24px; word-break: keep-all;
+            }
+            .highlight { color: var(--point-color); font-weight: 700; }
+
+            .btn-more {
+                background-color: var(--point-color); color: white;
+                display: inline-flex; align-items: center; gap: 6px;
+                padding: 10px 24px; border-radius: 50px;
+                font-size: 12px; font-weight: 700; text-decoration: none;
+                transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0, 74, 173, 0.2);
+            }
+            .btn-more:active { transform: scale(0.95); }
+
+            /* [모바일 등장 효과] - 이름 충돌 방지 위해 별도 클래스 사용 */
+            .reveal-mobile { opacity: 1; transform: translateY(0); transition: all 1.0s cubic-bezier(0.22, 1, 0.36, 1); }
+            .reveal-mobile.waiting { opacity: 0 !important; transform: translateY(30px) !important; }
+            .reveal-mobile.active { opacity: 1 !important; transform: translateY(0) !important; }
+
+            /* [모바일 푸터 스타일] */
+            .footer-mobile { font-family: 'Pretendard', sans-serif; color: var(--point-color); text-align: center; }
+            .footer-logo { font-size: 24px; font-weight: 900; letter-spacing: 1px; margin-bottom: 4px; }
+            .footer-slogan { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; margin-bottom: 30px; }
+            .footer-group { margin-bottom: 20px; }
+            .footer-group h4 { font-size: 12px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+            .footer-text { font-size: 11px; line-height: 1.5; opacity: 0.9; font-weight: 400; }
+            .footer-icon-wrap { display: inline-flex; align-items: center; justify-content: center; }
+
+            /* [스크롤 유도 아이콘] */
+            .scroll-indicator {
+                position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+                animation: bounce 2s infinite; opacity: 0.3; font-size: 20px; z-index: 10; pointer-events: none;
+            }
+            @keyframes bounce { 
+                0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);} 
+                40% {transform: translateX(-50%) translateY(-10px);} 
+                60% {transform: translateX(-50%) translateY(-5px);} 
+            }
+            
+            @keyframes craneSwayMobile { 0% { transform: rotate(-2deg); } 100% { transform: rotate(2deg); } }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- =================================================================
+         [1] 데스크탑(PC) 뷰 컨테이너 
+         화면 폭이 960px보다 클 때만 이 부분이 보입니다.
+         ================================================================= -->
+    <div id="desktop-view">
+        
+        <!-- [상단 헤더] 프로젝트 소개 섹션 -->
+        <section class="pt-32 pb-16 reveal">
+            <!-- 
+                ★ [헤더 폭 조절] 
+                여기서 style="max-width: ..." 부분에 제어판 변수를 넣었습니다.
+                이제 위쪽 CSS 제어판에서 --pc-container-width 숫자만 바꾸면 폭이 조절돼요!
+            -->
+            <div class="mx-auto px-6 text-center" style="max-width: var(--pc-container-width);">
+                
+                <!-- (3) 요약 아이콘 리스트 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-16 mx-auto border-t border-gray-100 pt-10" style="max-width: 100%;">
+                    <div class="py-4">
+                        <div style="color: #004aad; font-size: 24px;" class="font-black mb-1 uppercase">UP</div>
+                        <p style="color: #aaaaaa; font-size: 15px;" class="font-bold uppercase tracking-widest">듣는 갤러리</p>
+                    </div>
+                    <div class="py-4">
+                        <div style="color: #004aad; font-size: 24px;" class="font-black mb-1 uppercase">음</div>
+                        <p style="color: #aaaaaa; font-size: 15px;" class="font-bold uppercase tracking-widest">말하는 갤러리</p>
+                    </div>
+                    <div class="py-4">
+                        <div style="color: #004aad; font-size: 24px;" class="font-black mb-1 uppercase">U#</div>
+                        <p style="color: #aaaaaa; font-size: 15px;" class="font-bold uppercase tracking-widest">기록하는 갤러리</p>
+                    </div>
+                    <div class="py-4">
+                        <div style="color: #004aad; font-size: 24px;" class="font-black mb-1 uppercase">UAU</div>
+                        <p style="color: #aaaaaa; font-size: 15px;" class="font-bold uppercase tracking-widest">연결되는 갤러리</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- [메인 프로젝트 리스트] 여기서부터 프로젝트들이 하나씩 나옵니다 -->
+        <section class="pb-32">
+            <div class="unframe-project-section">
+                <div class="crane-wrapper">
+                    
+                    <!-- [프로젝트 01: UP] 왼쪽 정렬 -->
+                    <div class="project-item type-left reveal">
+                        <div class="card-crane-group">
+                            <div class="crane-line"></div>
+                            <!-- 카드 부분 -->
+                            <div class="flip-card">
+                                <div class="flip-card-inner">
+                                    <div class="flip-card-front">
+                                        <div class="claw-decoration"></div>
+                                        <img src="https://cdn.imweb.me/upload/S20251125a08fc62b773e4/ee396082c1565.png" alt="Project UP">
+                                    </div>
+                                    <div class="flip-card-back">
+                                        <h3 style="font-size: 18px; font-weight: 800;">언프레임 플레이리스트 'UP'</h3>
+                                        <p style="font-size: 14px; margin-top: 10px;">전시의 감각을 음악으로 기록하는 프로젝트</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 텍스트 설명 박스 -->
+                        <div class="text-box" style="text-align: left;">
+                            <!-- ★ 글자 크기 변수(--pc-title-size) 적용 -->
+                            <h2 style="font-size: var(--pc-title-size); color: #111111; margin-bottom: 20px; font-weight: 900; line-height: 1.3;">
+                                감각적인 갤러리<br>언프레임 플레이리스트 'UP'
+                            </h2>
+                            <!-- ★ 본문 크기 변수(--pc-desc-size) 적용 -->
+                            <p style="font-size: var(--pc-desc-size); color: #555555; line-height: 1.8; margin-bottom: 32px; font-weight: 300;">
+                                UP은 전시를 <span style="color: #004aad; font-weight: 800;">'듣는 경험'</span>으로 확장하며, <br> 음악을 통해 전시의 감각을 끌어올릴 수 있도록 합니다. <br><br>
+                                그동안 음악은 전시의 분위기를 만드는 중요한 요소이기는 했지만, <br> 이제는 전시를 관람한 뒤에도 그 <span style="color: #004aad; font-weight: 800;">감각과 분위기를 일상 속에서</span> <br>다시 경험할 수 있도록 하는 역할로 확장됩니다. <br><br>
+                                전시와 작가를 위한 <span style="color: #004aad; font-weight: 800;">공식 플레이리스트(Exhibition OST)</span>는 <br>전시의 시간을 음악으로 남기기 위한 기록입니다. <br>동시에 갤러리 디렉터의 시선으로 큐레이션한 <span style="color: #004aad; font-weight: 800;">Director's Playlist</span>를 통해 <br>UNFRAME 공간에서 시작된 사운드와 감각을 음악으로 다시 불러냅니다. <br><br>
+                                이때 UP은 <span style="color: #004aad; font-weight: 800;">전시와 일상</span>을 부드럽게 이어주는 <b>또 하나의 감각적인 통로</b>가 됩니다.
+                            </p>
+                            <a href="https://up.unframe.kr" class="btn-more" style="background-color: #004aad; color: #ffffff; display: inline-flex; align-items: center; gap: 8px; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 700; transition: 0.3s;">
+                                프로젝트 자세히 보기 <i data-lucide="arrow-right" style="width: 18px;"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- [프로젝트 02: 음] 오른쪽 정렬 -->
+                    <div class="project-item type-right reveal">
+                        <div class="card-crane-group">
+                            <div class="crane-line"></div>
+                            <div class="flip-card">
+                                <div class="flip-card-inner">
+                                    <div class="flip-card-front">
+                                        <div class="claw-decoration"></div>
+                                        <img src="https://cdn.imweb.me/upload/S20251125a08fc62b773e4/d3e227380b0d8.png" alt="Project 음">
+                                    </div>
+                                    <div class="flip-card-back">
+                                        <h3 style="font-size: 18px; font-weight: 800;">언프레임 팟캐스트 '음'</h3>
+                                        <p style="font-size: 14px; margin-top: 10px;">예술을 둘러싼 목소리를 듣는 프로젝트</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-box" style="text-align: right;">
+                            <h2 style="font-size: var(--pc-title-size); color: #111111; margin-bottom: 20px; font-weight: 900; line-height: 1.3;">
+                                들리는 갤러리<br>언프레임 팟캐스트 '음'
+                            </h2>
+                            <p style="font-size: var(--pc-desc-size); color: #555555; line-height: 1.8; margin-bottom: 32px; font-weight: 300;">
+                                '음'</b>은 소리이자 <b>말이 시작되기 직전의 순간</b>을 의미합니다. <br>완성된 작품으로서의 예술보다 그 이전의 아이디어와 망설임같은 <br><span style="color: #004aad; font-weight: 800;">아직 정리되지 않은 마음</span>에 시선을 둡니다. <br><br>
+                                작품은 완성된 순간보다 <span style="color: #004aad; font-weight: 800;">만들어지는 과정</span>에서 <br>더 많은 이야기를 품고 있기 때문입니다. <br>대화와 기록의 형식을 오가며 <span style="color: #004aad; font-weight: 800;">아티스트, 기획자, 갤러리</span>라는 <br>각자의 위치에서 생겨나는 <b>생각의 결</b>을 담아냅니다. <br><br>
+                                지금 이 순간 현장에서 활발히 활동 중인 아티스트를 초대해 <br><span style="color: #004aad; font-weight: 800;">예술계를 관통하는 <b>핫한 키워드와 주제</span>를 들여다보고 찬찬히 풀어봅니다. <br>그리고 디렉터의 시선으로 바라본 전시 준비 과정과 갤러리 운영의 기록까지, <br><span style="color: #004aad; font-weight: 800;">예술의 이면을 솔직하고 다정하게</span> 전달합니다.
+                            </p>
+                            <a href="https://www.unframe.kr/podcast" class="btn-more" style="background-color: #004aad; color: #ffffff; display: inline-flex; align-items: center; gap: 8px; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 700; transition: 0.3s;">
+                                프로젝트 자세히 보기 <i data-lucide="arrow-right" style="width: 18px;"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- [프로젝트 03: U#] 왼쪽 정렬 -->
+                    <div class="project-item type-left reveal">
+                        <div class="card-crane-group">
+                            <div class="crane-line"></div>
+                            <div class="flip-card">
+                                <div class="flip-card-inner">
+                                    <div class="flip-card-front">
+                                        <div class="claw-decoration"></div>
+                                        <img src="https://cdn.imweb.me/upload/S20251125a08fc62b773e4/f68578e096cb4.png" alt="Project U#">
+                                    </div>
+                                    <div class="flip-card-back">
+                                        <h3 style="font-size: 18px; font-weight: 800;">언프레임 독립출판 'U#'</h3>
+                                        <p style="font-size: 14px; margin-top: 10px;">전시와 생각의 과정을 기록으로 남기는 프로젝트</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-box" style="text-align: left;">
+                            <h2 style="font-size: var(--pc-title-size); color: #111111; margin-bottom: 20px; font-weight: 900; line-height: 1.3;">
+                                기록하는 갤러리<br>언프레임 독립출판 'U#'
+                            </h2>
+                            <p style="font-size: var(--pc-desc-size); color: #555555; line-height: 1.8; margin-bottom: 32px; font-weight: 300;">
+                                #</b>은 에디션이자 <b>해시태그</b>를 의미하며, <br>각 출판물은 고유한 번호와 주제를 가진 기록이 됩니다. <br>U#은 독립출판의 형식을 통해 <span style="color: #004aad; font-weight: 800;">전시의 과정과 그 이면의 생각</span>을 기록합니다. <br><br>
+                                예술은 완성된 결과만으로 존재하지 않고, <br>그 이전에 머물렀던 <span style="color: #004aad; font-weight: 800;">질문과 감각</span>들이 서로 엮이며 하나의 흐름을 이룹니다. <br>이 기록은 전시를 함께 경험하는 또 다른 방식의 대화가 되어 <br><span style="color: #004aad; font-weight: 800;">관객과 자연스럽게 이어집니다</span>. <br><br>
+                                디렉터가 전시 및 프로젝트와 관련된 과정을 담아내며 <br>정기적으로 관객과 소통합니다. <br>그리고 <b>관람객 방명록을 리캡 형식</b>으로 담아내어 <br><span style="color: #004aad; font-weight: 800;">전시 현장의 경험을 간직</span>할 수 있도록 합니다. <br><br>
+                                빠르게 소비되지 않는, <span style="color: #004aad; font-weight: 800;">다시 읽고 참고할 수 있는 기록</span>을 남김으로써 <br>우리의 역사는 넓어지고 쌓입니다.
+                            </p>
+                            <a href="https://magazine.unframe.kr" class="btn-more" style="background-color: #004aad; color: #ffffff; display: inline-flex; align-items: center; gap: 8px; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 700; transition: 0.3s;">
+                                프로젝트 자세히 보기 <i data-lucide="arrow-right" style="width: 18px;"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- [프로젝트 04: U.A.U] 오른쪽 정렬 -->
+                    <div class="project-item type-right reveal">
+                        <div class="card-crane-group">
+                            <div class="crane-line"></div>
+                            <div class="flip-card">
+                                <div class="flip-card-inner">
+                                    <div class="flip-card-front">
+                                        <div class="claw-decoration"></div>
+                                        <img src="https://cdn.imweb.me/upload/S20251125a08fc62b773e4/aa67c8758594d.png" alt="Project U.A.U">
+                                    </div>
+                                    <div class="flip-card-back">
+                                        <h3 style="font-size: 18px; font-weight: 800;">언프레임 아티스트 유닛 'U.A.U'</h3>
+                                        <p style="font-size: 14px; margin-top: 10px;">연결된 창작을 실험하는 멤버십</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-box" style="text-align: right;">
+                            <h2 style="font-size: var(--pc-title-size); color: #111111; margin-bottom: 20px; font-weight: 900; line-height: 1.3;">
+                                연결되는 갤러리<br>언프레임 아티스트 유닛 'U.A.U'
+                            </h2>
+                            <p style="font-size: var(--pc-desc-size); color: #555555; line-height: 1.8; margin-bottom: 32px; font-weight: 300;">
+                                작가는 대부분 혼자 작업하지만, 전시는 언제나 <span style="color: #004aad; font-weight: 800;">관계 속에서 완성</span>됩니다. <br>U.A.U는 전시를 통해 연결된 작가들이 <span style="color: #004aad; font-weight: 800;">방향과 태도를 공유</span>하는 <br><span style="color: #004aad; font-weight: 800;"><b>느슨한 연대</span>를 기반으로 이루어집니다. <br><br>
+                                경쟁과 성과를 우선하기보다는 <span style="color: #004aad; font-weight: 800;">공존의 방식</span>을 같이 찾아가고, <br>결과 이전의 <span style="color: #004aad; font-weight: 800;">과정</span>에 더 가까이 머물고자 합니다. <br><br>
+                                UNFRAME과 인연을 맺은 작가들을 중심으로 <br><span style="color: #004aad; font-weight: 800;">전시 이후에도 이어지는 관계</span>를 만들어갑니다. <br>이를 통해 갤러리를 매개로 한 작가들이 각자의 리듬으로 <br>작업을 지속할 수 있도록 <span style="color: #004aad; font-weight: 800;">커뮤니티의 가능성</span>을 실험합니다.
+                            </p>
+                            <a href="https://www.unframe.kr/UAU" class="btn-more" style="background-color: #004aad; color: #ffffff; display: inline-flex; align-items: center; gap: 8px; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 700; transition: 0.3s;">
+                                프로젝트 자세히 보기 <i data-lucide="arrow-right" style="width: 18px;"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </div>
+
+
+    <!-- =================================================================
+         [2] 모바일(Mobile) 뷰 컨테이너 
+         화면 폭이 960px 이하일 때만 이 부분이 보입니다.
+         ================================================================= -->
+    <div id="mobile-view">
+        
+        <!-- [모바일용 풀프레임 스크롤 컨테이너] -->
+        <div class="snap-container">
+
+            <!-- 섹션 1: 인트로 -->
+            <section id="intro" class="mobile-section">
+                <div class="content-box reveal-mobile">
+                    <h1 class="text-4xl font-black text-[#111] mb-2 tracking-tight">PROJECTS</h1>
+                    <p class="text-sm text-[#888] font-bold tracking-[0.3em] uppercase mb-12">Beyond The Frame</p>
+                    <div class="grid grid-cols-2 gap-x-8 gap-y-10 w-full px-4">
+                        <div class="text-center"><div class="text-[#004aad] text-2xl font-black mb-1">UP</div><p class="text-[#aaa] text-[10px] font-bold tracking-widest">듣는 갤러리</p></div>
+                        <div class="text-center"><div class="text-[#004aad] text-2xl font-black mb-1">음</div><p class="text-[#aaa] text-[10px] font-bold tracking-widest">말하는 갤러리</p></div>
+                        <div class="text-center"><div class="text-[#004aad] text-2xl font-black mb-1">U#</div><p class="text-[#aaa] text-[10px] font-bold tracking-widest">기록하는 갤러리</p></div>
+                        <div class="text-center"><div class="text-[#004aad] text-2xl font-black mb-1">UAU</div><p class="text-[#aaa] text-[10px] font-bold tracking-widest">연결되는 갤러리</p></div>
+                    </div>
+                </div>
+                <div class="scroll-indicator"><i data-lucide="chevron-down"></i></div>
+            </section>
+
+            <!-- 섹션 2: Project UP -->
+            <section id="project-up" class="mobile-section">
+                <div class="content-box reveal-mobile">
+                    <div class="card-crane-group" onclick="this.querySelector('.flip-card').classList.toggle('flipped')">
+                        <div class="crane-line"></div>
+                        <div class="flip-card">
+                            <div class="flip-card-inner">
+                                <div class="flip-card-front">
+                                    <div class="claw-decoration"></div>
+                                    <img src="https://cdn.imweb.me/upload/S20251125a08fc62b773e4/ee396082c1565.png" alt="Project UP">
+                                    <div class="absolute bottom-3 right-3 text-[#004aad] opacity-70 animate-pulse"><i data-lucide="touchpad" size="20"></i></div>
+                                </div>
+                                <div class="flip-card-back">
+                                    <h3 class="text-lg font-black mb-2">PLAYLIST 'UP'</h3>
+                                    <p class="text-xs break-keep opacity-90">전시의 감각을 음악으로 기록하는 프로젝트</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <!-- ★ 모바일 글자 크기도 제어판 변수(--m-...)를 사용해요 -->
+                        <h2 class="proj-title">감각적인 갤러리<br>플레이리스트 'UP'</h2>
+                        <p class="proj-desc">UP은 전시를 <span class="highlight">'듣는 경험'</span>으로 확장합니다.<br>전시 공식 OST와 디렉터의 추천곡을 통해<br>일상 속에서도 전시의 감각을 다시 느껴보세요.</p>
+                        <a href="https://www.unframe.kr/playlist" class="btn-more">View Project <i data-lucide="arrow-right" size="14"></i></a>
+                    </div>
+                </div>
+                <div class="scroll-indicator"><i data-lucide="chevron-down"></i></div>
+            </section>
+
+            <!-- 섹션 3: Project 음 -->
+            <section id="project-mm" class="mobile-section">
+                <div class="content-box reveal-mobile">
+                    <div class="card-crane-group" onclick="this.querySelector('.flip-card').classList.toggle('flipped')">
+                        <div class="crane-line"></div>
+                        <div class="flip-card">
+                            <div class="flip-card-inner">
+                                <div class="flip-card-front">
+                                    <div class="claw-decoration"></div>
+                                    <img src="https://cdn.imweb.me/upload/S20251125a08fc62b773e4/d3e227380b0d8.png" alt="음"><div class="absolute bottom-3 right-3 text-[#004aad] opacity-70 animate-pulse"><i data-lucide="touchpad" size="20"></i></div></div>
+                                <div class="flip-card-back">
+                                    <h3 class="text-lg font-black mb-2">PODCAST '음'</h3><p class="text-xs break-keep opacity-90">예술을 둘러싼 목소리</p></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="proj-title">들리는 갤러리<br>팟캐스트 '음'</h2>
+                        <p class="proj-desc">완성된 작품 이면의 <span class="highlight">망설임과 과정</span>에 집중하며<br>예술의 이면을 다정하게 전달합니다.</p>
+                        <a href="https://www.unframe.kr/podcast" class="btn-more">View Project <i data-lucide="arrow-right" size="14"></i></a>
+                    </div>
+                </div>
+                <div class="scroll-indicator"><i data-lucide="chevron-down"></i></div>
+            </section>
+
+            <!-- 섹션 4: Project U# -->
+            <section id="project-sharp" class="mobile-section">
+                <div class="content-box reveal-mobile">
+                    <div class="card-crane-group" onclick="this.querySelector('.flip-card').classList.toggle('flipped')">
+                        <div class="crane-line"></div>
+                        <div class="flip-card">
+                            <div class="flip-card-inner">
+                                <div class="flip-card-front">
+                                    <div class="claw-decoration"></div>
+                                    <img src="https://cdn.imweb.me/upload/S20251125a08fc62b773e4/f68578e096cb4.png" alt="U#"><div class="absolute bottom-3 right-3 text-[#004aad] opacity-70 animate-pulse"><i data-lucide="touchpad" size="20"></i></div></div>
+                                <div class="flip-card-back">
+                                    <h3 class="text-lg font-black mb-2">PUBLICATION 'U#'</h3><p class="text-xs break-keep opacity-90">전시와 생각의 기록</p></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="proj-title">기록하는 갤러리<br>독립출판 'U#'</h2>
+                        <p class="proj-desc">빠르게 소비되지 않는 <span class="highlight">단단한 기록</span>을 남김으로써<br>우리의 역사는 넓어지고 쌓입니다.</p>
+                        <a href="https://www.unframe.kr/folio" class="btn-more">View Project <i data-lucide="arrow-right" size="14"></i></a>
+                    </div>
+                </div>
+                <div class="scroll-indicator"><i data-lucide="chevron-down"></i></div>
+            </section>
+
+            <!-- 섹션 5: Project UAU -->
+            <section id="project-uau" class="mobile-section">
+                <div class="content-box reveal-mobile">
+                    <div class="card-crane-group" onclick="this.querySelector('.flip-card').classList.toggle('flipped')">
+                        <div class="crane-line"></div>
+                        <div class="flip-card">
+                            <div class="flip-card-inner">
+                                <div class="flip-card-front">
+                                    <div class="claw-decoration"></div>
+                                    <img src="https://cdn.imweb.me/upload/S20251125a08fc62b773e4/aa67c8758594d.png" alt="UAU"><div class="absolute bottom-3 right-3 text-[#004aad] opacity-70 animate-pulse"><i data-lucide="touchpad" size="20"></i></div></div>
+                                <div class="flip-card-back">
+                                    <h3 class="text-lg font-black mb-2">ARTIST UNIT 'U.A.U'</h3><p class="text-xs break-keep opacity-90">연결된 창작 멤버십</p></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="proj-title">연결되는 갤러리<br>아티스트 유닛 'U.A.U'</h2>
+                        <p class="proj-desc">경쟁보다는 공존의 방식을 함께 찾아가며<br>지속 가능한 <span class="highlight">커뮤니티</span>를 실험합니다.</p>
+                        <a href="https://www.unframe.kr/UAU" class="btn-more">View Project <i data-lucide="arrow-right" size="14"></i></a>
+                    </div>
+                </div>
+                <div class="scroll-indicator"><i data-lucide="chevron-down"></i></div>
+            </section>
+
+            <!-- 섹션 6: 푸터 -->
+            <section id="footer" class="footer-mobile mobile-section">
+                <div class="content-box flex flex-col justify-center h-full py-10 px-4 reveal-mobile">
+                    <div class="mb-8">
+                        <div class="footer-logo">UNFRAME</div>
+                        <div class="footer-slogan">Breaking frames, Building resonance.</div>
+                    </div>
+                    <div class="mb-8">
+                        <div class="footer-group">
+                            <h4><span class="footer-icon-wrap mr-1.5"><i data-lucide="box" size="14"></i></span> 장소 및 운영안내</h4>
+                            <div class="footer-text">서울 종로구 인사동4길 17, 108호<br>(화-일) 11:00am - 07:00pm<br>T. 0502-1322-8906</div>
+                        </div>
+                        <div class="footer-group">
+                            <h4><span class="footer-icon-wrap mr-1.5"><i data-lucide="box" size="14"></i></span> UNFRAME</h4>
+                            <div class="footer-text">대표: 김재우 | 개인정보관리자: 박소연<br>사업자번호: 668-27-02010</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="mb-6 space-x-2 text-[10px] font-bold underline">
+                            <a href="/terms">이용약관</a>
+                            <a href="/privacy">개인정보처리방침</a>
+                        </div>
+                        <div class="flex justify-center gap-6 mb-6 text-[#004aad]">
+                            <a href="https://www.instagram.com/unframe.kr" target="_blank"><i data-lucide="instagram"></i></a>
+                            <a href="https://www.youtube.com/@unframe_kr" target="_blank"><i data-lucide="youtube"></i></a>
+                        </div>
+                        <div class="text-[9px] opacity-60 font-light">Copyright © 2025 UNFRAME All rights reserved.</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- [스크립트 통합 제어실] -->
+    <script>
+        // 1. 아이콘 그리기 (데스크탑 & 모바일 공통)
+        lucide.createIcons();
+
+        // 2. [데스크탑 전용] 스크롤 애니메이션 (Reveal)
+        function checkDesktopReveal() {
+            // 모바일 뷰일때는 실행하지 않음 (성능 절약)
+            if (window.innerWidth <= 960) return;
+
+            var reveals = document.querySelectorAll(".reveal");
+            for (var i = 0; i < reveals.length; i++) {
+                var windowHeight = window.innerHeight; 
+                var elementTop = reveals[i].getBoundingClientRect().top; 
+                var elementVisible = 100; 
+                if (elementTop < windowHeight - elementVisible) {
+                    reveals[i].classList.add("active"); 
+                }
+            }
+        }
+
+        // 3. [모바일 전용] 스크롤 스냅 & 크레인 재생
+        function initMobileFeatures() {
+            // 데스크탑일때는 실행하지 않음
+            if (window.innerWidth > 960) return;
+
+            const reveals = document.querySelectorAll('.reveal-mobile');
+            reveals.forEach(el => el.classList.add('waiting'));
+
+            const snapContainer = document.querySelector('.snap-container');
+            if (!snapContainer) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.remove('waiting');
+                        entry.target.classList.add('active');
+                        // 크레인 애니메이션 트리거
+                        const crane = entry.target.querySelector('.card-crane-group');
+                        if (crane) crane.style.animationPlayState = 'running';
+                    }
+                });
+            }, { root: snapContainer, threshold: 0.1 });
+
+            reveals.forEach(el => observer.observe(el));
+        }
+
+        // 이벤트 리스너 등록 (창 크기 조절 시에도 반응)
+        window.addEventListener("scroll", checkDesktopReveal);
+        window.addEventListener("load", () => {
+            checkDesktopReveal();
+            initMobileFeatures();
+        });
+        window.addEventListener("resize", () => {
+            checkDesktopReveal();
+            initMobileFeatures();
+        });
+    </script>
+</body>
+</html>

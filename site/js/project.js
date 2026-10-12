@@ -1,0 +1,11 @@
+import {chrome} from './ui.js';
+import {PROJECTS} from './projects.js';
+import {escapeHTML as e} from './model.js';
+chrome(false);
+const arrow='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg>';
+document.querySelector('#project-index').innerHTML=PROJECTS.map(p=>`<a href="#${p.id}" class="project-preview"><div class="preview-art"><img src="/assets/projects/${p.image}.webp" width="560" height="760" alt="${e(p.subtitle+' '+p.name+' 공식 포스터')}" fetchpriority="${p.id==='up'?'high':'auto'}"></div><span class="preview-name">${e(p.name)}${arrow}</span><span class="preview-type">${e(p.type)}</span></a>`).join('');
+document.querySelector('#project-nav').innerHTML=PROJECTS.map(p=>`<a href="#${p.id}" data-project="${p.id}">${e(p.name)}<span>${e(p.title)}</span></a>`).join('');
+document.querySelector('#project-stories').innerHTML=PROJECTS.map(p=>`<section class="project-story" id="${p.id}" aria-labelledby="title-${p.id}"><div class="story-art"><figure><img src="/assets/projects/${p.image}.webp" width="560" height="760" loading="lazy" alt="${e(p.subtitle+' '+p.name+' 공식 포스터')}"><figcaption>${e(p.subtitle)} ‘${e(p.name)}’</figcaption></figure><span class="art-word" aria-hidden="true">${e(p.name)}</span></div><div class="story-copy"><div class="story-title"><h2 id="title-${p.id}">${e(p.name)}</h2><span>${e(p.type)}</span></div><h3>${e(p.title)}</h3><p class="story-summary">${e(p.summary)}</p><div class="story-paragraphs">${p.paragraphs.map(text=>`<p>${e(text)}</p>`).join('')}</div><ul class="story-notes">${p.notes.map(n=>`<li>${e(n)}</li>`).join('')}</ul><a class="project-outbound" href="${e(p.url)}" target="_blank" rel="noopener">${e(p.action)}${arrow}<span class="sr-only">새 창에서 열기</span></a></div></section>`).join('');
+const links=[...document.querySelectorAll('[data-project]')];
+const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting)for(const link of links){const active=link.dataset.project===entry.target.id;link.toggleAttribute('data-active',active);if(active)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');}},{rootMargin:'-15% 0px -55% 0px'});
+document.querySelectorAll('.project-story').forEach(s=>observer.observe(s));
