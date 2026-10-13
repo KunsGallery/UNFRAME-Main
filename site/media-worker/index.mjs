@@ -42,8 +42,8 @@ export async function handle(request,env,fetcher=fetch){
   if(request.method==='GET'){
    // Anonymous Firestore reads enforce published=true. Never cache this authorization decision.
    const record=await document(env,`${path.collection}/${path.id}`,null,fetcher);
-   const maps=[record?.cover?.mapValue?.fields,...(record?.gallery?.arrayValue?.values||[]).map(v=>v.mapValue?.fields)];
-   const published=record?.published?.booleanValue===true&&maps.some(v=>v?.path?.stringValue===path.key);
+   const references=[record?.cover?.mapValue?.fields?.path?.stringValue,...(record?.gallery?.arrayValue?.values||[]).map(value=>typeof value.stringValue==='string'?value.stringValue.split('\u001f')[0]:value.mapValue?.fields?.path?.stringValue)];
+   const published=record?.published?.booleanValue===true&&references.includes(path.key);
    if(!published){if(!token)fail(404,'이미지를 찾을 수 없습니다.');await staff(env,token,fetcher);}
    const object=await env.MEDIA.get(path.key);if(!object)fail(404,'이미지를 찾을 수 없습니다.');
    headers.set('Content-Type',path.type);headers.set('ETag',object.httpEtag);return new Response(object.body,{headers});

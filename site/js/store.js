@@ -1,3 +1,4 @@
+import {encodeGallery,decodeGallery} from './gallery-codec.js';
 import {CONFIG} from '../config.js';
 import {DEMO_EXHIBITIONS} from './demo.js';
 import {validateExhibition,todaySeoul} from './model.js';
@@ -12,14 +13,14 @@ async function firebase() {
  api={auth,db,a:auth.getAuth(instance),d:db.getFirestore(instance)}; return api;
 }
 const localRead=()=>JSON.parse(localStorage.getItem(key)||'null') || structuredClone(DEMO_EXHIBITIONS);
-const normalize=doc=>({...doc.data(),id:doc.id});
+const normalize=doc=>{const data=doc.data();return {...data,gallery:decodeGallery(data.gallery),id:doc.id};};
 export async function listExhibitions(admin=false) { if(demo) return localRead().filter(x=>admin||x.published); const f=await firebase(); const collection=f.db.collection(f.d,'exhibitions'); const request=admin?collection:f.db.query(collection,f.db.where('published','==',true)); return (await f.db.getDocs(request)).docs.map(normalize); }
 export async function getExhibition(id) { if(demo) return localRead().find(x=>x.id===id)||null; const f=await firebase(); const doc=await f.db.getDoc(f.db.doc(f.d,'exhibitions',id)); return doc.exists()?normalize(doc):null; }
 export async function session() { if(demo) return null; const f=await firebase(); await f.a.authStateReady(); return f.a.currentUser; }
 export async function login() { if(demo) throw new Error('샘플 모드에서는 Google 로그인을 사용하지 않습니다.'); const f=await firebase(); return (await f.auth.signInWithPopup(f.a,new f.auth.GoogleAuthProvider())).user; }
 export async function logout() { if(!demo){const f=await firebase(); await f.auth.signOut(f.a);} }
 export async function isStaff(user) { if(demo) return false; if(!user?.emailVerified) return false; const f=await firebase(); const record=await f.db.getDoc(f.db.doc(f.d,'staffEmails',user.email)); return record.exists()&&record.data().active===true && record.data().email===user.email; }
-export async function saveExhibition(item) { validateExhibition(item); const data={...item,updatedAt:new Date().toISOString()}; if(demo){const list=localRead(); const at=list.findIndex(x=>x.id===item.id); if(at<0)list.push(data);else list[at]=data; try{localStorage.setItem(key,JSON.stringify(list));}catch{throw new Error('샘플 저장 공간이 부족합니다. 이미지 수나 크기를 줄여주세요.');}return data;} const f=await firebase(); const existing=await f.db.getDocs(f.db.query(f.db.collection(f.d,'exhibitions'),f.db.where('slug','==',data.slug))); if(existing.docs.some(x=>x.id!==data.id)) throw new Error('이미 사용 중인 전시 주소입니다. 다른 주소를 입력해주세요.'); const {id,...record}=data; record.cover={...record.cover,url:record.cover.path?'':record.cover.url}; record.gallery=record.gallery.map(im=>({...im,url:im.path?'':im.url})); record.imagePaths=[record.cover,...record.gallery].map(im=>im.path).filter(Boolean); await f.db.setDoc(f.db.doc(f.d,'exhibitions',id),record); return data; }
+export async function saveExhibition(item) { validateExhibition(item); const data={...item,updatedAt:new Date().toISOString()}; if(demo){const list=localRead(); const at=list.findIndex(x=>x.id===item.id); if(at<0)list.push(data);else list[at]=data; try{localStorage.setItem(key,JSON.stringify(list));}catch{throw new Error('샘플 저장 공간이 부족합니다. 이미지 수나 크기를 줄여주세요.');}return data;} const f=await firebase(); const existing=await f.db.getDocs(f.db.query(f.db.collection(f.d,'exhibitions'),f.db.where('slug','==',data.slug))); if(existing.docs.some(x=>x.id!==data.id)) throw new Error('이미 사용 중인 전시 주소입니다. 다른 주소를 입력해주세요.'); const {id,...record}=data; record.cover={...record.cover,url:record.cover.path?'':record.cover.url}; record.imagePaths=[record.cover,...record.gallery].map(im=>im.path).filter(Boolean); record.gallery=encodeGallery(record.gallery); await f.db.setDoc(f.db.doc(f.d,'exhibitions',id),record); return data; }
 export async function deleteExhibition(id) { if(demo){localStorage.setItem(key,JSON.stringify(localRead().filter(x=>x.id!==id)));return;} const f=await firebase(); await f.db.deleteDoc(f.db.doc(f.d,'exhibitions',id)); }
 export async function uploadImage(file,id,onProgress=()=>{},collection='exhibitions') {
  if(!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error('JPG, PNG, WebP 이미지만 업로드할 수 있습니다.');

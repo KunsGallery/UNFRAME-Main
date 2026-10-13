@@ -3,6 +3,9 @@
 // All exhibition writes require verified Google sign-in plus a matching active staff record.
 // staffEmails/{email}: email + active, managed by trusted project administrators.
 // Image paths are scoped to the exhibition; uploads are handled by the R2 Worker.
+// Gallery writes use [path, alt, caption] strings joined by US (U+001F).
+// Dual RS/GS joins validate every entry within the Firestore expression budget.
+// Legacy image maps remain readable and supported for smaller existing forms.
 // homeHighlights/{id}: public published event/virtual cards; staff manage drafts.
 // Required bounded fields: kind, title, summary, project, url, dates, cover,
 // published, featured, order and updatedAt. Cover URLs stay empty; R2 paths use the card ID.
@@ -16,87 +19,82 @@ service cloud.firestore {
     && get(/databases/$(database)/documents/staffEmails/$(request.auth.token.email)).data.active == true
     && get(/databases/$(database)/documents/staffEmails/$(request.auth.token.email)).data.email == request.auth.token.email;
   }
-  function validImage(image,id) {
-   return image is map && image.keys().hasAll(['url','path','alt'])
-    && image.keys().hasOnly(['url','path','alt','caption'])
-    && image.url == '' && image.path is string && image.path.size()<=512
-    && (image.path == '' || image.path.matches('^exhibitions/'+id+'/[^/]+$'))
-    && image.alt is string && image.alt.size()<=1000
-    && (!('caption' in image) || (image.caption is string && image.caption.size()<=2000));
+  function validImage(image,pattern) {
+   // Required field access and matches() reject absent or wrongly typed fields.
+   let caption = image.get('caption','');
+   return image.keys().hasOnly(['url','path','alt','caption'])
+    && image.url == '' && image.path.matches(pattern)
+    && image.alt.matches('^[\\s\\S]{0,1000}$')
+    && caption.matches('^[\\s\\S]{0,1000}[\\s\\S]{0,1000}$');
   }
-  function galleryItem(items,i,id) { return items.size()<=i || validImage(items[i],id); }
-  function imagePath(items,i) { return items.size()<=i || (items[i] is string && items[i].size()<=512); }
+  // Short lazy chains avoid validating absent legacy entries.
+  function galleryGroup0(items,count,pattern) {
+   return (count<=0 ? true : (validImage(items[0],pattern) &&
+    (count<=1 ? true : (validImage(items[1],pattern) &&
+    (count<=2 ? true : (validImage(items[2],pattern) &&
+    (count<=3 ? true : (validImage(items[3],pattern) &&
+    (count<=4 ? true : (validImage(items[4],pattern) &&
+    galleryGroup5(items,count,pattern)))))))))));
+  }
+  function galleryGroup5(items,count,pattern) {
+   return (count<=5 ? true : (validImage(items[5],pattern) &&
+    (count<=6 ? true : (validImage(items[6],pattern) &&
+    (count<=7 ? true : (validImage(items[7],pattern) &&
+    (count<=8 ? true : (validImage(items[8],pattern) &&
+    (count<=9 ? true : (validImage(items[9],pattern) &&
+    galleryGroup10(items,count,pattern)))))))))));
+  }
+  function galleryGroup10(items,count,pattern) {
+   return (count<=10 ? true : (validImage(items[10],pattern) &&
+    (count<=11 ? true : (validImage(items[11],pattern) &&
+    (count<=12 ? true : (validImage(items[12],pattern) &&
+    (count<=13 ? true : (validImage(items[13],pattern) &&
+    (count<=14 ? true : (validImage(items[14],pattern) &&
+    galleryGroup15(items,count,pattern)))))))))));
+  }
+  function galleryGroup15(items,count,pattern) {
+   return (count<=15 ? true : (validImage(items[15],pattern) &&
+    (count<=16 ? true : (validImage(items[16],pattern) &&
+    (count<=17 ? true : (validImage(items[17],pattern) &&
+    (count<=18 ? true : (validImage(items[18],pattern) &&
+    (count<=19 ? true : (validImage(items[19],pattern) &&
+    galleryGroup20(items,count,pattern)))))))))));
+  }
+  function galleryGroup20(items,count,pattern) {
+   return (count<=20 ? true : (validImage(items[20],pattern) &&
+    (count<=21 ? true : (validImage(items[21],pattern) &&
+    (count<=22 ? true : (validImage(items[22],pattern) &&
+    (count<=23 ? true : (validImage(items[23],pattern) &&
+    (count<=24 ? true : (validImage(items[24],pattern) &&
+    galleryGroup25(items,count,pattern)))))))))));
+  }
+  function galleryGroup25(items,count,pattern) {
+   return (count<=25 ? true : (validImage(items[25],pattern) &&
+    (count<=26 ? true : (validImage(items[26],pattern) &&
+    (count<=27 ? true : (validImage(items[27],pattern) &&
+    (count<=28 ? true : (validImage(items[28],pattern) &&
+    (count<=29 ? true : (validImage(items[29],pattern) &&
+    true))))))))));
+  }
+  function validLegacyGallery(items,id) { return galleryGroup0(items,items.size(),'^$|^exhibitions/'+id+'/[^/]{1,400}$'); }
   function validGallery(items,id) {
-   return items is list && items.size()<=30
-    && galleryItem(items,0,id)
-    && galleryItem(items,1,id)
-    && galleryItem(items,2,id)
-    && galleryItem(items,3,id)
-    && galleryItem(items,4,id)
-    && galleryItem(items,5,id)
-    && galleryItem(items,6,id)
-    && galleryItem(items,7,id)
-    && galleryItem(items,8,id)
-    && galleryItem(items,9,id)
-    && galleryItem(items,10,id)
-    && galleryItem(items,11,id)
-    && galleryItem(items,12,id)
-    && galleryItem(items,13,id)
-    && galleryItem(items,14,id)
-    && galleryItem(items,15,id)
-    && galleryItem(items,16,id)
-    && galleryItem(items,17,id)
-    && galleryItem(items,18,id)
-    && galleryItem(items,19,id)
-    && galleryItem(items,20,id)
-    && galleryItem(items,21,id)
-    && galleryItem(items,22,id)
-    && galleryItem(items,23,id)
-    && galleryItem(items,24,id)
-    && galleryItem(items,25,id)
-    && galleryItem(items,26,id)
-    && galleryItem(items,27,id)
-    && galleryItem(items,28,id)
-    && galleryItem(items,29,id)
-   ;
+   let image = 'exhibitions/'+id+'/[^/\u001f\u001e\u001d]{1,400}\u001f[^\u001f\u001e\u001d]{0,1000}\u001f[^\u001f\u001e\u001d]{0,1000}[^\u001f\u001e\u001d]{0,1000}';
+   return items is list && items.size()<=30 && (items.size()==0 ? true :
+    (items[0] is string ?
+     (items.join('\u001e').matches('^'+image+'(\u001e'+image+')*$')
+      && items.join('\u001d').matches('^'+image+'(\u001d'+image+')*$'))
+     : validLegacyGallery(items,id)));
   }
-  function validPaths(items) {
+  function validPaths(items,id) {
+   let prefix = 'exhibitions/'+id+'/';
+   // Both separators must agree, so embedded separators cannot disguise an oversized entry.
    return items is list && items.size()<=31
-    && imagePath(items,0)
-    && imagePath(items,1)
-    && imagePath(items,2)
-    && imagePath(items,3)
-    && imagePath(items,4)
-    && imagePath(items,5)
-    && imagePath(items,6)
-    && imagePath(items,7)
-    && imagePath(items,8)
-    && imagePath(items,9)
-    && imagePath(items,10)
-    && imagePath(items,11)
-    && imagePath(items,12)
-    && imagePath(items,13)
-    && imagePath(items,14)
-    && imagePath(items,15)
-    && imagePath(items,16)
-    && imagePath(items,17)
-    && imagePath(items,18)
-    && imagePath(items,19)
-    && imagePath(items,20)
-    && imagePath(items,21)
-    && imagePath(items,22)
-    && imagePath(items,23)
-    && imagePath(items,24)
-    && imagePath(items,25)
-    && imagePath(items,26)
-    && imagePath(items,27)
-    && imagePath(items,28)
-    && imagePath(items,29)
-    && imagePath(items,30)
-   ;
+    && items.join('|').matches('^$|^'+prefix+'[^/|~]{1,400}(\\|'+prefix+'[^/|~]{1,400})*$')
+    && items.join('~').matches('^$|^'+prefix+'[^/|~]{1,400}(~'+prefix+'[^/|~]{1,400})*$');
   }
   function valid(data,id) {
-   return data.keys().hasAll(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths'])
+   return id.size()<=100 && id.matches('^[A-Za-z0-9_-]+$')
+    && data.keys().hasAll(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths'])
     && data.keys().hasOnly(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths'])
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.slug is string && data.slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && data.slug.size()<=200
@@ -111,9 +109,9 @@ service cloud.firestore {
     && data.address is string && data.address.size()<=1000
     && data.mapUrl is string && data.mapUrl.size()<=2000
     && data.bookingUrl is string && data.bookingUrl.size()<=2000
-    && validImage(data.cover,id) && validGallery(data.gallery,id)
+    && validImage(data.cover,'^$|^exhibitions/'+id+'/[^/]{1,400}$') && validGallery(data.gallery,id)
     && data.published is bool && data.order is int && data.order>=0 && data.order<=1000000
-    && validPaths(data.imagePaths)
+    && validPaths(data.imagePaths,id)
     && data.updatedAt is string && data.updatedAt.size()<=50
     && (!data.published || (data.description.size()>0 && data.cover.path.matches('^exhibitions/'+id+'/[^/]+$')));
   }
