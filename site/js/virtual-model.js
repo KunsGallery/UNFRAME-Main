@@ -1,11 +1,14 @@
-export const THEMES={white:'화이트',black:'블랙 헤링본','herringbone-wood':'우드 헤링본',wood:'내추럴 우드'};
+export const THEMES={white:'화이트',black:'블랙 헤링본','herringbone-wood':'우드 헤링본',wood:'내추럴 우드',urethane:'새틴 우레탄'};
 export const WALLS={front:'전면 벽',right:'우측 벽',left:'좌측 벽'};
 export const FRAMES={canvas:'캔버스 (테두리 없음)',black:'블랙 액자',white:'화이트 액자',wood:'우드 액자',none:'프레임 없음 (종이)'};
-export const defaultGallery=exhibition=>({title:exhibition.title,subtitle:exhibition.summary||'',published:false,theme:'white',wallColor:'#f6f4ee',brightness:1,speed:2.5,outdoor:true,showPrices:false});
+export const LIGHTING={general:'전체 조명',focused:'작품 중심 조명'};
+export const CEILINGS={plain:'일반 천장',luminous:'광천장'};
+export const CANVAS_EDGES={natural:'자연색 캔버스',black:'검정 측면',image:'이미지 감싸기'};
+export const defaultGallery=exhibition=>({title:exhibition.title,subtitle:exhibition.summary||'',published:false,lighting:'general',ceiling:'luminous',theme:'white',wallColor:'#f6f4ee',brightness:1,speed:2.5,outdoor:true,showPrices:false});
 export const galleryExhibitionId=(id,settings)=>settings.exhibitionId||id;
 export const defaultArtistGallery=(exhibition,artistName,order=0)=>({...defaultGallery(exhibition),title:`${artistName} · ${exhibition.title}`.slice(0,200),subtitle:'',exhibitionId:exhibition.id,artistName,order});
 export const sortVirtualGalleries=items=>[...items].sort((a,b)=>Number(!!a.settings.artistName)-Number(!!b.settings.artistName)||(a.settings.order||0)-(b.settings.order||0)||a.settings.title.localeCompare(b.settings.title));
-export const emptyArtwork=()=>({id:crypto.randomUUID(),title:'',titleEn:'',artist:'',year:'',medium:'',widthCm:80,heightCm:100,price:'',description:'',wall:'front',frame:'canvas',order:0,image:{url:'',path:'',alt:''}});
+export const emptyArtwork=()=>({id:crypto.randomUUID(),title:'',titleEn:'',artist:'',year:'',medium:'',widthCm:80,heightCm:100,price:'',description:'',wall:'front',frame:'canvas',canvasThickness:3.5,canvasEdge:'natural',order:0,image:{url:'',path:'',alt:''}});
 const bounded=(value,max,min=0)=>typeof value==='string'&&value.length>=min&&value.length<=max;
 const between=(value,min,max)=>Number.isFinite(value)&&value>=min&&value<=max;
 export function validateGallery(data,artworks=[]){
@@ -14,6 +17,7 @@ export function validateGallery(data,artworks=[]){
  }
  if(!bounded(data.title,200,1)||!bounded(data.subtitle,1000))throw new Error('갤러리 제목은 200자, 소개는 1,000자 이내로 입력해주세요.');
  if(!Object.hasOwn(THEMES,data.theme)||!/^#[0-9a-fA-F]{6}$/.test(data.wallColor)||!between(data.brightness,.5,1.8)||!between(data.speed,1,5))throw new Error('공간 설정 값을 확인해주세요.');
+ if(data.lighting!==undefined&&!Object.hasOwn(LIGHTING,data.lighting)||data.ceiling!==undefined&&!Object.hasOwn(CEILINGS,data.ceiling))throw new Error('조명과 천장 설정을 확인해주세요.');
  if(['published','outdoor','showPrices'].some(key=>typeof data[key]!=='boolean'))throw new Error('게시 및 공간 설정을 확인해주세요.');
  if(data.published&&!artworks.length)throw new Error('공개하려면 작품을 한 점 이상 등록해주세요.');
  if(data.published)layoutArtworks(artworks);
@@ -24,13 +28,14 @@ export function validateArtwork(data){
  for(const [key,max] of Object.entries({titleEn:200,year:20,medium:500,price:100,description:5000}))if(!bounded(data[key],max))throw new Error('작품 정보의 글자 수를 확인해주세요.');
  if(!between(data.widthCm,10,500)||!between(data.heightCm,10,500))throw new Error('작품의 가로·세로 크기는 10~500cm로 입력해주세요.');
  if(!Object.hasOwn(WALLS,data.wall)||!Object.hasOwn(FRAMES,data.frame)||!Number.isInteger(data.order)||!between(data.order,0,1000000))throw new Error('작품 배치와 노출 순서를 확인해주세요.');
+ if(data.canvasThickness!==undefined&&!between(data.canvasThickness,.5,10)||data.canvasEdge!==undefined&&!Object.hasOwn(CANVAS_EDGES,data.canvasEdge))throw new Error('캔버스 두께는 0.5~10cm, 측면 표현은 선택 항목으로 입력해주세요.');
  if(!data.image?.url&&!data.image?.path)throw new Error('작품 이미지를 업로드해주세요.');
  if(!bounded(data.image?.alt,1000))throw new Error('이미지 설명은 1,000자 이내로 입력해주세요.');
  return data;
 }
-export function artworkMount(frame){
+export function artworkMount(frame,thickness=3.5){
  const framed=['black','white','wood'].includes(frame);
- return {framed,border:framed?.12:0,depth:framed?.08:frame==='canvas'?.035:.004};
+ return {framed,border:framed?.12:0,depth:framed?.08:frame==='canvas'?thickness/100:.004};
 }
 // Centimetres become metres without scaling. Reflow actual footprints and reject
 // arrangements exceeding the usable wall area (10m wide, 3.6m high).

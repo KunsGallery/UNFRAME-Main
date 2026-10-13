@@ -273,4 +273,53 @@ await expectStatus('legacy parent draft hides legacy root',403,request(`virtualG
 await expectStatus('delete artist parent',200,request(`exhibitions/${artistParent}`,{method:'DELETE',auth:'owner'}));
 await expectStatus('orphaned artist query denied',403,artistQuery([['exhibitionId',artistParent],['published',true]]));
 await expectStatus('orphaned artist artwork edit denied',403,request(`virtualGalleries/${artistIds[0]}/artworks/${artid}`,{method:'PATCH',data:artistArtwork(artistIds[0])}));
+// Optional lighting/ceiling and canvas properties keep legacy settings valid.
+const upgradeParent='rules-upgrade-parent';const upgradeArtist='artist-rules-upgrade';
+await expectStatus('seed optional-upgrade parent',200,request(`exhibitions/${upgradeParent}`,{method:'PATCH',data:fixture(upgradeParent)}));
+const enhancedSettings={...settings,theme:'urethane',lighting:'focused',ceiling:'luminous'};
+for(const galleryId of [upgradeParent,upgradeArtist]){
+ const galleryPath=`virtualGalleries/${galleryId}`;
+ const artworkPath=`${galleryPath}/artworks/${artid}`;
+ const association=galleryId===upgradeParent?{}:{exhibitionId:upgradeParent,artistName:'선택 설정 작가',order:0};
+ const legacySettings={...settings,...association};
+ const enhanced={...enhancedSettings,...association};
+ const baseArtwork=artistArtwork(galleryId);
+ await expectStatus(`${galleryId}: clear optional fixture`,200,request(galleryPath,{method:'DELETE',auth:'owner'}));
+ await expectStatus(`${galleryId}: optional settings create`,200,request(galleryPath,{method:'PATCH',data:enhanced}));
+ await expectStatus(`${galleryId}: optional settings update`,200,request(galleryPath,{method:'PATCH',data:{...enhanced,lighting:'general',ceiling:'plain'}}));
+ await expectStatus(`${galleryId}: legacy settings update`,200,request(galleryPath,{method:'PATCH',data:legacySettings}));
+ const invalidSettings=[['lighting enum',{lighting:'spotlight'}],['lighting type',{lighting:1}],['lighting null',{lighting:null}],['ceiling enum',{ceiling:'open'}],['ceiling type',{ceiling:true}],['invalid floor',{theme:'plastic'}]];
+ for(const [label,extra] of invalidSettings){
+  await expectStatus(`${galleryId} ${label}: clear`,200,request(galleryPath,{method:'DELETE',auth:'owner'}));
+  await expectStatus(`${galleryId} ${label}: create denied`,403,request(galleryPath,{method:'PATCH',data:{...legacySettings,...extra}}));
+  await expectStatus(`${galleryId} ${label}: seed`,200,request(galleryPath,{method:'PATCH',data:legacySettings}));
+  await expectStatus(`${galleryId} ${label}: update denied`,403,request(galleryPath,{method:'PATCH',data:{...legacySettings,...extra}}));
+ }
+ await expectStatus(`${galleryId}: clear canvas fixture`,200,request(artworkPath,{method:'DELETE',auth:'owner'}));
+ await expectStatus(`${galleryId}: canvas optional create minimum`,200,request(artworkPath,{method:'PATCH',data:{...baseArtwork,frame:'canvas',canvasThickness:0.5,canvasEdge:'natural'}}));
+ await expectStatus(`${galleryId}: canvas optional update maximum`,200,request(artworkPath,{method:'PATCH',data:{...baseArtwork,frame:'canvas',canvasThickness:10,canvasEdge:'black'}}));
+ await expectStatus(`${galleryId}: canvas optional image edge`,200,request(artworkPath,{method:'PATCH',data:{...baseArtwork,canvasThickness:3.5,canvasEdge:'image'}}));
+ await expectStatus(`${galleryId}: legacy artwork unchanged`,200,request(artworkPath,{method:'PATCH',data:baseArtwork}));
+ const invalidCanvas=[['thickness type',{canvasThickness:'3.5'}],['thickness null',{canvasThickness:null}],['thickness minimum',{canvasThickness:0.49}],['thickness maximum',{canvasThickness:10.01}],['edge enum',{canvasEdge:'wood'}],['edge type',{canvasEdge:1}],['edge null',{canvasEdge:null}]];
+ for(const [label,extra] of invalidCanvas){
+  await expectStatus(`${galleryId} ${label}: clear`,200,request(artworkPath,{method:'DELETE',auth:'owner'}));
+  await expectStatus(`${galleryId} ${label}: create denied`,403,request(artworkPath,{method:'PATCH',data:{...baseArtwork,...extra}}));
+  await expectStatus(`${galleryId} ${label}: seed`,200,request(artworkPath,{method:'PATCH',data:baseArtwork}));
+  await expectStatus(`${galleryId} ${label}: update denied`,403,request(artworkPath,{method:'PATCH',data:{...baseArtwork,...extra}}));
+ }
+ await expectStatus(`${galleryId}: restore enhanced settings`,200,request(galleryPath,{method:'PATCH',data:enhanced}));
+ await expectStatus(`${galleryId}: enhanced public settings read`,200,request(galleryPath,{auth:null}));
+ await expectStatus(`${galleryId}: enhanced artwork public read`,200,request(artworkPath,{auth:null}));
+ await expectStatus(`${galleryId}: anonymous enhanced settings denied`,403,request(galleryPath,{method:'PATCH',data:enhanced,auth:null}));
+ await expectStatus(`${galleryId}: anonymous enhanced artwork denied`,403,request(artworkPath,{method:'PATCH',data:{...baseArtwork,canvasThickness:3.5,canvasEdge:'image'},auth:null}));
+ await expectStatus(`${galleryId}: enhanced draft settings save`,200,request(galleryPath,{method:'PATCH',data:{...enhanced,published:false}}));
+ await expectStatus(`${galleryId}: enhanced draft settings public denied`,403,request(galleryPath,{auth:null}));
+ await expectStatus(`${galleryId}: enhanced draft artwork public denied`,403,request(artworkPath,{auth:null}));
+ await expectStatus(`${galleryId}: restore publication`,200,request(galleryPath,{method:'PATCH',data:enhanced}));
+}
+await expectStatus('enhanced parent unpublish',200,request(`exhibitions/${upgradeParent}`,{method:'PATCH',data:{...fixture(upgradeParent),published:false}}));
+for(const galleryId of [upgradeParent,upgradeArtist]){
+ await expectStatus('enhanced settings unpublished parent denied',403,request(`virtualGalleries/${galleryId}`,{auth:null}));
+ await expectStatus('enhanced artwork unpublished parent denied',403,request(`virtualGalleries/${galleryId}/artworks/${artid}`,{auth:null}));
+}
 console.log(`Firestore emulator: ${checks} checks passed.`);

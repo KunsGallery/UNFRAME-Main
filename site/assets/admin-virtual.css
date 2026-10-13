@@ -3,3 +3,5 @@
 
 .virtual-gallery-row{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 0;border-bottom:1px solid #d9dcd6}.virtual-gallery-row h3{font-size:22px;margin:0 0 8px;overflow-wrap:anywhere}.virtual-gallery-row p{font-size:14px;margin:0 0 8px;overflow-wrap:anywhere}.virtual-gallery-row small{font-size:12px;color:#4d5851}.virtual-gallery-row .actions{flex-wrap:wrap;justify-content:flex-end}.virtual-admin>#create-artist-gallery,.virtual-admin>.editor-section{margin-bottom:24px}
 @media(max-width:700px){.virtual-gallery-row{display:block}.virtual-gallery-row .actions{justify-content:flex-start;margin-top:20px}}
+
+#virtual-canvas-options[hidden]{display:none}

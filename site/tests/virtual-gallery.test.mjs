@@ -1,4 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
+import {environmentOptions} from '../js/virtual-environment.js';
 import {defaultGallery,emptyArtwork,validateArtwork,validateGallery,layoutArtworks,artworkMount} from '../js/virtual-model.js';
 test('gallery publication requires real saved works, valid settings and bounded editorial data',()=>{
  const gallery=defaultGallery({title:'전시',summary:''});assert.doesNotThrow(()=>validateGallery(gallery));
@@ -37,3 +38,15 @@ test('canvas adds thickness with no border, paper stays thin, and framed works r
  assert.deepEqual(artworkMount('none'),{framed:false,border:0,depth:.004});
  assert.deepEqual(artworkMount('black'),{framed:true,border:.12,depth:.08});
 });
+
+test('optional finishes preserve legacy defaults and physical canvas dimensions',()=>{
+ const base=defaultGallery({title:'전시',summary:''});
+ for(const lighting of ['general','focused'])for(const ceiling of ['plain','luminous'])assert.doesNotThrow(()=>validateGallery({...base,lighting,ceiling,theme:'urethane'}));
+ const legacy={...base};delete legacy.lighting;delete legacy.ceiling;assert.doesNotThrow(()=>validateGallery(legacy));
+ for(const extra of [{lighting:'spot'},{ceiling:'glass'},{theme:'unknown'}])assert.throws(()=>validateGallery({...base,...extra}));
+ const art={...emptyArtwork(),title:'작품',artist:'작가',image:{path:'virtualGalleries/ex/art/image.webp',url:'',alt:''},canvasThickness:5,canvasEdge:'image'};
+ assert.doesNotThrow(()=>validateArtwork(art));assert.equal(artworkMount('canvas',5).depth,.05);assert.equal(artworkMount('black',5).depth,.08);assert.deepEqual(layoutArtworks([art])[0].size,[.8,1]);
+ for(const extra of [{canvasThickness:0},{canvasThickness:11},{canvasThickness:'5'},{canvasEdge:'unknown'}])assert.throws(()=>validateArtwork({...art,...extra}));
+});
+
+test('legacy environment uses general lighting and plain ceiling without replacing outdoor visibility',()=>{assert.deepEqual(environmentOptions({outdoor:true}),{lighting:'general',ceiling:'plain',outdoor:true});assert.equal(environmentOptions({outdoor:false}).outdoor,false);});

@@ -183,11 +183,13 @@ service cloud.firestore {
   function validVirtualGallery(data,exid) {
    return virtualId(exid)
     && data.keys().hasAll(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt'])
-    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order'])
+    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order','lighting','ceiling'])
     && validVirtualAssociation(data,exid)
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.subtitle is string && data.subtitle.size()<=1000
-    && data.published is bool && data.theme in ['white','black','herringbone-wood','wood']
+    && data.published is bool && data.theme in ['white','black','herringbone-wood','wood','urethane']
+    && (!('lighting' in data) || data.lighting in ['general','focused'])
+    && (!('ceiling' in data) || data.ceiling in ['plain','luminous'])
     && data.wallColor is string && data.wallColor.matches('^#[0-9a-fA-F]{6}$')
     && data.brightness is number && data.brightness>=0.5 && data.brightness<=1.8
     && data.speed is number && data.speed>=1 && data.speed<=5
@@ -205,7 +207,7 @@ service cloud.firestore {
   function validArtwork(data,exid,artid) {
    return virtualId(exid) && virtualId(artid)
     && data.keys().hasAll(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt'])
-    && data.keys().hasOnly(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt'])
+    && data.keys().hasOnly(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt','canvasThickness','canvasEdge'])
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.titleEn is string && data.titleEn.size()<=200
     && data.artist is string && data.artist.size()>0 && data.artist.size()<=300
@@ -217,6 +219,8 @@ service cloud.firestore {
     && data.description is string && data.description.size()<=5000
     && data.wall in ['front','right','left'] && data.frame in ['black','wood','white','none','canvas']
     && data.order is int && data.order>=0 && data.order<=1000000
+    && (!('canvasThickness' in data) || (data.canvasThickness is number && data.canvasThickness>=0.5 && data.canvasThickness<=10))
+    && (!('canvasEdge' in data) || data.canvasEdge in ['natural','black','image'])
     && validArtworkImage(data.image,exid,artid)
     && data.updatedAt is string && data.updatedAt.size()<=50
     && data.updatedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?Z$');

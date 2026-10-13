@@ -1,3 +1,4 @@
+import {environmentOptions,surfaceTexture,materialTexture,buildOutdoor,canvasSideMaterials} from './virtual-environment.js';
 import {layoutArtworks,artworkMount} from './virtual-model.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
 let artworksData=[],gallerySettings;
@@ -411,7 +412,7 @@ let artworksData=[],gallerySettings;
       },
 
       createArtworkTexture: function(art) {
-        const texture=new THREE.TextureLoader().load(art.dataUrl,undefined,undefined,()=>GalleryApp.showToast('일부 작품 이미지를 불러오지 못했습니다. 작품 목록에서 다시 확인해주세요.'));
+        const texture=new THREE.TextureLoader().load(art.dataUrl,loaded=>{for(const edge of loaded.userData?.edgeMaps||[]){edge.image=loaded.image;edge.needsUpdate=true;}},undefined,()=>GalleryApp.showToast('일부 작품 이미지를 불러오지 못했습니다. 작품 목록에서 다시 확인해주세요.'));
         texture.encoding=THREE.sRGBEncoding;
         return {texture,dataUrl:art.dataUrl};
       }
@@ -510,7 +511,7 @@ let artworksData=[],gallerySettings;
         this.setupCamera();
         this.setupLights();
         this.buildGalleryRoom();
-        if(gallerySettings.outdoor)this.buildOutdoorGarden();
+        if(gallerySettings.outdoor)this.buildOutdoorGarden();else{const blank=new THREE.Mesh(new THREE.PlaneGeometry(18,5),new THREE.MeshStandardMaterial({color:0xf6f4ee,roughness:1}));blank.position.set(8.2,2.1,0);blank.rotation.y=-Math.PI/2;this.scene.add(blank);}
         this.buildArtworks();
         this.setupEvents();
 
@@ -541,8 +542,8 @@ let artworksData=[],gallerySettings;
 
       setupScene: function() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xb2d4ec);
-        this.scene.fog = new THREE.FogExp2(0xa7c28d, 0.012);
+        this.scene.background = new THREE.Color(0xe6e3db);
+        this.scene.fog = new THREE.Fog(0xe6e3db,20,45);
       },
 
       setupCamera: function() {
@@ -557,10 +558,11 @@ let artworksData=[],gallerySettings;
       },
 
       setupLights: function() {
-        const ambientLight = new THREE.AmbientLight(0xf2f7fc, 0.45);
+        const focused=environmentOptions(gallerySettings).lighting==='focused';
+        const ambientLight = new THREE.AmbientLight(0xf5f5f0, focused?.24:.6);
         this.scene.add(ambientLight);
 
-        const sunLight = new THREE.DirectionalLight(0xfff6ea, 1.4);
+        const sunLight = new THREE.DirectionalLight(0xf5f5f0, gallerySettings.outdoor?(focused?.7:1.2):.2);
         sunLight.position.set(24, 18, -6);
         sunLight.target.position.set(0, 0, 0);
         sunLight.castShadow = true;
@@ -576,7 +578,7 @@ let artworksData=[],gallerySettings;
         this.scene.add(sunLight);
         this.scene.add(sunLight.target);
 
-        const hemisphereLight = new THREE.HemisphereLight(0xe8f4ff, 0x3d4a36, 0.25);
+        const hemisphereLight = new THREE.HemisphereLight(0xf2f4ef, 0x71725d, focused?.15:.3);
         this.scene.add(hemisphereLight);
       },
 
@@ -589,10 +591,11 @@ let artworksData=[],gallerySettings;
         this.textures.floorHerringboneWood = TextureGenerator.createSeamlessHerringbone(true);
         this.textures.floorWood = TextureGenerator.createSeamlessWoodPlank();
         this.textures.floorWhite = TextureGenerator.createSeamlessWhiteFloor();
-        this.textures.wallPlaster = TextureGenerator.createWallTexture();
+        this.textures.wallPlaster = surfaceTexture(THREE,this.renderer,'wall-plaster',3,2);
+        this.textures.floorUrethane=materialTexture(THREE,'urethane');this.textures.floorUrethane.repeat.set(4,4);
 
         const floorGeo = new THREE.PlaneGeometry(roomW, roomD);
-        this.materials.floor = new THREE.MeshStandardMaterial({
+        this.materials.floor = new THREE.MeshPhysicalMaterial({
           map: this.textures.floorBlack,
           roughness: 0.35,
           metalness: 0.08
@@ -604,7 +607,7 @@ let artworksData=[],gallerySettings;
         this.scene.add(floor);
 
         this.materials.walls = new THREE.MeshStandardMaterial({
-          map: this.textures.wallPlaster,
+          map: this.textures.wallPlaster,bumpMap:this.textures.wallPlaster,bumpScale:.004,
           color: 0xfdfdfd,
           roughness: 0.85,
           metalness: 0.02
@@ -649,10 +652,9 @@ let artworksData=[],gallerySettings;
         this.scene.add(bbLeft);
 
         const ceilingGeo = new THREE.PlaneGeometry(roomW, roomD);
-        const ceilingMat = new THREE.MeshStandardMaterial({
-          color: 0xf5f6f8,
-          roughness: 0.9
-        });
+        const luminous=environmentOptions(gallerySettings).ceiling==='luminous';
+        const ceilingMat = new THREE.MeshStandardMaterial({color:0xf5f6ef,roughness:.9,emissive:luminous?0xf5f5ee:0x000000,emissiveIntensity:luminous?.5:0,map:luminous?surfaceTexture(THREE,this.renderer,'ceiling-diffuser',3,3):null});
+        if(luminous){const fill=new THREE.HemisphereLight(0xf5f5ef,0x777764,environmentOptions(gallerySettings).lighting==='focused'?.15:.4);this.scene.add(fill);}
         const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
         ceiling.position.set(0, roomH, 0);
         ceiling.rotation.x = Math.PI / 2;
@@ -733,13 +735,13 @@ let artworksData=[],gallerySettings;
         const glassGeo = new THREE.PlaneGeometry(windowLength, roomH - 0.2);
         const glassMat = new THREE.MeshPhysicalMaterial({
           color: 0xffffff,
-          transmission: 0.94,
-          opacity: 0.15,
+          transmission: 0,
+          opacity: 0.045,
           transparent: true,
-          roughness: 0.03,
-          metalness: 0.1,
+          roughness: 0.08,
+          metalness: 0.02,
           ior: 1.5,
-          reflectivity: 0.6
+          reflectivity: 0.15
         });
         const glass = new THREE.Mesh(glassGeo, glassMat);
         glass.position.set(windowX - 0.02, roomH / 2, 0);
@@ -901,7 +903,7 @@ let artworksData=[],gallerySettings;
             frameMetal = 0.1;
           }
 
-          const mount=artworkMount(art.frameStyle);
+          const mount=artworkMount(art.frameStyle,art.canvasThickness??3.5);
           if(!mount.framed){frameColor=art.frameStyle==='canvas'?0xd9cdb6:0xf6f4ee;frameRoughness=1;frameMetal=0;}
           const frameMaterial = new THREE.MeshStandardMaterial({
             color: frameColor,
@@ -915,7 +917,7 @@ let artworksData=[],gallerySettings;
           const frameHeightExtra = mount.border;
 
           const frameGeo = new THREE.BoxGeometry(w + frameWidthExtra, h + frameHeightExtra, frameDepth);
-          const frameMesh = new THREE.Mesh(frameGeo, frameMaterial);
+          const frameMesh = new THREE.Mesh(frameGeo,art.frameStyle==='canvas'?canvasSideMaterials(THREE,texture,art.canvasEdge||'natural'):frameMaterial);
           frameMesh.position.z = frameDepth / 2;
           frameMesh.castShadow = true;
           frameMesh.receiveShadow = true;
@@ -933,11 +935,7 @@ let artworksData=[],gallerySettings;
 
           // 3. Canvas Painting
           const canvasGeo = new THREE.PlaneGeometry(w, h);
-          const canvasMat = new THREE.MeshStandardMaterial({
-            map: texture,
-            roughness: 0.95,
-            metalness: 0.0
-          });
+          const canvasMat = new THREE.MeshBasicMaterial({map:texture,toneMapped:false});
           const canvasMesh = new THREE.Mesh(canvasGeo, canvasMat);
           canvasMesh.position.z = frameDepth+0.002;
           canvasMesh.castShadow = true;
@@ -966,7 +964,7 @@ let artworksData=[],gallerySettings;
           const cfg = this.wallConfigs[art.wall] || this.wallConfigs['front'];
           const spotPos = cfg.getSpotPos(cfg.axis === 'Z' ? art.position[2] : art.position[0]);
 
-          const spotLight = new THREE.SpotLight(0xfff6ed, 1.15, 12, Math.PI / 6, 0.6, 1.2);
+          const spotLight = new THREE.SpotLight(0xf5f5ef, environmentOptions(gallerySettings).lighting==='focused'?1.5:.75, 12, Math.PI / 6, 0.6, 1.2);
           spotLight.position.set(...spotPos);
 
           const spotTarget = new THREE.Object3D();
@@ -1009,6 +1007,8 @@ let artworksData=[],gallerySettings;
           this.materials.ceilingBeams.color.setHex(0x6b3f20);
           this.materials.trim.color.setHex(0x422612);
           this.renderer.toneMappingExposure = 1.02;
+        } else if (themeName === 'urethane') {
+          this.materials.floor.map=this.textures.floorUrethane;this.materials.floor.roughness=.31;this.materials.floor.metalness=0;this.materials.ceilingBeams.color.setHex(0xd8d9d1);this.materials.trim.color.setHex(0xbfc3b7);
         } else if (themeName === 'white') {
           this.materials.floor.map = this.textures.floorWhite;
           this.materials.floor.roughness = 0.22;
@@ -1018,6 +1018,7 @@ let artworksData=[],gallerySettings;
           this.renderer.toneMappingExposure = 0.90;
         }
 
+        this.materials.floor.bumpMap=themeName==='urethane'?this.textures.floorUrethane:null;this.materials.floor.bumpScale=.00035;this.materials.floor.clearcoat=themeName==='urethane'?.28:.08;this.materials.floor.clearcoatRoughness=.36;
         this.materials.floor.needsUpdate = true;
         this.materials.ceilingBeams.needsUpdate = true;
         this.materials.trim.needsUpdate = true;
@@ -1357,6 +1358,8 @@ let artworksData=[],gallerySettings;
         this.animationFrame=requestAnimationFrame(() => this.animate());
 
         const delta = Math.min(this.clock.getDelta(), 0.1);
+        if(document.hidden)return;
+        this.outdoorEnvironment?.update(this.clock.elapsedTime);
         TWEEN.update();
 
         if (!this.isInspectMode) {
@@ -1396,6 +1399,8 @@ let artworksData=[],gallerySettings;
 // touch input and native accessible artwork dialogs.
 GalleryApp.rebalanceArtworksOnWalls=function(){artworksData=layoutArtworks(artworksData);};
 GalleryApp.requestPointerLock=function(){};
+GalleryApp.buildSunbeams=function(){}; // Daylight and real window shadows replace a luminous overlay plane.
+GalleryApp.buildOutdoorGarden=function(){this.outdoorEnvironment=buildOutdoor(THREE,this.scene,this.renderer,()=>TextureGenerator.createPhotorealisticForestTexture());};
 TextureGenerator.createPlaqueTexture=function(art){
  const canvas=document.createElement('canvas');canvas.width=768;canvas.height=512;
  const context=canvas.getContext('2d');context.fillStyle='#f6f4ee';context.fillRect(0,0,768,512);context.fillStyle='#19211e';
@@ -1445,7 +1450,7 @@ export function mountRoom(settings,works){
  document.getElementById('tour-next').onclick=()=>{GalleryApp.closeModal();GalleryApp.nextTourStop();};
  document.getElementById('tour-stop').onclick=()=>{GalleryApp.isTourActive=false;GalleryApp.closeModal();};
  document.getElementById('btn-close').addEventListener('click',()=>{GalleryApp.isTourActive=false;});
- const stop=()=>{GalleryApp.disposed=true;cancelAnimationFrame(GalleryApp.animationFrame);TWEEN.removeAll();GalleryApp.scene.traverse(object=>{object.geometry?.dispose();for(const material of [object.material].flat().filter(Boolean)){material.map?.dispose();material.dispose();}});GalleryApp.renderer.dispose();};
+ const stop=()=>{GalleryApp.disposed=true;cancelAnimationFrame(GalleryApp.animationFrame);TWEEN.removeAll();GalleryApp.outdoorEnvironment?.dispose();GalleryApp.scene.traverse(object=>{object.geometry?.dispose();for(const material of [object.material].flat().filter(Boolean)){for(const texture of new Set([material.map,material.bumpMap,material.emissiveMap].filter(Boolean)))texture.dispose();material.dispose();}});GalleryApp.renderer.dispose();};
  // Back/forward cache retains the live room; dispose only when leaving for good.
  window.addEventListener('pagehide',event=>{if(!event.persisted)stop();});
  return {inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
