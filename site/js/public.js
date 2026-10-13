@@ -1,3 +1,4 @@
+import {exhibitionView,bindExhibitionImages} from './exhibition-view.js';
 import {listExhibitions,getExhibition,hydrateImages,demo,subscribeExhibitions} from './store.js';
 import {escapeHTML as e,imageURL,safeURL,dateRange,exhibitionState,stateLabels,stateEnglish,filterExhibitions,sortExhibitions} from './model.js';
 import {$,chrome,errorView,toast} from './ui.js';
@@ -21,10 +22,9 @@ async function detail(id) {
  const raw=await getExhibition(id);if(!raw||!raw.published){errorView('전시를 찾을 수 없습니다.','주소를 확인하거나 전시 목록으로 돌아가주세요.');return;}
  const [item]=await hydrateImages([raw]);document.title=`${item.title} — UNFRAME`;
  document.querySelector('meta[name="description"]').content=item.summary;
- $('#main').innerHTML=`<section class="detail-top wrap"><a class="text-link" href="/exhibition">← 전시 목록</a><div class="detail-heading"><div><p class="detail-state">${e(stateEnglish[exhibitionState(item)])}</p><h1>${e(item.title)}</h1><p class="detail-artists">${e(item.artists)}</p></div><div class="detail-dates"><p>${e(dateRange(item))}</p><p>${e(item.location)}</p><button id="share" class="text-link">링크 복사 ↗</button></div></div><div class="detail-cover">${image(item)}</div></section><section class="detail-content wrap"><article><h2>전시 소개</h2><p class="summary">${e(item.summary)}</p><div class="prose">${e(item.description).split('\n\n').map(p=>`<p>${p.replaceAll('\n','<br>')}</p>`).join('')}</div>${item.artists?`<div class="artists"><h2>참여 작가</h2><p>${e(item.artists)}</p></div>`:''}</article><aside class="visit"><h2>관람 안내</h2><dl><dt>기간</dt><dd>${e(dateRange(item))}</dd><dt>장소</dt><dd>${e(item.location)}${item.address?`<br><span>${e(item.address)}</span>`:''}</dd>${item.hours?`<dt>관람 시간</dt><dd>${e(item.hours)}</dd>`:''}${item.admission?`<dt>관람료</dt><dd>${e(item.admission)}</dd>`:''}</dl>${safeURL(item.mapUrl)?`<a class="button secondary" href="${e(safeURL(item.mapUrl))}" target="_blank" rel="noopener">지도에서 보기 ↗</a>`:''}${safeURL(item.bookingUrl)?`<a class="button" href="${e(safeURL(item.bookingUrl))}" target="_blank" rel="noopener">방문 예약 ↗</a>`:''}</aside></section>${item.gallery.length?`<section class="gallery wrap"><div class="section-heading"><h2>EXHIBITION VIEWS</h2><span>이미지를 누르면 크게 볼 수 있습니다.</span></div><div class="gallery-grid">${item.gallery.map((im,i)=>`<figure><button class="gallery-open" data-index="${i}" aria-label="${e(im.alt||'전시 사진')} 크게 보기"><img src="${e(imageURL(im.url))}" alt="${e(im.alt)}" loading="lazy"></button><figcaption>${e(im.caption)}</figcaption></figure>`).join('')}</div></section>`:''}<div class="detail-end wrap"><a class="text-link" href="/exhibition">← 모든 전시로 돌아가기</a></div>`;
+ $('#main').innerHTML=exhibitionView(item);
  $('#share').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast('전시 링크를 복사했습니다.');}catch{toast('주소창의 링크를 복사해주세요.');}};
- document.querySelectorAll('.gallery-open').forEach(button=>button.onclick=()=>{const im=item.gallery[Number(button.dataset.index)],dialog=$('#lightbox');dialog.querySelector('img').src=imageURL(im.url);dialog.querySelector('img').alt=im.alt;dialog.querySelector('p').textContent=im.caption;dialog.showModal();});
- if($('#lightbox')){$('.lightbox-close').onclick=()=>$('#lightbox').close();$('#lightbox').onclick=event=>{if(event.target===$('#lightbox'))$('#lightbox').close();};}
+ bindExhibitionImages($('#main'),item,$('#lightbox'));
 }
 chrome(demo);
 const match=location.pathname.match(/^\/exhibition\/([^/]+)\/?$/);const id=match?decodeURIComponent(match[1]):new URLSearchParams(location.search).get('id');

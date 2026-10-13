@@ -15,7 +15,8 @@ export function validateExhibition(item) {
   if(item.startDate > item.endDate) throw new Error('종료일은 시작일 이후여야 합니다.');
   if(!item.location?.trim()) throw new Error('전시 장소를 입력해주세요.');
   if(!Number.isInteger(item.order) || (item.order < 0 || item.order > 1000000)) throw new Error('노출 순서는 0부터 1,000,000 사이의 정수로 입력해주세요.');
-  if(item.published && (!(item.cover?.url || item.cover?.path) || !item.description?.trim())) throw new Error('게시하려면 대표 이미지와 전시 소개를 입력해주세요.');
+  if(item.published && !(item.cover?.url || item.cover?.path)) throw new Error('대표 이미지는 게시할 때 필수입니다. 대표 이미지를 업로드해주세요.');
+  if(item.published && !item.description?.trim()) throw new Error('전시 소개는 게시할 때 필수입니다. 전시 소개를 입력해주세요.');
   if(item.title.length > 200 || item.description.length > 30000 || item.summary.length > 600) throw new Error('입력 내용이 너무 깁니다.');
   return item;
 }
