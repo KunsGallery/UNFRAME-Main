@@ -9,6 +9,9 @@
 // homeHighlights/{id}: public published event/virtual cards; staff manage drafts.
 // Required bounded fields: kind, title, summary, project, url, dates, cover,
 // published, featured, order and updatedAt. Cover URLs stay empty; R2 paths use the card ID.
+// virtualGalleries/{exid}: exhibition-linked display settings; artworks/{artid}
+// contain bounded labels, dimensions, placement and a scoped R2 image reference.
+// Public viewing requires both the exhibition and virtual gallery to be published.
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
@@ -145,6 +148,70 @@ service cloud.firestore {
     && data.updatedAt is string && data.updatedAt.size()<=100
     && (!data.published || (data.url.size()>0 && data.cover.path.size()>0
      && (data.kind != 'event' || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate))));
+  }
+  function virtualId(id) {
+   return id.size()<=100 && id.matches('^[A-Za-z0-9_-]+$');
+  }
+  function publicVirtualGallery(exid) {
+   return exists(/databases/$(database)/documents/exhibitions/$(exid))
+    && get(/databases/$(database)/documents/exhibitions/$(exid)).data.published == true
+    && exists(/databases/$(database)/documents/virtualGalleries/$(exid))
+    && get(/databases/$(database)/documents/virtualGalleries/$(exid)).data.published == true;
+  }
+  function validVirtualGallery(data,exid) {
+   return virtualId(exid)
+    && data.keys().hasAll(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt'])
+    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt'])
+    && data.title is string && data.title.size()>0 && data.title.size()<=200
+    && data.subtitle is string && data.subtitle.size()<=1000
+    && data.published is bool && data.theme in ['white','black','herringbone-wood','wood']
+    && data.wallColor is string && data.wallColor.matches('^#[0-9a-fA-F]{6}$')
+    && data.brightness is number && data.brightness>=0.5 && data.brightness<=1.8
+    && data.speed is number && data.speed>=1 && data.speed<=5
+    && data.outdoor is bool && data.showPrices is bool
+    && data.updatedAt is string && data.updatedAt.size()<=50
+    && data.updatedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?Z$');
+  }
+  function validArtworkImage(image,exid,artid) {
+   return image is map && image.keys().hasAll(['url','path','alt'])
+    && image.keys().hasOnly(['url','path','alt']) && image.url == ''
+    && image.path is string && image.path.size()<=512
+    && image.path.matches('^virtualGalleries/'+exid+'/'+artid+'/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[.](png|jpeg|webp)$')
+    && image.alt is string && image.alt.size()<=1000;
+  }
+  function validArtwork(data,exid,artid) {
+   return virtualId(exid) && virtualId(artid)
+    && data.keys().hasAll(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt'])
+    && data.keys().hasOnly(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt'])
+    && data.title is string && data.title.size()>0 && data.title.size()<=200
+    && data.titleEn is string && data.titleEn.size()<=200
+    && data.artist is string && data.artist.size()>0 && data.artist.size()<=300
+    && data.year is string && data.year.size()<=20
+    && data.medium is string && data.medium.size()<=500
+    && data.widthCm is number && data.widthCm>=10 && data.widthCm<=500
+    && data.heightCm is number && data.heightCm>=10 && data.heightCm<=500
+    && data.price is string && data.price.size()<=100
+    && data.description is string && data.description.size()<=5000
+    && data.wall in ['front','right','left'] && data.frame in ['black','wood','white','none']
+    && data.order is int && data.order>=0 && data.order<=1000000
+    && validArtworkImage(data.image,exid,artid)
+    && data.updatedAt is string && data.updatedAt.size()<=50
+    && data.updatedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?Z$');
+  }
+  match /virtualGalleries/{exid} {
+   allow read: if publicVirtualGallery(exid) || staff();
+   allow create, update: if staff()
+    && exists(/databases/$(database)/documents/exhibitions/$(exid))
+    && validVirtualGallery(request.resource.data,exid);
+   allow delete: if staff();
+   match /artworks/{artid} {
+    allow read: if publicVirtualGallery(exid) || staff();
+    allow create, update: if staff()
+     && exists(/databases/$(database)/documents/exhibitions/$(exid))
+     && exists(/databases/$(database)/documents/virtualGalleries/$(exid))
+     && validArtwork(request.resource.data,exid,artid);
+    allow delete: if staff();
+   }
   }
   match /staffEmails/{email} {
    allow get: if request.auth != null && request.auth.token.email_verified == true

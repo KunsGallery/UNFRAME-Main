@@ -71,3 +71,12 @@
   for = "/project-scroll*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
+
+[[redirects]]
+  from = "/virtual-gallery"
+  to = "/virtual-gallery.html"
+  status = 200
+[[redirects]]
+  from = "/virtual-gallery/:id"
+  to = "/virtual-gallery.html"
+  status = 200

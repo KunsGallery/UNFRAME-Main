@@ -22,12 +22,13 @@ export async function logout() { if(!demo){const f=await firebase(); await f.aut
 export async function isStaff(user) { if(demo) return false; if(!user?.emailVerified) return false; const f=await firebase(); const record=await f.db.getDoc(f.db.doc(f.d,'staffEmails',user.email)); return record.exists()&&record.data().active===true && record.data().email===user.email; }
 export async function saveExhibition(item) { validateExhibition(item); const data={...item,updatedAt:new Date().toISOString()}; if(demo){const list=localRead(); const at=list.findIndex(x=>x.id===item.id); if(at<0)list.push(data);else list[at]=data; try{localStorage.setItem(key,JSON.stringify(list));}catch{throw new Error('샘플 저장 공간이 부족합니다. 이미지 수나 크기를 줄여주세요.');}return data;} const f=await firebase(); const existing=await f.db.getDocs(f.db.query(f.db.collection(f.d,'exhibitions'),f.db.where('slug','==',data.slug))); if(existing.docs.some(x=>x.id!==data.id)) throw new Error('이미 사용 중인 전시 주소입니다. 다른 주소를 입력해주세요.'); const {id,...record}=data; record.cover={...record.cover,url:record.cover.path?'':record.cover.url}; record.imagePaths=[record.cover,...record.gallery].map(im=>im.path).filter(Boolean); record.gallery=encodeGallery(record.gallery); await f.db.setDoc(f.db.doc(f.d,'exhibitions',id),record); return data; }
 export async function deleteExhibition(id) { if(demo){localStorage.setItem(key,JSON.stringify(localRead().filter(x=>x.id!==id)));return;} const f=await firebase(); await f.db.deleteDoc(f.db.doc(f.d,'exhibitions',id)); }
-export async function uploadImage(file,id,onProgress=()=>{},collection='exhibitions') {
+export async function uploadImage(file,id,onProgress=()=>{},collection='exhibitions',artId='') {
  if(!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error('JPG, PNG, WebP 이미지만 업로드할 수 있습니다.');
  if(file.size > 10*1024*1024) throw new Error('이미지는 10MB 이하로 올려주세요.');
  if(demo){if(file.size>2*1024*1024)throw new Error('샘플 모드에서는 2MB 이하 이미지를 사용해주세요.'); const url=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});return {url,path:'',alt:file.name};}
- if(!['exhibitions','homeHighlights'].includes(collection))throw new Error('잘못된 이미지 분류입니다.');
- const path=`${collection}/${id}/${crypto.randomUUID()}.${file.type.split('/')[1]}`;
+ if(!['exhibitions','homeHighlights','virtualGalleries'].includes(collection))throw new Error('잘못된 이미지 분류입니다.');
+ if(collection==='virtualGalleries'&&!/^[A-Za-z0-9_-]{1,100}$/.test(artId))throw new Error('잘못된 작품 주소입니다.');
+ const path=`${collection}/${id}/${collection==='virtualGalleries'?artId+'/':''}${crypto.randomUUID()}.${file.type.split('/')[1]}`;
  const token=await mediaToken();
  await new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('PUT',mediaURL(path));xhr.setRequestHeader('Authorization',`Bearer ${token}`);xhr.setRequestHeader('Content-Type',file.type);xhr.upload.onprogress=e=>{if(e.lengthComputable)onProgress(Math.round(e.loaded/e.total*100));};xhr.onload=()=>{if(xhr.status>=200&&xhr.status<300)resolve();else{let message='이미지 업로드에 실패했습니다.';try{message=JSON.parse(xhr.responseText).error||message;}catch{}reject(new Error(message));}};xhr.onerror=()=>reject(new Error('이미지 서버에 연결하지 못했습니다.'));xhr.send(file);});
  return {url:'',path,alt:file.name};

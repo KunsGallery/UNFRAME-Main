@@ -8,6 +8,19 @@ const path='exhibitions/exhibit/12345678-1234-1234-1234-123456789012.png';
 const png=Uint8Array.from([137,80,78,71,13,10,26,10,0]);
 function fixture({published=false,active=true,referenced=true}={}){let stored;const env={FIREBASE_PROJECT_ID:'unframe-main',ALLOWED_ORIGINS:'https://unframe-main.netlify.app',MEDIA:{async get(){return {body:png,httpEtag:'"test"'};},async put(k,v){stored={k,v};},async delete(k){stored={deleted:k};}}};const fetcher=async url=>url.includes('googleapis.com/service_accounts')?Response.json({keys:[jwk]}):url.includes('/staffEmails/')?Response.json({fields:{active:{booleanValue:active},email:{stringValue:'owner@example.com'}}}):published?Response.json({fields:{published:{booleanValue:true},cover:{mapValue:{fields:{path:{stringValue:referenced?path:'other'}}}}}}):new Response('',{status:403});return {env,fetcher,stored:()=>stored};}
 const req=(method,headers={},body)=>new Request('https://media.example/media/'+path,{method,headers,body});
+test('virtual artwork access requires a published gallery and the exact artwork reference; staff can upload scoped files',async()=>{
+ const virtualPath='virtualGalleries/exhibit/art/12345678-1234-1234-1234-123456789012.png',f=fixture();
+ const request=new Request('https://media.example/media/'+virtualPath);
+ assert.equal(parsePath(new URL(request.url).pathname).artId,'art');
+ assert.equal(parsePath('/media/virtualGalleries/exhibit/../bad.png'),null);
+ for(const [published,referenced] of [[true,true],[false,true],[true,false]]){
+  const fetcher=async url=>url.includes('/artworks/')?Response.json({fields:{image:{mapValue:{fields:{path:{stringValue:referenced?virtualPath:'other'}}}}}}):published?Response.json({fields:{published:{booleanValue:true}}}):new Response('',{status:403});
+  assert.equal((await handle(request,f.env,fetcher)).status,published&&referenced?200:404);
+ }
+ const auth='Bearer '+await token();
+ assert.equal((await handle(new Request(request.url,{method:'PUT',headers:{Authorization:auth,'Content-Type':'image/png','Content-Length':String(png.length)},body:png}),f.env,f.fetcher)).status,200);
+ assert.equal(f.stored().k,virtualPath);
+});
 test('public gallery references accept bounded serialized images and legacy maps, without granting access to unrelated files',async()=>{
  const f=fixture();
  for(const image of [{stringValue:path+'\u001f작품 사진\u001f캡션'},{mapValue:{fields:{path:{stringValue:path}}}}]){
