@@ -9,5 +9,5 @@ export const CONFIG = {
     apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: ''
   },
   // Add confirmed Imweb menu destinations here. No guessed URLs.
-  menuLinks: [{label:'ABOUT',url:'/#about'},{label:'PROJECT',url:'/project'},{label:'U.A.U',url:'https://unframe.kr/uau'},{label:'JOIN',url:'https://join.unframe.kr'},{label:'SHOP',url:'https://unframe.kr/shop'}]
+  menuLinks: [{label:'ABOUT',url:'/about'},{label:'PROJECT',url:'/project'},{label:'U.A.U',url:'https://uau.unframe.kr'},{label:'JOIN',url:'https://join.unframe.kr'},{label:'SHOP',url:'https://unframe.kr/shop'}]
 };
