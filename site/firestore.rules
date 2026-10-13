@@ -192,7 +192,7 @@ service cloud.firestore {
     && data.heightCm is number && data.heightCm>=10 && data.heightCm<=500
     && data.price is string && data.price.size()<=100
     && data.description is string && data.description.size()<=5000
-    && data.wall in ['front','right','left'] && data.frame in ['black','wood','white','none']
+    && data.wall in ['front','right','left'] && data.frame in ['black','wood','white','none','canvas']
     && data.order is int && data.order>=0 && data.order<=1000000
     && validArtworkImage(data.image,exid,artid)
     && data.updatedAt is string && data.updatedAt.size()<=50

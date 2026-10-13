@@ -1,4 +1,4 @@
-import {layoutArtworks} from './virtual-model.js';
+import {layoutArtworks,artworkMount} from './virtual-model.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
 let artworksData=[],gallerySettings;
     const TextureGenerator = {
@@ -901,6 +901,8 @@ let artworksData=[],gallerySettings;
             frameMetal = 0.1;
           }
 
+          const mount=artworkMount(art.frameStyle);
+          if(!mount.framed){frameColor=art.frameStyle==='canvas'?0xd9cdb6:0xf6f4ee;frameRoughness=1;frameMetal=0;}
           const frameMaterial = new THREE.MeshStandardMaterial({
             color: frameColor,
             metalness: frameMetal,
@@ -908,36 +910,36 @@ let artworksData=[],gallerySettings;
           });
 
           // 1. Frame Box
-          const frameDepth = (art.frameStyle === 'none') ? 0.04 : 0.08;
-          const frameWidthExtra = (art.frameStyle === 'none') ? 0.0 : 0.12;
-          const frameHeightExtra = (art.frameStyle === 'none') ? 0.0 : 0.12;
+          const frameDepth = mount.depth;
+          const frameWidthExtra = mount.border;
+          const frameHeightExtra = mount.border;
 
           const frameGeo = new THREE.BoxGeometry(w + frameWidthExtra, h + frameHeightExtra, frameDepth);
           const frameMesh = new THREE.Mesh(frameGeo, frameMaterial);
-          frameMesh.position.z = -frameDepth / 2;
+          frameMesh.position.z = frameDepth / 2;
           frameMesh.castShadow = true;
           frameMesh.receiveShadow = true;
           frameMesh.userData = { isArtwork: true, data: art, index: index };
           group.add(frameMesh);
 
           // 2. Passe-partout
-          if (art.frameStyle !== 'none') {
+          if (mount.framed) {
             const innerMatGeo = new THREE.PlaneGeometry(w + 0.02, h + 0.02);
             const matMesh = new THREE.Mesh(innerMatGeo, matMaterial);
-            matMesh.position.z = 0.002;
+            matMesh.position.z = frameDepth+0.001;
             matMesh.userData = { isArtwork: true, data: art, index: index };
             group.add(matMesh);
           }
 
           // 3. Canvas Painting
-          const canvasGeo = new THREE.PlaneGeometry(w - 0.08, h - 0.08);
+          const canvasGeo = new THREE.PlaneGeometry(w, h);
           const canvasMat = new THREE.MeshStandardMaterial({
             map: texture,
             roughness: 0.95,
             metalness: 0.0
           });
           const canvasMesh = new THREE.Mesh(canvasGeo, canvasMat);
-          canvasMesh.position.z = 0.005;
+          canvasMesh.position.z = frameDepth+0.002;
           canvasMesh.castShadow = true;
           canvasMesh.receiveShadow = true;
           canvasMesh.userData = { isArtwork: true, data: art, index: index };
@@ -1420,6 +1422,7 @@ GalleryApp.closeModal=function(){
  this.isInspectMode=false;this.camera.rotation.set(this.player.pitch,this.player.yaw,0,'YXZ');
 };
 export function mountRoom(settings,works){
+ layoutArtworks(works); // Validate true-size placement before allocating the scene.
  gallerySettings=settings;
  artworksData=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:`${work.heightCm} × ${work.widthCm} cm`}));
  GalleryApp.init();

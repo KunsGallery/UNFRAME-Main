@@ -85,7 +85,9 @@ await expectStatus('seed virtual parent exhibition',200,request(`exhibitions/${e
 await expectStatus('artwork requires gallery root',403,saveArtwork(artwork));
 await expectStatus('create gallery settings',200,saveGallery(settings));
 await expectStatus('update gallery settings',200,saveGallery({...settings,theme:'herringbone-wood'}));
-await expectStatus('create artwork',200,saveArtwork(artwork));
+await expectStatus('create canvas artwork',200,saveArtwork({...artwork,frame:'canvas'}));
+await expectStatus('update canvas artwork',200,saveArtwork({...artwork,frame:'canvas',title:'캔버스 작품'}));
+await expectStatus('update artwork to black frame',200,saveArtwork(artwork));
 await expectStatus('update artwork',200,saveArtwork({...artwork,frame:'wood'}));
 await expectStatus('public published gallery',200,request(galleryPath,{auth:null}));
 await expectStatus('public published artwork',200,request(artworkPath,{auth:null}));
