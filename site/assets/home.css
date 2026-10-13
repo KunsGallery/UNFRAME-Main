@@ -32,9 +32,8 @@
             --insta-border-radius: 12px;   /* [위젯 모서리] 인스타 사진 뭉치들의 모서리를 둥글게(px) 만들어요. */
         }
 
-        /* [풀페이지 스크롤 설정] 화면이 자석처럼 착착 달라붙게 만드는 마법이에요. */
+        /* 메뉴 이동은 부드럽게, 일반 스크롤은 자유롭게 유지합니다. */
         html {
-            scroll-snap-type: y mandatory;
             scroll-behavior: smooth;
             height: 100%;
         }
@@ -110,9 +109,7 @@
 
         /* [섹션 공통 디자인] */
         section {
-            scroll-snap-align: start; 
-            scroll-snap-stop: always;
-            height: 100vh;           
+            height: auto;           
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -148,9 +145,7 @@
           ===========================================================
         */
         .full-page-footer {
-            scroll-snap-align: start;
-            scroll-snap-stop: always;
-            height: 100vh;
+            height: auto;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -216,7 +211,7 @@
 
         @media (max-width: 768px) {
             .footer-grid { flex-direction: column; gap: 40px; }
-            .full-page-footer { height: auto; min-height: 100vh; padding: 100px 5%; }
+            .full-page-footer { height: auto; min-height: auto; padding: 100px 5%; }
             .footer-center-content { margin-top: 30px; }
         }
 
@@ -226,6 +221,10 @@
         ::-webkit-scrollbar-thumb { background: var(--point-color); }
     
 /* Integration overrides: preserve source composition, allow content and zoom. */
-html{scroll-snap-type:y proximity;height:auto}body{height:auto;overflow-x:clip}.home-page section{height:auto;min-height:100svh;padding-top:110px;padding-bottom:90px;overflow:visible}.home-page #hero{height:100svh;min-height:650px}.home-page #projects{min-height:100svh}.reveal{opacity:1;transform:none}.home-page #custom-nav{pointer-events:auto;background:rgba(253,251,247,.97);border-bottom:1px solid #deded8;padding:22px 5%;z-index:30}.home-page #custom-nav .logo{font-size:24px;letter-spacing:-.035em;font-weight:900}.home-page #custom-nav a{color:#1a1a1a}.home-page #custom-nav .logo span{font-size:8px;display:block;letter-spacing:.08em;margin-top:5px}.home-page #custom-nav .active{color:#004aad}.home-page .demo-strip{position:relative;margin-top:100px;z-index:2}.home-page #hero{min-height:calc(100svh - 115px);height:calc(100svh - 115px)}#hero-canvas-container canvas{opacity:.22}.home-exhibition-image img{width:100%;height:100%;object-fit:cover}.home-live-date{font-size:12px;color:#004aad;font-weight:600;margin-bottom:18px}.home-live-title{font-size:32px;line-height:1.35;font-weight:700;word-break:keep-all;margin-bottom:20px}.home-live-copy{font-size:16px;color:#555;line-height:1.8;margin-bottom:30px}.home-live-actions{display:flex;gap:16px;flex-wrap:wrap}.home-live-actions a,.home-empty a{border:1px solid #1a1a1a;padding:14px 24px;display:inline-block;font-size:12px;font-weight:600}.home-live-actions a:hover{background:#004aad;color:white;border-color:#004aad}.home-empty{padding:35px 0;color:#555}.home-empty p{margin-bottom:24px}.home-update-status{font-size:12px;color:#555;margin-top:20px}.home-page .full-page-footer{height:auto;min-height:600px;padding-top:80px;padding-bottom:60px}.home-page .info-list a{font-size:14px}.home-page .button{background:#004aad;color:white;padding:12px 22px}.home-page .demo-strip{font-size:11px;text-align:center;padding:8px 15px;background:#e8eef7;color:#173e76}.home-page .demo-strip a{text-decoration:underline;margin-left:10px}.skip:not(:focus){position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden}.skip:focus{position:fixed;z-index:1001;background:white;padding:12px}a:focus-visible,button:focus-visible{outline:3px solid #004aad;outline-offset:4px}.home-page .feed-link{display:inline-block;color:#004aad;margin:20px 0;font-size:14px}.home-page .lightwidget-widget{min-height:350px}.home-page #contact .contact-phone{display:block;margin-top:30px;color:#004aad;font-size:15px}.home-page #hero h1{font-size:clamp(52px,9vw,100px)!important}.home-page #hero p{letter-spacing:.2em!important}.home-page .noise-overlay{display:none}
-@media(max-width:768px){.home-page section{min-height:auto;padding-top:80px;padding-bottom:80px}.home-page #hero{min-height:560px}.home-page #custom-nav{padding:15px 5%;gap:10px}.home-page #custom-nav .menu-links{gap:12px}.home-page #custom-nav a{font-size:9px;letter-spacing:.06em}.home-page .demo-strip{margin-top:120px}.home-page #hero h1{margin-bottom:30px}.home-page #hero p{font-size:13px!important;letter-spacing:.12em!important}.home-page #exhibition h2{font-size:34px!important}.home-page #exhibition .mb-16{margin-bottom:35px}.home-page #projects .grid{grid-template-columns:1fr}.home-page #projects .grid>div{padding:30px;border-top:1px solid #ddd}.home-page #projects .grid>div>span{margin-bottom:25px}.home-page #projects .grid>div>p{margin-bottom:25px}.home-page #projects h3{font-size:36px!important}.home-page #about p{font-size:18px!important}.home-page #about p:first-of-type{font-size:30px!important}.home-live-title{font-size:26px}.home-page .lightwidget-widget{min-height:420px}.home-page #contact p{font-size:14px!important;letter-spacing:.12em!important}.home-page .full-page-footer{min-height:auto}}
+html{scroll-snap-type:none;height:auto}body{height:auto;overflow-x:clip}.home-page section{height:auto;min-height:0;padding-top:90px;padding-bottom:80px;overflow:visible}.home-page #hero{height:100svh;min-height:650px}.home-page #projects{min-height:0}.reveal{opacity:1;transform:none}.home-page #custom-nav{pointer-events:auto;background:rgba(253,251,247,.97);border-bottom:1px solid #deded8;padding:22px 5%;z-index:30}.home-page #custom-nav .logo{font-size:24px;letter-spacing:-.035em;font-weight:900}.home-page #custom-nav a{color:#1a1a1a}.home-page #custom-nav .logo span{font-size:8px;display:block;letter-spacing:.08em;margin-top:5px}.home-page #custom-nav .active{color:#004aad}.home-page .demo-strip{position:relative;margin-top:100px;z-index:2}.home-page #hero{min-height:calc(100svh - 115px);height:calc(100svh - 115px)}#hero-canvas-container canvas{opacity:.22}.home-exhibition-image img{width:100%;height:100%;object-fit:cover}.home-live-date{font-size:12px;color:#004aad;font-weight:600;margin-bottom:18px}.home-live-title{font-size:32px;line-height:1.35;font-weight:700;word-break:keep-all;margin-bottom:20px}.home-live-copy{font-size:16px;color:#555;line-height:1.8;margin-bottom:30px}.home-live-actions{display:flex;gap:16px;flex-wrap:wrap}.home-live-actions a,.home-empty a{border:1px solid #1a1a1a;padding:14px 24px;display:inline-block;font-size:12px;font-weight:600}.home-live-actions a:hover{background:#004aad;color:white;border-color:#004aad}.home-empty{padding:35px 0;color:#555}.home-empty p{margin-bottom:24px}.home-update-status{font-size:12px;color:#555;margin-top:20px}.home-page .full-page-footer{height:auto;min-height:0;padding-top:65px;padding-bottom:40px}.home-page .info-list a{font-size:14px}.home-page .button{background:#004aad;color:white;padding:12px 22px}.home-page .demo-strip{font-size:11px;text-align:center;padding:8px 15px;background:#e8eef7;color:#173e76}.home-page .demo-strip a{text-decoration:underline;margin-left:10px}.skip:not(:focus){position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden}.skip:focus{position:fixed;z-index:1001;background:white;padding:12px}a:focus-visible,button:focus-visible{outline:3px solid #004aad;outline-offset:4px}.home-page .feed-link{display:inline-block;color:#004aad;margin:20px 0;font-size:14px}.home-page .lightwidget-widget{min-height:350px}.home-page #contact .contact-phone{display:block;margin-top:30px;color:#004aad;font-size:15px}.home-page #hero h1{font-size:clamp(52px,9vw,100px)!important}.home-page #hero p{letter-spacing:.2em!important}.home-page .noise-overlay{display:none}
+@media(max-width:768px){.home-page section{min-height:0;padding-top:64px;padding-bottom:64px}.home-page #hero{min-height:560px}.home-page #custom-nav{padding:15px 5%;gap:10px}.home-page #custom-nav .menu-links{gap:12px}.home-page #custom-nav a{font-size:9px;letter-spacing:.06em}.home-page .demo-strip{margin-top:120px}.home-page #hero h1{margin-bottom:30px}.home-page #hero p{font-size:13px!important;letter-spacing:.12em!important}.home-page #exhibition h2{font-size:34px!important}.home-page #exhibition .mb-16{margin-bottom:35px}.home-page #projects .grid{grid-template-columns:1fr}.home-page #projects .grid>div{padding:30px;border-top:1px solid #ddd}.home-page #projects .grid>div>span{margin-bottom:25px}.home-page #projects .grid>div>p{margin-bottom:25px}.home-page #projects h3{font-size:36px!important}.home-page #about p{font-size:18px!important}.home-page #about p:first-of-type{font-size:30px!important}.home-live-title{font-size:26px}.home-page .lightwidget-widget{min-height:420px}.home-page #contact p{font-size:14px!important;letter-spacing:.12em!important}.home-page .full-page-footer{min-height:auto}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal,.btn-hover-effect{transition:none!important;transform:none!important}.animate-bounce{animation:none!important}}
+
+/* A compact manifesto between the exhibition and project index. */
+.home-page #about{padding-top:72px;padding-bottom:72px}.home-page #about h2{margin-bottom:32px}.home-page #about p:first-of-type{margin-bottom:32px}
+@media(max-width:768px){.home-page #about{padding-top:56px;padding-bottom:56px}.home-page #about h2{margin-bottom:24px}.home-page #about p:first-of-type{margin-bottom:24px}}
