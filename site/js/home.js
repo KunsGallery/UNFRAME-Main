@@ -1,3 +1,4 @@
+import './home-projects.js';
 import {demo,subscribeExhibitions,hydrateImages,resolveImage} from './store.js';
 import {subscribeHighlights} from './highlights.js';
 import {selectedHighlights} from './highlight-model.js';

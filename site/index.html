@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UNFRAME | Beyond the Frame</title><meta name="description" content="감각이 머무는 곳, UNFRAME. 전시와 작가, 공간을 잇는 열린 실천의 장소."><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="/assets/home.css"><link rel="stylesheet" href="/assets/site-shell.css"><link rel="stylesheet" href="/assets/home-slider.css"><script type="module" src="/js/home.js"></script><script src="https://cdn.lightwidget.com/widgets/lightwidget.js" defer></script></head><body class="home-page"><!-- THESIS: Restore the supplied homepage; hero alone becomes a full-size curated slideshow. OWN-WORLD: Original typography, sections and footer. STORY: Current exhibitions plus selected events and virtual galleries. FIRST VIEWPORT: Full image, title, dates, destination and slide controls. FORM: User-approved original layout with managed hero. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md --><a class="skip" href="#main">본문으로 이동</a>
+<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UNFRAME | Beyond the Frame</title><meta name="description" content="감각이 머무는 곳, UNFRAME. 전시와 작가, 공간을 잇는 열린 실천의 장소."><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="/assets/home.css"><link rel="stylesheet" href="/assets/site-shell.css"><link rel="stylesheet" href="/assets/home-slider.css"><link rel="stylesheet" href="/assets/home-projects.css"><script type="module" src="/js/home.js"></script><script src="https://cdn.lightwidget.com/widgets/lightwidget.js" defer></script></head><body class="home-page"><!-- THESIS: Restore the supplied homepage; hero alone becomes a full-size curated slideshow. OWN-WORLD: Original typography, sections and footer. STORY: Current exhibitions plus selected events and virtual galleries. FIRST VIEWPORT: Full image, title, dates, destination and slide controls. FORM: User-approved original layout with managed hero. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md --><a class="skip" href="#main">본문으로 이동</a>
 
     
     <header id="site-header"></header>
@@ -29,31 +29,23 @@
                 <h2 style="font-size: 12px; color: rgba(26,26,26,0.3);" class="font-bold uppercase tracking-[0.5em] mb-8">Archive</h2>
                 <h3 style="font-size: var(--section-title-px); color: #1a1a1a;" class="font-black uppercase tracking-tighter">Selected Projects</h3>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-2 gap-px bg-black/10 border border-black/10">
-                <div class="reveal p-12 md:p-16 transition-colors hover:bg-[#004aad]/5 group" style="background-color: #fdfbf7;">
-                    <span style="font-size: 11px; color: rgba(26,26,26,0.2);" class="font-bold uppercase tracking-widest block mb-16">01 / Playlist</span>
-                    <h4 style="font-size: var(--card-title-px); color: #1a1a1a;" class="font-bold mb-8 group-hover:text-[#004aad] transition"><a href="/project#up">UP</a></h4>
-                    <p style="font-size: 16px; color: rgba(26,26,26,0.5); line-height: 1.6;" class="mb-12">전시의 감각을 음악으로 기록하는 플레이리스트</p>
-                    
-                </div>
-                <div class="reveal p-12 md:p-16 transition-colors hover:bg-[#004aad]/5 group" style="background-color: #fdfbf7; border-left: 1px solid rgba(0,0,0,0.1);">
-                    <span style="font-size: 11px; color: rgba(26,26,26,0.2);" class="font-bold uppercase tracking-widest block mb-16">02 / Podcast</span>
-                    <h4 style="font-size: var(--card-title-px); color: #1a1a1a;" class="font-bold mb-8 group-hover:text-[#004aad] transition"><a href="/project#mm">음</a></h4>
-                    <p style="font-size: 16px; color: rgba(26,26,26,0.5); line-height: 1.6;" class="mb-12">예술의 이면에 있는 생각과 목소리를 담는 팟캐스트</p>
-                    
-                </div>
-                <div class="reveal p-12 md:p-16 transition-colors hover:bg-[#004aad]/5 group" style="background-color: #fdfbf7; border-top: 1px solid rgba(0,0,0,0.1);">
-                    <span style="font-size: 11px; color: rgba(26,26,26,0.2);" class="font-bold uppercase tracking-widest block mb-16">03 / Print</span>
-                    <h4 style="font-size: var(--card-title-px); color: #1a1a1a;" class="font-bold mb-8 group-hover:text-[#004aad] transition"><a href="/project#print">U#</a></h4>
-                    <p style="font-size: 16px; color: rgba(26,26,26,0.5); line-height: 1.6;" class="mb-12">전시의 과정과 관객의 경험을 남기는 독립출판</p>
-                    
-                </div>
-                <div class="reveal p-12 md:p-16 transition-colors hover:bg-[#004aad]/5 group" style="background-color: #fdfbf7; border-left: 1px solid rgba(0,0,0,0.1); border-top: 1px solid rgba(0,0,0,0.1);">
-                    <span style="font-size: 11px; color: rgba(26,26,26,0.2);" class="font-bold uppercase tracking-widest block mb-16">04 / People</span>
-                    <h4 style="font-size: var(--card-title-px); color: #1a1a1a;" class="font-bold mb-8 group-hover:text-[#004aad] transition"><a href="/project#uau">U.A.U</a></h4>
-                    <p style="font-size: 16px; color: rgba(26,26,26,0.5); line-height: 1.6;" class="mb-12">전시 이후에도 이어지는 작가들의 느슨한 연대</p>
-                    
-                </div>
+            <div class="home-project-grid">
+                <a class="home-project-card hp-up" href="/project#up" data-project="up">
+                    <div class="hp-copy"><span class="hp-tag">01 / Playlist</span><h4>UP</h4><p>전시의 감각을 음악으로 기록하는 플레이리스트</p><span class="hp-cta">프로젝트 보기 <span aria-hidden="true">↗</span></span></div>
+                    <div class="hp-preview" aria-hidden="true"><div class="hp-record"><div class="hp-record-label"><b>UP</b><span>EXHIBITION OST</span></div></div><div class="hp-equalizer"><i style="--i:0;--bar:25%"></i><i style="--i:1;--bar:45%"></i><i style="--i:2;--bar:70%"></i><i style="--i:3;--bar:40%"></i><i style="--i:4;--bar:90%"></i><i style="--i:5;--bar:55%"></i><i style="--i:6;--bar:30%"></i><i style="--i:7;--bar:80%"></i><i style="--i:8;--bar:60%"></i><i style="--i:9;--bar:95%"></i><i style="--i:10;--bar:45%"></i><i style="--i:11;--bar:70%"></i><i style="--i:12;--bar:35%"></i><i style="--i:13;--bar:55%"></i><i style="--i:14;--bar:25%"></i></div></div>
+                </a>
+                <a class="home-project-card hp-mm" href="/project#mm" data-project="mm">
+                    <div class="hp-copy"><span class="hp-tag">02 / Podcast</span><h4>음</h4><p>예술의 이면에 있는 생각과 목소리를 담는 팟캐스트</p><span class="hp-cta">프로젝트 보기 <span aria-hidden="true">↗</span></span></div>
+                    <div class="hp-preview" aria-hidden="true"><div class="hp-voice"><span>VOICE</span><span>DIALOGUE</span><span>RESONANCE</span></div><div class="hp-waveform"><i style="--i:0;--bar:25%"></i><i style="--i:1;--bar:45%"></i><i style="--i:2;--bar:70%"></i><i style="--i:3;--bar:40%"></i><i style="--i:4;--bar:90%"></i><i style="--i:5;--bar:55%"></i><i style="--i:6;--bar:30%"></i><i style="--i:7;--bar:80%"></i><i style="--i:8;--bar:60%"></i><i style="--i:9;--bar:95%"></i><i style="--i:10;--bar:45%"></i><i style="--i:11;--bar:70%"></i><i style="--i:12;--bar:35%"></i><i style="--i:13;--bar:55%"></i><i style="--i:14;--bar:25%"></i></div></div>
+                </a>
+                <a class="home-project-card hp-print" href="/project#print" data-project="print">
+                    <div class="hp-copy"><span class="hp-tag">03 / Print</span><h4>U#</h4><p>전시의 과정과 관객의 경험을 남기는 독립출판</p><span class="hp-cta">프로젝트 보기 <span aria-hidden="true">↗</span></span></div>
+                    <div class="hp-preview" aria-hidden="true"><div class="hp-page hp-page-back"><b>RECORD</b><span>전시의 과정<br>관객의 경험</span><i></i><i></i><i></i></div><div class="hp-page hp-page-middle"><span>NOTES FROM<br>THE EXHIBITION</span><i></i><i></i><i></i></div><div class="hp-page hp-page-cover"><b>U#</b><span>INDEPENDENT<br>PUBLICATION</span></div></div>
+                </a>
+                <a class="home-project-card hp-uau" href="/project#uau" data-project="uau">
+                    <div class="hp-copy"><span class="hp-tag">04 / People</span><h4>U.A.U</h4><p>전시 이후에도 이어지는 작가들의 느슨한 연대</p><span class="hp-cta">프로젝트 보기 <span aria-hidden="true">↗</span></span></div>
+                    <div class="hp-preview" aria-hidden="true"><svg class="hp-particle-fallback" viewBox="0 0 240 220"><g fill="#004aad"><circle cx="46" cy="40" r="2"/><circle cx="83" cy="40" r="3"/><circle cx="120" cy="40" r="4"/><circle cx="157" cy="40" r="2"/><circle cx="194" cy="40" r="3"/><circle cx="46" cy="76" r="4"/><circle cx="83" cy="76" r="2"/><circle cx="120" cy="76" r="3"/><circle cx="157" cy="76" r="4"/><circle cx="194" cy="76" r="2"/><circle cx="46" cy="112" r="3"/><circle cx="83" cy="112" r="4"/><circle cx="120" cy="112" r="2"/><circle cx="157" cy="112" r="3"/><circle cx="194" cy="112" r="4"/><circle cx="46" cy="148" r="2"/><circle cx="83" cy="148" r="3"/><circle cx="120" cy="148" r="4"/><circle cx="157" cy="148" r="2"/><circle cx="194" cy="148" r="3"/><circle cx="46" cy="184" r="4"/><circle cx="83" cy="184" r="2"/><circle cx="120" cy="184" r="3"/><circle cx="157" cy="184" r="4"/><circle cx="194" cy="184" r="2"/></g></svg><canvas class="hp-particles"></canvas><span class="hp-community">U.A.U</span></div>
+                </a>
             </div>
             <div class="reveal mt-20 text-center">
                 <a href="/project" class="btn-hover-effect font-extrabold uppercase tracking-widest inline-block" style="border: 1.5px solid #1a1a1a; padding: 16px 48px; font-size: 13px; color: #1a1a1a; letter-spacing: 0.1em;">프로젝트 전체 보기</a>
