@@ -37,3 +37,6 @@ button.onclick=()=>{paused=!paused;sync();};document.addEventListener('visibilit
 addEventListener('pageshow',event=>{if(event.persisted){frames.forEach(frame=>observer.observe(frame));resize();const closest=frames.reduce((a,b)=>Math.abs(a.getBoundingClientRect().top)<Math.abs(b.getBoundingClientRect().top)?a:b);select(closest);}});
 
 document.addEventListener('pointerleave',()=>{pointer.inside=false;});addEventListener('pointerup',event=>{if(event.pointerType==='touch')pointer.inside=false;});
+// Deep links from the homepage must land on the requested project after fonts settle.
+const initialFrame=frames.find(frame=>location.hash==='#'+frame.id);
+if(initialFrame){const align=()=>{initialFrame.scrollIntoView({behavior:'instant',block:'start'});select(initialFrame);};requestAnimationFrame(align);document.fonts.ready.then(align);}
