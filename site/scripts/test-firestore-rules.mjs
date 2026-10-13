@@ -166,4 +166,39 @@ await expectStatus('orphaned artwork update denied',403,saveArtwork(artwork));
 await expectStatus('anonymous artwork delete denied',403,request(artworkPath,{method:'DELETE',auth:null}));
 await expectStatus('staff orphan artwork cleanup allowed',200,request(artworkPath,{method:'DELETE'}));
 await expectStatus('staff orphan gallery cleanup allowed',200,request(galleryPath,{method:'DELETE'}));
+const newsid='rules-now';const newsPath=`homeHighlights/${newsid}`;
+const news={kind:'news',title:'새 소식',summary:'',project:'UP',url:'/news',startDate:'',endDate:'',cover:{url:'',path:`homeHighlights/${newsid}/cover.jpeg`,alt:'소식 이미지'},published:true,featured:false,nowFeatured:true,order:0,updatedAt:new Date().toISOString()};
+const saveNews=data=>request(newsPath,{method:'PATCH',data});
+await expectStatus('create news in NOW without hero',200,saveNews(news));
+await expectStatus('update news in hero without NOW',200,saveNews({...news,featured:true,nowFeatured:false}));
+await expectStatus('news in both selections',200,saveNews({...news,featured:true}));
+await expectStatus('legacy news without NOW field',200,saveNews(Object.fromEntries(Object.entries(news).filter(([key])=>key!=='nowFeatured'))));
+await expectStatus('legacy virtual without NOW field',200,saveNews({...Object.fromEntries(Object.entries(news).filter(([key])=>key!=='nowFeatured')),kind:'virtual',project:''}));
+await expectStatus('event selected for NOW',200,saveNews({...news,kind:'event',project:'음',startDate:'2026-10-13',endDate:'2026-10-20'}));
+for(const projectName of ['UP','음','U#','U.A.U'])await expectStatus(`published news project ${projectName}`,200,saveNews({...news,project:projectName}));
+await expectStatus('draft news can omit project value',200,saveNews({...news,published:false,project:'',url:'',cover:{url:'',path:'',alt:''}}));
+const badNews=[
+ ['invalid NOW type',{...news,nowFeatured:'true'}],
+ ['invalid hero type',{...news,featured:'true'}],
+ ['invalid kind',{...news,kind:'article'}],
+ ['published news unknown project',{...news,project:'other'}],
+ ['published news missing project selection',{...news,project:''}],
+ ['NOW event unknown project',{...news,kind:'event',project:'other',startDate:'2026-10-13',endDate:'2026-10-20'}],
+ ['virtual selected for NOW',{...news,kind:'virtual'}],
+ ['news unpaired dates',{...news,startDate:'2026-10-13'}],
+ ['news reversed dates',{...news,startDate:'2026-10-20',endDate:'2026-10-13'}],
+ ['published news missing URL',{...news,url:''}],
+ ['published news missing image',{...news,cover:{url:'',path:'',alt:''}}],
+];
+for(const [label,data] of badNews){
+ await expectStatus(`${label}: clear fixture`,200,request(newsPath,{method:'DELETE',auth:'owner'}));
+ await expectStatus(`${label}: create denied`,403,saveNews(data));
+ await expectStatus(`${label}: seed fixture`,200,saveNews(news));
+ await expectStatus(`${label}: update denied`,403,saveNews(data));
+}
+for(const [label,auth] of [['anonymous',null],['inactive',token({email:'inactive@example.com'})],['unapproved',token({email:'other@example.com'})],['unverified',token({email_verified:false})],['password',token({firebase:{sign_in_provider:'password'}})]])await expectStatus(`${label}: news write denied`,403,request(newsPath,{method:'PATCH',data:news,auth}));
+await expectStatus('published news public read',200,request(newsPath,{auth:null}));
+await expectStatus('draft news saved',200,saveNews({...news,published:false}));
+await expectStatus('draft news public read denied',403,request(newsPath,{auth:null}));
+await expectStatus('draft news staff read',200,request(newsPath));
 console.log(`Firestore emulator: ${checks} checks passed.`);

@@ -6,7 +6,8 @@
 // Gallery writes use [path, alt, caption] strings joined by US (U+001F).
 // Dual RS/GS joins validate every entry within the Firestore expression budget.
 // Legacy image maps remain readable and supported for smaller existing forms.
-// homeHighlights/{id}: public published event/virtual cards; staff manage drafts.
+// homeHighlights/{id}: public published event/virtual/news cards; staff manage drafts.
+// Optional nowFeatured selects UNFRAME NOW independently of hero featured.
 // Required bounded fields: kind, title, summary, project, url, dates, cover,
 // published, featured, order and updatedAt. Cover URLs stay empty; R2 paths use the card ID.
 // virtualGalleries/{exid}: exhibition-linked display settings; artworks/{artid}
@@ -132,22 +133,25 @@ service cloud.firestore {
   function validHighlight(data,id) {
    return id.size()<=128 && id.matches('^[A-Za-z0-9_-]+$')
     && data.keys().hasAll(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','order','updatedAt'])
-    && data.keys().hasOnly(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','order','updatedAt'])
-    && data.kind in ['event','virtual']
+    && data.keys().hasOnly(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','nowFeatured','order','updatedAt'])
+    && data.kind in ['event','virtual','news']
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.summary is string && data.summary.size()<=600
     && data.project is string && data.project.size()<=100
     && data.url is string && data.url.size()<=2000
     && (data.url == '' || data.url.matches('^https?://[^/ ].*$') || data.url.matches('^/([^/].*)?$'))
     && validHighlightDate(data.startDate) && validHighlightDate(data.endDate)
-    && (data.kind != 'virtual' || ((data.startDate == '' && data.endDate == '')
+    && (data.kind == 'event' || ((data.startDate == '' && data.endDate == '')
      || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate)))
     && validHighlightCover(data.cover,id)
     && data.published is bool && data.featured is bool
+    && (!('nowFeatured' in data) || data.nowFeatured is bool)
+    && (data.kind != 'virtual' || data.get('nowFeatured',false) == false)
     && data.order is int && data.order>=0 && data.order<=1000000
     && data.updatedAt is string && data.updatedAt.size()<=100
     && (!data.published || (data.url.size()>0 && data.cover.path.size()>0
-     && (data.kind != 'event' || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate))));
+     && (data.kind != 'event' || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate))
+     && ((data.kind != 'news' && data.get('nowFeatured',false) == false) || data.project in ['UP','음','U#','U.A.U'])));
   }
   function virtualId(id) {
    return id.size()<=100 && id.matches('^[A-Za-z0-9_-]+$');
