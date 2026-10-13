@@ -201,4 +201,76 @@ await expectStatus('published news public read',200,request(newsPath,{auth:null}
 await expectStatus('draft news saved',200,saveNews({...news,published:false}));
 await expectStatus('draft news public read denied',403,request(newsPath,{auth:null}));
 await expectStatus('draft news staff read',200,request(newsPath));
+// Multiple artist galleries use immutable exhibition references, without migrating legacy roots.
+const artistParent='rules-artists-parent';const otherParent='rules-artists-other';
+await expectStatus('seed artist parent',200,request(`exhibitions/${artistParent}`,{method:'PATCH',data:fixture(artistParent)}));
+await expectStatus('seed other artist parent',200,request(`exhibitions/${otherParent}`,{method:'PATCH',data:fixture(otherParent)}));
+const artistIds=['artist-rules-one','artist-rules-two','artist-rules-draft'];
+await expectStatus('clear prior artist-invalid fixture',200,request('virtualGalleries/artist-rules-invalid',{method:'DELETE',auth:'owner'}));
+const artistSettings=(galleryId,extra={})=>({...settings,exhibitionId:artistParent,artistName:galleryId,order:0,...extra});
+const artistArtwork=galleryId=>({...artwork,image:{...artwork.image,path:`virtualGalleries/${galleryId}/${artid}/11111111-2222-4333-8444-555555555555.jpeg`}});
+for(const galleryId of artistIds){
+ const path=`virtualGalleries/${galleryId}`;
+ await expectStatus(`clear ${galleryId} prior artwork`,200,request(`${path}/artworks/${artid}`,{method:'DELETE',auth:'owner'}));
+ await expectStatus(`clear ${galleryId} prior metadata`,200,request(path,{method:'DELETE',auth:'owner'}));
+ await expectStatus(`create ${galleryId}`,200,request(path,{method:'PATCH',data:artistSettings(galleryId,{published:galleryId!==artistIds[2]})}));
+ await expectStatus(`create ${galleryId} artwork`,200,request(`${path}/artworks/${artid}`,{method:'PATCH',data:artistArtwork(galleryId)}));
+}
+async function artistQuery(filters,auth=null){
+ const response=await fetch(`${base}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json',...(auth?{Authorization:`Bearer ${auth}`}:{})},body:JSON.stringify({structuredQuery:{from:[{collectionId:'virtualGalleries'}],where:{compositeFilter:{op:'AND',filters:filters.map(([key,value])=>({fieldFilter:{field:{fieldPath:key},op:'EQUAL',value:field(value)}}))}}}})});
+ return {status:response.status,text:await response.text()};
+}
+const filtered=await artistQuery([['exhibitionId',artistParent],['published',true]]);
+await expectStatus('public artist list query',200,Promise.resolve(filtered));
+assert.deepEqual(JSON.parse(filtered.text).filter(item=>item.document).map(item=>item.document.name.split('/').at(-1)).sort(),artistIds.slice(0,2).sort());checks++;
+await expectStatus('public artist query without published filter denied',403,artistQuery([['exhibitionId',artistParent]]));
+await expectStatus('public gallery query without parent filter denied',403,artistQuery([['published',true]]));
+await expectStatus('staff artist list including drafts',200,artistQuery([['exhibitionId',artistParent]],staff));
+for(const galleryId of artistIds){
+ await expectStatus(`public ${galleryId} metadata`,galleryId===artistIds[2]?403:200,request(`virtualGalleries/${galleryId}`,{auth:null}));
+ await expectStatus(`public ${galleryId} artwork`,galleryId===artistIds[2]?403:200,request(`virtualGalleries/${galleryId}/artworks/${artid}`,{auth:null}));
+}
+await expectStatus('artwork cannot borrow another artist image path',403,request(`virtualGalleries/${artistIds[0]}/artworks/${artid}`,{method:'PATCH',data:artistArtwork(artistIds[1])}));
+await expectStatus('artist cannot be reassigned to another valid exhibition',403,request(`virtualGalleries/${artistIds[0]}`,{method:'PATCH',data:artistSettings(artistIds[0],{exhibitionId:otherParent})}));
+await expectStatus('artist remains editable within parent',200,request(`virtualGalleries/${artistIds[0]}`,{method:'PATCH',data:artistSettings(artistIds[0],{artistName:'수정한 작가',order:2})}));
+const invalidArtistId='artist-rules-invalid';const invalidArtistPath=`virtualGalleries/${invalidArtistId}`;
+const invalidArtistSettings=[
+ ['missing artist name',Object.fromEntries(Object.entries(artistSettings(invalidArtistId)).filter(([key])=>key!=='artistName'))],
+ ['missing artist order',Object.fromEntries(Object.entries(artistSettings(invalidArtistId)).filter(([key])=>key!=='order'))],
+ ['empty artist name',artistSettings(invalidArtistId,{artistName:''})],
+ ['oversized artist name',artistSettings(invalidArtistId,{artistName:'x'.repeat(301)})],
+ ['invalid parent type',artistSettings(invalidArtistId,{exhibitionId:123})],
+ ['invalid parent characters',artistSettings(invalidArtistId,{exhibitionId:'../parent'})],
+ ['missing parent',artistSettings(invalidArtistId,{exhibitionId:'rules-missing-parent'})],
+ ['negative order',artistSettings(invalidArtistId,{order:-1})],
+ ['fractional order',artistSettings(invalidArtistId,{order:0.5})],
+ ['large order',artistSettings(invalidArtistId,{order:1000001})],
+];
+for(const [label,data] of invalidArtistSettings){
+ await expectStatus(`${label}: artist clear fixture`,200,request(invalidArtistPath,{method:'DELETE',auth:'owner'}));
+ await expectStatus(`${label}: artist create denied`,403,request(invalidArtistPath,{method:'PATCH',data}));
+ await expectStatus(`${label}: seed legal artist`,200,request(invalidArtistPath,{method:'PATCH',data:artistSettings(invalidArtistId)}));
+ await expectStatus(`${label}: artist update denied`,403,request(invalidArtistPath,{method:'PATCH',data}));
+}
+await expectStatus('legacy gallery still supported',200,request(`virtualGalleries/${artistParent}`,{method:'PATCH',data:settings}));
+await expectStatus('legacy gallery public read',200,request(`virtualGalleries/${artistParent}`,{auth:null}));
+await expectStatus('legacy cannot convert to artist gallery',403,request(`virtualGalleries/${artistParent}`,{method:'PATCH',data:artistSettings(artistParent,{exhibitionId:otherParent})}));
+await expectStatus('legacy cannot add artist metadata without parent',403,request(`virtualGalleries/${artistParent}`,{method:'PATCH',data:{...settings,artistName:'작가',order:0}}));
+await expectStatus('seed exhibition using artist ID for conversion attack',200,request(`exhibitions/${artistIds[0]}`,{method:'PATCH',data:fixture(artistIds[0])}));
+await expectStatus('artist cannot convert to legacy root despite same-ID exhibition',403,request(`virtualGalleries/${artistIds[0]}`,{method:'PATCH',data:settings}));
+const sameId='rules-artist-same-id';
+await expectStatus('seed same-ID association attack parent',200,request(`exhibitions/${sameId}`,{method:'PATCH',data:fixture(sameId)}));
+await expectStatus('new artist gallery ID must differ from parent',403,request(`virtualGalleries/${sameId}`,{method:'PATCH',data:artistSettings(sameId,{exhibitionId:sameId})}));
+for(const auth of [null,token({email:'inactive@example.com'}),token({email:'other@example.com'}),token({email_verified:false})])await expectStatus('unapproved user cannot edit artist gallery',403,request(`virtualGalleries/${artistIds[0]}`,{method:'PATCH',data:artistSettings(artistIds[0]),auth}));
+await expectStatus('unpublish artist parent',200,request(`exhibitions/${artistParent}`,{method:'PATCH',data:{...fixture(artistParent),published:false}}));
+await expectStatus('unpublished parent public query denied',403,artistQuery([['exhibitionId',artistParent],['published',true]]));
+for(const galleryId of artistIds.slice(0,2)){
+ await expectStatus('unpublished parent artist read denied',403,request(`virtualGalleries/${galleryId}`,{auth:null}));
+ await expectStatus('unpublished parent artist artwork read denied',403,request(`virtualGalleries/${galleryId}/artworks/${artid}`,{auth:null}));
+ await expectStatus('staff can read unpublished parent artist gallery',200,request(`virtualGalleries/${galleryId}`));
+}
+await expectStatus('legacy parent draft hides legacy root',403,request(`virtualGalleries/${artistParent}`,{auth:null}));
+await expectStatus('delete artist parent',200,request(`exhibitions/${artistParent}`,{method:'DELETE',auth:'owner'}));
+await expectStatus('orphaned artist query denied',403,artistQuery([['exhibitionId',artistParent],['published',true]]));
+await expectStatus('orphaned artist artwork edit denied',403,request(`virtualGalleries/${artistIds[0]}/artworks/${artid}`,{method:'PATCH',data:artistArtwork(artistIds[0])}));
 console.log(`Firestore emulator: ${checks} checks passed.`);

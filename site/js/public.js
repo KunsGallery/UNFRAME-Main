@@ -1,4 +1,4 @@
-import {getVirtualGallery} from './virtual-store.js';
+import {listVirtualGalleries} from './virtual-store.js';
 import {exhibitionView,bindExhibitionImages} from './exhibition-view.js';
 import {listExhibitions,getExhibition,hydrateImages,demo,subscribeExhibitions} from './store.js';
 import {escapeHTML as e,imageURL,safeURL,dateRange,exhibitionState,stateLabels,stateEnglish,filterExhibitions,sortExhibitions} from './model.js';
@@ -23,7 +23,7 @@ async function detail(id) {
  const raw=await getExhibition(id);if(!raw||!raw.published){errorView('전시를 찾을 수 없습니다.','주소를 확인하거나 전시 목록으로 돌아가주세요.');return;}
  const [item]=await hydrateImages([raw]);document.title=`${item.title} — UNFRAME`;
  document.querySelector('meta[name="description"]').content=item.summary;
- const virtual=await getVirtualGallery(item.id).catch(()=>null);item.virtualGallery=virtual?.settings.published&&virtual.artworks.length>0;
+ try{item.virtualGalleries=await listVirtualGalleries(item.id);}catch{item.virtualGalleries=[];item.virtualGalleryError=true;}
  $('#main').innerHTML=exhibitionView(item);
  $('#share').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast('전시 링크를 복사했습니다.');}catch{toast('주소창의 링크를 복사해주세요.');}};
  bindExhibitionImages($('#main'),item,$('#lightbox'));

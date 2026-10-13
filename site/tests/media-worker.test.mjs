@@ -40,3 +40,11 @@ test('highlight media authorization uses its own published record and rejects dr
  const f=fixture({published:true});const response=await handle(new Request('https://media.example/media/'+highlightPath),f.env,f.fetcher);assert.equal(response.status,404);
  const authorization='Bearer '+await token();const draft=fixture();assert.equal((await handle(new Request('https://media.example/media/'+highlightPath,{method:'PUT',headers:{Authorization:authorization,'Content-Type':'image/png','Content-Length':String(png.length)},body:png}),draft.env,draft.fetcher)).status,200);assert.equal(draft.stored().k,highlightPath);
 });
+
+test('artist media uses its own gallery ID and never resolves a sibling gallery reference',async()=>{
+ const galleryId='artist-one',virtualPath=`virtualGalleries/${galleryId}/art/12345678-1234-1234-1234-123456789012.png`,f=fixture();
+ for(const [visible,referenced] of [[true,true],[false,true],[true,false]]){
+  const queried=[];const fetcher=async url=>{queried.push(url);if(!visible)return new Response('',{status:403});return url.includes('/artworks/')?Response.json({fields:{image:{mapValue:{fields:{path:{stringValue:referenced?virtualPath:virtualPath.replace('artist-one','artist-two')}}}}}}):Response.json({fields:{published:{booleanValue:true},exhibitionId:{stringValue:'parent-exhibit'},artistName:{stringValue:'작가 A'}}});};
+  const response=await handle(new Request('https://media.example/media/'+virtualPath),f.env,fetcher);assert.equal(response.status,visible&&referenced?200:404);assert.equal(queried.length,2);assert.ok(queried.every(url=>url.includes('/virtualGalleries/artist-one')));
+ }
+});

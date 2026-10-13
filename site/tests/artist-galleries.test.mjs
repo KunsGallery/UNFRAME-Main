@@ -1,0 +1,44 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {defaultArtistGallery,galleryExhibitionId,validateGallery,emptyArtwork} from '../js/virtual-model.js';
+import {getVirtualGallery,listVirtualGalleries,saveVirtualSettings,saveVirtualArtwork} from '../js/virtual-store.js';
+import {DEMO_EXHIBITIONS} from '../js/demo.js';
+import {exhibitionView} from '../js/exhibition-view.js';
+test('artist metadata is complete and legacy root resolves without migration',()=>{
+ const gallery=defaultArtistGallery({id:'resonance',title:'단체전'},'작가 A',2);
+ assert.equal(galleryExhibitionId('artist-one',gallery),'resonance');
+ assert.equal(galleryExhibitionId('resonance',{}),'resonance');
+ assert.doesNotThrow(()=>validateGallery(gallery));
+ for(const extra of [{artistName:''},{exhibitionId:'../other'},{order:1.5},{order:-1}])assert.throws(()=>validateGallery({...gallery,...extra}));
+ assert.throws(()=>validateGallery({title:'제목',subtitle:'',exhibitionId:'resonance'}));
+});
+test('demo artist rooms retain isolated artwork, independent publication and parent visibility',async()=>{
+ const values=new Map();globalThis.localStorage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value)};
+ const initial=await listVirtualGalleries('resonance');
+ assert.deepEqual(initial.map(x=>x.id),['resonance','artist-demo-one']);
+ assert.equal(await getVirtualGallery('artist-demo-two'),null);
+ assert.ok(await getVirtualGallery('artist-demo-two',{admin:true}));
+ const before=await getVirtualGallery('artist-demo-one');
+ const settings=defaultArtistGallery({id:'resonance',title:'단체전'},'테스트 작가',3);
+ await saveVirtualSettings('artist-test',settings,[]);
+ const art={...emptyArtwork(),title:'테스트 작품',artist:'테스트 작가',image:{url:'/assets/projects/up.webp',path:'',alt:'샘플'}};
+ await saveVirtualArtwork('artist-test',art);
+ await saveVirtualSettings('artist-test',{...settings,published:true},[art]);
+ assert.equal((await getVirtualGallery('artist-test')).artworks[0].title,'테스트 작품');
+ assert.deepEqual((await getVirtualGallery('artist-demo-one')).artworks,before.artworks);
+ assert.ok((await listVirtualGalleries('resonance')).some(x=>x.id==='artist-test'));
+ values.set('unframe-exhibitions-demo-v1',JSON.stringify(DEMO_EXHIBITIONS.map(item=>({...item,published:item.id==='resonance'?false:item.published}))));
+ assert.equal(await getVirtualGallery('artist-test'),null);
+ assert.deepEqual(await listVirtualGalleries('resonance'),[]);
+ assert.ok((await getVirtualGallery('artist-test',{admin:true})).settings.published);
+ delete globalThis.localStorage;
+});
+test('exhibition renders public gallery destinations and escaped artist text without biography routes',()=>{
+ const item={...DEMO_EXHIBITIONS[0],virtualGalleries:[{id:'resonance',settings:{title:'전체 전시'}},{id:'artist-a',settings:{artistName:'<script>작가</script>',title:'작가 개인 공간'}}]};
+ const html=exhibitionView(item);
+ assert.match(html,/href="\/virtual-gallery\/artist-a"/);
+ assert.match(html,/href="#ex-online"/);
+ assert.match(html,/&lt;script&gt;작가&lt;\/script&gt;/);
+ assert.doesNotMatch(html,/<script>작가/);
+ assert.doesNotMatch(html,/href="\/artist\//);
+});

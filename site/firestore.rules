@@ -13,6 +13,8 @@
 // virtualGalleries/{exid}: exhibition-linked display settings; artworks/{artid}
 // contain bounded labels, dimensions, placement and a scoped R2 image reference.
 // Public viewing requires both the exhibition and virtual gallery to be published.
+// Artist galleries add exhibitionId + artistName + order together. Their parent
+// is immutable; legacy galleries omit all three and use their own ID as parent.
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
@@ -156,16 +158,33 @@ service cloud.firestore {
   function virtualId(id) {
    return id.size()<=100 && id.matches('^[A-Za-z0-9_-]+$');
   }
-  function publicVirtualGallery(exid) {
-   return exists(/databases/$(database)/documents/exhibitions/$(exid))
-    && get(/databases/$(database)/documents/exhibitions/$(exid)).data.published == true
-    && exists(/databases/$(database)/documents/virtualGalleries/$(exid))
-    && get(/databases/$(database)/documents/virtualGalleries/$(exid)).data.published == true;
+  function virtualParent(data,galleryId) {
+   return 'exhibitionId' in data ? data.exhibitionId : galleryId;
+  }
+  function virtualParentExists(data,galleryId) {
+   return exists(/databases/$(database)/documents/exhibitions/$(virtualParent(data,galleryId)));
+  }
+  function publicVirtualSettings(data,galleryId) {
+   return data.published == true && virtualParentExists(data,galleryId)
+    && get(/databases/$(database)/documents/exhibitions/$(virtualParent(data,galleryId))).data.published == true;
+  }
+  function publicVirtualGallery(galleryId) {
+   return exists(/databases/$(database)/documents/virtualGalleries/$(galleryId))
+    && publicVirtualSettings(get(/databases/$(database)/documents/virtualGalleries/$(galleryId)).data,galleryId);
+  }
+  function validVirtualAssociation(data,galleryId) {
+   return 'exhibitionId' in data ?
+    (data.keys().hasAll(['exhibitionId','artistName','order'])
+     && data.exhibitionId is string && virtualId(data.exhibitionId) && data.exhibitionId != galleryId
+     && data.artistName is string && data.artistName.size()>0 && data.artistName.size()<=300
+     && data.order is int && data.order>=0 && data.order<=1000000)
+    : !data.keys().hasAny(['artistName','order']);
   }
   function validVirtualGallery(data,exid) {
    return virtualId(exid)
     && data.keys().hasAll(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt'])
-    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt'])
+    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order'])
+    && validVirtualAssociation(data,exid)
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.subtitle is string && data.subtitle.size()<=1000
     && data.published is bool && data.theme in ['white','black','herringbone-wood','wood']
@@ -203,16 +222,21 @@ service cloud.firestore {
     && data.updatedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?Z$');
   }
   match /virtualGalleries/{exid} {
-   allow read: if publicVirtualGallery(exid) || staff();
-   allow create, update: if staff()
-    && exists(/databases/$(database)/documents/exhibitions/$(exid))
+   allow read: if publicVirtualSettings(resource.data,exid) || staff();
+   allow create: if staff()
+    && virtualParentExists(request.resource.data,exid)
+    && validVirtualGallery(request.resource.data,exid);
+   allow update: if staff()
+    && virtualParentExists(request.resource.data,exid)
+    && virtualParent(request.resource.data,exid) == virtualParent(resource.data,exid)
+    && ('exhibitionId' in request.resource.data) == ('exhibitionId' in resource.data)
     && validVirtualGallery(request.resource.data,exid);
    allow delete: if staff();
    match /artworks/{artid} {
     allow read: if publicVirtualGallery(exid) || staff();
     allow create, update: if staff()
-     && exists(/databases/$(database)/documents/exhibitions/$(exid))
      && exists(/databases/$(database)/documents/virtualGalleries/$(exid))
+     && virtualParentExists(get(/databases/$(database)/documents/virtualGalleries/$(exid)).data,exid)
      && validArtwork(request.resource.data,exid,artid);
     allow delete: if staff();
    }

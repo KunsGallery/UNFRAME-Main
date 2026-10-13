@@ -5,3 +5,5 @@
 .top-header{background:var(--paper);color:var(--ink);padding:14px 18px;max-width:min(43vw,430px);text-shadow:none;border:1px solid #d9dcd6;border-radius:4px}.virtual-brand{color:var(--blue);font-size:17px}.gallery-title{color:var(--ink);font-size:27px;text-shadow:none;margin-top:7px}.gallery-subtitle{color:#4d5851;font-size:11px}.top-header .virtual-return{color:var(--ink)}#start-overlay.hidden{display:none}#preview-mode{padding:0;font-size:10px}.artwork-modal-overlay::backdrop{background:transparent}
 @media(max-width:650px){.top-header{padding:10px 12px;max-width:calc(100vw - 135px)}.gallery-title{font-size:19px}.virtual-brand{font-size:14px}.top-header .virtual-return{font-size:10px;margin-top:9px}.virtual-admin-title{overflow-wrap:anywhere}}
 .gallery-title{word-break:keep-all;overflow-wrap:anywhere}
+
+.virtual-gallery-choice{display:inline-block;text-decoration:none;text-align:center;font-size:12px}.top-actions{flex-wrap:wrap}

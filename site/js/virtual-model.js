@@ -2,10 +2,16 @@ export const THEMES={white:'화이트',black:'블랙 헤링본','herringbone-woo
 export const WALLS={front:'전면 벽',right:'우측 벽',left:'좌측 벽'};
 export const FRAMES={canvas:'캔버스 (테두리 없음)',black:'블랙 액자',white:'화이트 액자',wood:'우드 액자',none:'프레임 없음 (종이)'};
 export const defaultGallery=exhibition=>({title:exhibition.title,subtitle:exhibition.summary||'',published:false,theme:'white',wallColor:'#f6f4ee',brightness:1,speed:2.5,outdoor:true,showPrices:false});
+export const galleryExhibitionId=(id,settings)=>settings.exhibitionId||id;
+export const defaultArtistGallery=(exhibition,artistName,order=0)=>({...defaultGallery(exhibition),title:`${artistName} · ${exhibition.title}`.slice(0,200),subtitle:'',exhibitionId:exhibition.id,artistName,order});
+export const sortVirtualGalleries=items=>[...items].sort((a,b)=>Number(!!a.settings.artistName)-Number(!!b.settings.artistName)||(a.settings.order||0)-(b.settings.order||0)||a.settings.title.localeCompare(b.settings.title));
 export const emptyArtwork=()=>({id:crypto.randomUUID(),title:'',titleEn:'',artist:'',year:'',medium:'',widthCm:80,heightCm:100,price:'',description:'',wall:'front',frame:'canvas',order:0,image:{url:'',path:'',alt:''}});
 const bounded=(value,max,min=0)=>typeof value==='string'&&value.length>=min&&value.length<=max;
 const between=(value,min,max)=>Number.isFinite(value)&&value>=min&&value<=max;
 export function validateGallery(data,artworks=[]){
+ if(['exhibitionId','artistName','order'].some(key=>Object.hasOwn(data,key))){
+  if(!/^[A-Za-z0-9_-]{1,100}$/.test(data.exhibitionId||'')||!bounded(data.artistName,300,1)||!data.artistName.trim()||!Number.isInteger(data.order)||!between(data.order,0,1000000))throw new Error('연결 전시, 작가명과 갤러리 노출 순서를 확인해주세요.');
+ }
  if(!bounded(data.title,200,1)||!bounded(data.subtitle,1000))throw new Error('갤러리 제목은 200자, 소개는 1,000자 이내로 입력해주세요.');
  if(!Object.hasOwn(THEMES,data.theme)||!/^#[0-9a-fA-F]{6}$/.test(data.wallColor)||!between(data.brightness,.5,1.8)||!between(data.speed,1,5))throw new Error('공간 설정 값을 확인해주세요.');
  if(['published','outdoor','showPrices'].some(key=>typeof data[key]!=='boolean'))throw new Error('게시 및 공간 설정을 확인해주세요.');
