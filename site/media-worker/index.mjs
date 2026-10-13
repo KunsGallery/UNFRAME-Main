@@ -26,7 +26,7 @@ async function staff(env,token,fetcher){
  const record=await document(env,`staffEmails/${encodeURIComponent(user.email)}`,token,fetcher);
  if(record?.active?.booleanValue!==true||record?.email?.stringValue!==user.email)fail(403,'관리자 권한이 없습니다.');
 }
-export function parsePath(path){const match=/^\/media\/(exhibitions\/([a-zA-Z0-9_-]{1,128})\/[a-f0-9-]{36}\.(jpeg|png|webp))$/.exec(path);return match?{key:match[1],id:match[2],type:`image/${match[3]}`}:null;}
+export function parsePath(path){const match=/^\/media\/((exhibitions|homeHighlights)\/([a-zA-Z0-9_-]{1,128})\/[a-f0-9-]{36}\.(jpeg|png|webp))$/.exec(path);return match?{key:match[1],collection:match[2],id:match[3],type:`image/${match[4]}`}:null;}
 export async function handle(request,env,fetcher=fetch){
  const origin=request.headers.get('Origin'),allowed=(env.ALLOWED_ORIGINS||'').split(',');
  const headers=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin'});
@@ -41,7 +41,7 @@ export async function handle(request,env,fetcher=fetch){
   const token=request.headers.get('Authorization')?.match(/^Bearer (.+)$/)?.[1];
   if(request.method==='GET'){
    // Anonymous Firestore reads enforce published=true. Never cache this authorization decision.
-   const record=await document(env,`exhibitions/${path.id}`,null,fetcher);
+   const record=await document(env,`${path.collection}/${path.id}`,null,fetcher);
    const maps=[record?.cover?.mapValue?.fields,...(record?.gallery?.arrayValue?.values||[]).map(v=>v.mapValue?.fields)];
    const published=record?.published?.booleanValue===true&&maps.some(v=>v?.path?.stringValue===path.key);
    if(!published){if(!token)fail(404,'이미지를 찾을 수 없습니다.');await staff(env,token,fetcher);}

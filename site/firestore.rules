@@ -3,6 +3,9 @@
 // All exhibition writes require verified Google sign-in plus a matching active staff record.
 // staffEmails/{email}: email + active, managed by trusted project administrators.
 // Image paths are scoped to the exhibition; uploads are handled by the R2 Worker.
+// homeHighlights/{id}: public published event/virtual cards; staff manage drafts.
+// Required bounded fields: kind, title, summary, project, url, dates, cover,
+// published, featured, order and updatedAt. Cover URLs stay empty; R2 paths use the card ID.
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
@@ -114,6 +117,37 @@ service cloud.firestore {
     && data.updatedAt is string && data.updatedAt.size()<=50
     && (!data.published || (data.description.size()>0 && data.cover.path.matches('^exhibitions/'+id+'/[^/]+$')));
   }
+  function validHighlightCover(cover,id) {
+   return cover is map && cover.keys().hasAll(['url','path','alt'])
+    && cover.keys().hasOnly(['url','path','alt'])
+    && cover.url == '' && cover.path is string && cover.path.size()<=512
+    && (cover.path == '' || cover.path.matches('^homeHighlights/'+id+'/[^/]+$'))
+    && cover.alt is string && cover.alt.size()<=1000;
+  }
+  function validHighlightDate(value) {
+   return value is string && value.size()<=10
+    && (value == '' || value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
+  }
+  function validHighlight(data,id) {
+   return id.size()<=128 && id.matches('^[A-Za-z0-9_-]+$')
+    && data.keys().hasAll(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','order','updatedAt'])
+    && data.keys().hasOnly(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','order','updatedAt'])
+    && data.kind in ['event','virtual']
+    && data.title is string && data.title.size()>0 && data.title.size()<=200
+    && data.summary is string && data.summary.size()<=600
+    && data.project is string && data.project.size()<=100
+    && data.url is string && data.url.size()<=2000
+    && (data.url == '' || data.url.matches('^https?://[^/ ].*$') || data.url.matches('^/([^/].*)?$'))
+    && validHighlightDate(data.startDate) && validHighlightDate(data.endDate)
+    && (data.kind != 'virtual' || ((data.startDate == '' && data.endDate == '')
+     || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate)))
+    && validHighlightCover(data.cover,id)
+    && data.published is bool && data.featured is bool
+    && data.order is int && data.order>=0 && data.order<=1000000
+    && data.updatedAt is string && data.updatedAt.size()<=100
+    && (!data.published || (data.url.size()>0 && data.cover.path.size()>0
+     && (data.kind != 'event' || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate))));
+  }
   match /staffEmails/{email} {
    allow get: if request.auth != null && request.auth.token.email_verified == true
     && request.auth.token.firebase.sign_in_provider == 'google.com' && request.auth.token.email == email;
@@ -126,6 +160,11 @@ service cloud.firestore {
   match /exhibitions/{id} {
    allow read: if resource.data.published == true || staff();
    allow create, update: if staff() && valid(request.resource.data,id);
+   allow delete: if staff();
+  }
+  match /homeHighlights/{id} {
+   allow read: if resource.data.published == true || staff();
+   allow create, update: if staff() && validHighlight(request.resource.data,id);
    allow delete: if staff();
   }
   match /{document=**} { allow read, write: if false; }
