@@ -5,7 +5,7 @@ let generation=0,ownedURLs=[];
 export async function renderNews(items,failed=false){
  const target=document.querySelector('#home-news');if(!target)return;
  const version=++generation;
- const selected=selectedNews(items);
+ const selected=selectedNews(items).slice(0,3);
  const results=await Promise.allSettled(selected.map(async item=>({...item,cover:await resolveImage(item.cover)})));
  const ready=results.filter(x=>x.status==='fulfilled').map(x=>x.value);
  const urls=ready.map(x=>x.cover?.url).filter(x=>x?.startsWith('blob:'));

@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KRONOS & CO. — Contemporary Art Gallery</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            sans: ['"Inter"', 'sans-serif'],
+          },
+          colors: {
+            gallery: {
+              50: '#F9F9F8',
+              100: '#F4F3F0',
+              200: '#E8E6E1',
+              300: '#D5D2CB',
+              400: '#A49F94',
+              700: '#4A463F',
+              800: '#282623',
+              900: '#151413',
+              accent: '#B08968',
+            }
+          },
+          letterSpacing: {
+            widest2: '0.25em',
+            mega: '0.35em',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    ::selection {
+      background-color: #151413;
+      color: #F4F3F0;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .aspect-art {
+      aspect-ratio: 4 / 3;
+    }
+    .aspect-tall {
+      aspect-ratio: 3 / 4;
+    }
+    .hero-img-zoom {
+      transition: transform 12s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .group:hover .hero-img-zoom {
+      transform: scale(1.05);
+    }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="bg-[#FBFBF9] text-gallery-900 font-sans antialiased selection:bg-black selection:text-white transition-colors duration-500">
+
+  <div class="bg-gallery-900 text-gallery-100 text-[11px] tracking-widest2 uppercase py-2 px-6 flex justify-between items-center border-b border-gallery-800">
+    <div class="flex items-center space-x-3">
+      <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span>Frieze Seoul 2026 Preview • Booth A14</span>
+    </div>
+    <div class="flex items-center space-x-6 text-[11px]">
+      <a href="#locations" class="hover:text-gallery-300 transition-colors hidden sm:inline">Seoul • New York • London • Paris • Tokyo</a>
+      <div class="flex items-center space-x-2">
+        <button onclick="setLang('EN')" class="lang-btn font-semibold hover:opacity-75 active">EN</button>
+        <span class="opacity-40">/</span>
+        <button onclick="setLang('KR')" class="lang-btn opacity-60 hover:opacity-100">KR</button>
+      </div>
+    </div>
+  </div>
+
+  <header id="mainNav" class="sticky top-0 z-40 bg-[#FBFBF9]/90 backdrop-blur-md border-b border-gallery-200/70 transition-all duration-300">
+    <div class="max-w-[1600px] mx-auto px-6 md:px-12 h-20 flex items-center justify-between">
+      
+      <!-- Logo -->
+      <a href="#" class="flex flex-col group">
+        <span class="font-serif text-2xl md:text-3xl tracking-widest uppercase font-light text-gallery-900 group-hover:opacity-80 transition">
+          K R O N O S
+        </span>
+        <span class="text-[9px] tracking-[0.3em] uppercase text-gallery-400 -mt-1 font-medium">Contemporary</span>
+      </a>
+
+      <!-- Desktop Navigation Links -->
+      <nav class="hidden lg:flex items-center space-x-9 text-xs uppercase tracking-widest font-normal text-gallery-800">
+        <a href="#exhibitions" class="hover:text-black relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-black hover:after:w-full after:transition-all">Exhibitions</a>
+        <a href="#artists" class="hover:text-black relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-black hover:after:w-full after:transition-all">Artists</a>
+        <a href="#viewing-room" class="hover:text-black relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-black hover:after:w-full after:transition-all flex items-center gap-1.5">
+          Viewing Rooms
+          <span class="text-[8px] bg-gallery-200 text-gallery-800 px-1 py-0.5 tracking-normal uppercase rounded-xs">Online</span>
+        </a>
+        <a href="#editorial" class="hover:text-black relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-black hover:after:w-full after:transition-all">Publications</a>
+        <a href="#locations" class="hover:text-black relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-black hover:after:w-full after:transition-all">Locations</a>
+      </nav>
+
+      <!-- Right Utility Actions -->
+      <div class="flex items-center space-x-5">
+        <button onclick="toggleSearchModal(true)" aria-label="Search" class="p-2 text-gallery-700 hover:text-black transition">
+          <i data-lucide="search" class="w-4 h-4"></i>
+        </button>
+        <button onclick="openInquireModal('General Gallery Inquiry')" class="hidden sm:inline-flex items-center text-xs tracking-widest uppercase border border-gallery-900 px-4 py-2 hover:bg-gallery-900 hover:text-white transition duration-300">
+          Inquire
+        </button>
+        <!-- Mobile Menu Toggle -->
+        <button id="menuBtn" onclick="toggleMobileMenu()" class="lg:hidden p-2 text-gallery-800 focus:outline-none">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Drawer Navigation -->
+    <div id="mobileMenu" class="hidden lg:hidden bg-[#FBFBF9] border-b border-gallery-200 px-8 py-6 space-y-5 text-sm uppercase tracking-widest">
+      <a href="#exhibitions" onclick="toggleMobileMenu()" class="block py-1 hover:text-gallery-400">Exhibitions</a>
+      <a href="#artists" onclick="toggleMobileMenu()" class="block py-1 hover:text-gallery-400">Artists</a>
+      <a href="#viewing-room" onclick="toggleMobileMenu()" class="block py-1 hover:text-gallery-400">Viewing Rooms</a>
+      <a href="#editorial" onclick="toggleMobileMenu()" class="block py-1 hover:text-gallery-400">Editorial & Books</a>
+      <a href="#locations" onclick="toggleMobileMenu()" class="block py-1 hover:text-gallery-400">Locations & Visit</a>
+      <div class="pt-4 border-t border-gallery-200 flex justify-between items-center">
+        <button onclick="openInquireModal('Mobile Inquiry')" class="w-full text-center border border-gallery-900 py-2.5 uppercase tracking-widest text-xs">Contact Gallery</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="relative bg-black text-white overflow-hidden min-h-[85vh] lg:min-h-[88vh] flex items-end">
+      
+      <!-- Slide 1 (Active) -->
+      <div id="heroSlide1" class="hero-slide absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out opacity-100">
+        <img 
+          src="https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=2400&q=85" 
+          alt="Ethereal Monoliths - Min-jun Park" 
+          class="w-full h-full object-cover object-center hero-img-zoom brightness-90 filter"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20"></div>
+      </div>
+
+      <!-- Slide 2 -->
+      <div id="heroSlide2" class="hero-slide absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out opacity-0 pointer-events-none">
+        <img 
+          src="https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=2400&q=85" 
+          alt="Silence in Pigment - Clara Vance" 
+          class="w-full h-full object-cover object-center hero-img-zoom brightness-90 filter"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20"></div>
+      </div>
+
+      <!-- Hero Captions & Content Overlay -->
+      <div class="relative z-10 w-full max-w-[1600px] mx-auto px-6 md:px-12 pb-16 pt-32">
+        <div class="max-w-4xl space-y-4">
+          <div class="flex items-center space-x-3 text-xs tracking-mega uppercase text-gallery-300 font-light">
+            <span class="inline-block w-8 h-[1px] bg-gallery-400"></span>
+            <span id="heroLocation">Seoul, Hannam-dong & New York Chelsea</span>
+          </div>
+
+          <h1 id="heroTitle" class="font-serif text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight leading-[1.05] text-white">
+            Ethereal Monoliths
+          </h1>
+
+          <p id="heroArtist" class="text-lg md:text-xl font-serif italic text-gallery-200">
+            Solo Exhibition by <span class="not-italic font-sans text-base font-normal tracking-wide text-white">Park Min-Jun (박민준)</span>
+          </p>
+
+          <p id="heroDate" class="text-xs uppercase tracking-widest text-gallery-300 pt-1">
+            October 15, 2026 – January 18, 2027
+          </p>
+
+          <!-- CTAs -->
+          <div class="pt-6 flex flex-wrap items-center gap-4">
+            <button onclick="openExhibitionModal('Ethereal Monoliths', 'Park Min-Jun', 'Seoul & New York', 'Oct 15, 2026 – Jan 18, 2027')" class="bg-white text-gallery-900 px-7 py-3 text-xs tracking-widest uppercase hover:bg-gallery-200 transition font-medium">
+              Explore Exhibition
+            </button>
+            <a href="#viewing-room" class="border border-white/60 text-white px-7 py-3 text-xs tracking-widest uppercase hover:bg-white/10 backdrop-blur-xs transition">
+              Virtual Viewing Room
+            </a>
+          </div>
+        </div>
+
+        <!-- Slide Indicators & Controls -->
+        <div class="mt-12 pt-6 border-t border-white/20 flex items-center justify-between">
+          <div class="flex items-center space-x-3 text-xs uppercase tracking-widest text-gallery-300 font-light">
+            <span id="slideCounter" class="text-white font-medium">01</span>
+            <span>/</span>
+            <span>02</span>
+          </div>
+          
+          <div class="flex items-center space-x-2">
+            <button onclick="prevSlide()" aria-label="Previous Slide" class="p-2.5 rounded-full border border-white/30 hover:border-white text-white hover:bg-white/10 transition">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <button onclick="nextSlide()" aria-label="Next Slide" class="p-2.5 rounded-full border border-white/30 hover:border-white text-white hover:bg-white/10 transition">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="exhibitions" class="py-24 max-w-[1600px] mx-auto px-6 md:px-12">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-6 border-b border-gallery-200">
+        <div>
+          <span class="text-[11px] uppercase tracking-mega text-gallery-400 block mb-2 font-medium">Global Calendar</span>
+          <h2 class="font-serif text-3xl md:text-5xl font-light text-gallery-900 tracking-tight">Current & Upcoming Exhibitions</h2>
+        </div>
+        <div class="mt-6 md:mt-0 flex items-center space-x-6 text-xs uppercase tracking-widest">
+          <button onclick="filterExhibitions('all')" class="exhibition-filter font-medium text-black underline underline-offset-8">All Spaces</button>
+          <button onclick="filterExhibitions('seoul')" class="exhibition-filter text-gallery-400 hover:text-black transition">Seoul</button>
+          <button onclick="filterExhibitions('new-york')" class="exhibition-filter text-gallery-400 hover:text-black transition">New York</button>
+          <button onclick="filterExhibitions('london')" class="exhibition-filter text-gallery-400 hover:text-black transition">London</button>
+          <button onclick="filterExhibitions('paris')" class="exhibition-filter text-gallery-400 hover:text-black transition">Paris</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-16" id="exhibitionGrid">
+        
+        <!-- Exhibition Card 1 -->
+        <article class="exhibit-item group cursor-pointer" data-city="seoul" onclick="openExhibitionModal('Chromatic Resonances', 'Elena Rostova', 'Seoul — Hannam', 'Through Nov 28, 2026')">
+          <div class="overflow-hidden bg-gallery-100 aspect-[16/11] mb-6 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1547891654-e66ed7ebb968?auto=format&fit=crop&w=1200&q=80" 
+              alt="Chromatic Resonances" 
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              loading="lazy"
+            />
+            <span class="absolute top-4 left-4 bg-gallery-900/80 backdrop-blur-xs text-white text-[10px] tracking-widest uppercase px-2.5 py-1">
+              Now Open
+            </span>
+          </div>
+          <div class="space-y-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 font-medium">Seoul — Hannam Space</p>
+            <h3 class="font-serif text-2xl md:text-3xl font-light text-gallery-900 group-hover:text-gallery-700 transition">Chromatic Resonances</h3>
+            <p class="font-serif italic text-gallery-700 text-sm">Elena Rostova</p>
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 pt-2">Sep 20 – Nov 28, 2026</p>
+          </div>
+        </article>
+
+        <!-- Exhibition Card 2 -->
+        <article class="exhibit-item group cursor-pointer" data-city="new-york" onclick="openExhibitionModal('Form & Void: Recent Sculptures', 'Marcus Sterling', 'New York — Chelsea 24th St', 'Oct 10 – Dec 19, 2026')">
+          <div class="overflow-hidden bg-gallery-100 aspect-[16/11] mb-6 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=1200&q=80" 
+              alt="Form & Void: Recent Sculptures" 
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              loading="lazy"
+            />
+            <span class="absolute top-4 left-4 bg-white/90 backdrop-blur-xs text-gallery-900 text-[10px] tracking-widest uppercase px-2.5 py-1 font-medium">
+              New York
+            </span>
+          </div>
+          <div class="space-y-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 font-medium">New York — 540 W 24th Street</p>
+            <h3 class="font-serif text-2xl md:text-3xl font-light text-gallery-900 group-hover:text-gallery-700 transition">Form & Void: Recent Sculptures</h3>
+            <p class="font-serif italic text-gallery-700 text-sm">Marcus Sterling</p>
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 pt-2">Oct 10 – Dec 19, 2026</p>
+          </div>
+        </article>
+
+        <!-- Exhibition Card 3 -->
+        <article class="exhibit-item group cursor-pointer" data-city="london" onclick="openExhibitionModal('Vaporous Horizons', 'Aiko Tanaka', 'London — Mayfair', 'Upcoming: Nov 14, 2026 – Jan 30, 2027')">
+          <div class="overflow-hidden bg-gallery-100 aspect-[16/11] mb-6 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=1200&q=80" 
+              alt="Vaporous Horizons" 
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              loading="lazy"
+            />
+            <span class="absolute top-4 left-4 bg-gallery-200 text-gallery-900 text-[10px] tracking-widest uppercase px-2.5 py-1">
+              Upcoming
+            </span>
+          </div>
+          <div class="space-y-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 font-medium">London — Cork Street, Mayfair</p>
+            <h3 class="font-serif text-2xl md:text-3xl font-light text-gallery-900 group-hover:text-gallery-700 transition">Vaporous Horizons</h3>
+            <p class="font-serif italic text-gallery-700 text-sm">Aiko Tanaka (田中 愛子)</p>
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 pt-2">Opening Nov 14, 2026</p>
+          </div>
+        </article>
+
+        <!-- Exhibition Card 4 -->
+        <article class="exhibit-item group cursor-pointer" data-city="paris" onclick="openExhibitionModal('Dialogues en Noir et Blanc', 'Pierre Soulanges & Lee Ufan', 'Paris — Rue de Turenne', 'Through Dec 12, 2026')">
+          <div class="overflow-hidden bg-gallery-100 aspect-[16/11] mb-6 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&w=1200&q=80" 
+              alt="Dialogues en Noir et Blanc" 
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              loading="lazy"
+            />
+            <span class="absolute top-4 left-4 bg-gallery-900/80 backdrop-blur-xs text-white text-[10px] tracking-widest uppercase px-2.5 py-1">
+              Curated Dual
+            </span>
+          </div>
+          <div class="space-y-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 font-medium">Paris — Le Marais</p>
+            <h3 class="font-serif text-2xl md:text-3xl font-light text-gallery-900 group-hover:text-gallery-700 transition">Dialogues en Noir et Blanc</h3>
+            <p class="font-serif italic text-gallery-700 text-sm">Lee Ufan & Pierre Soulages</p>
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 pt-2">Oct 02 – Dec 12, 2026</p>
+          </div>
+        </article>
+
+        <!-- Exhibition Card 5 -->
+        <article class="exhibit-item group cursor-pointer" data-city="seoul" onclick="openExhibitionModal('Architectures of Memory', 'Haegue Yang', 'Seoul — Samcheong', 'Oct 24, 2026 – Jan 05, 2027')">
+          <div class="overflow-hidden bg-gallery-100 aspect-[16/11] mb-6 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=1200&q=80" 
+              alt="Architectures of Memory" 
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              loading="lazy"
+            />
+            <span class="absolute top-4 left-4 bg-gallery-200 text-gallery-900 text-[10px] tracking-widest uppercase px-2.5 py-1">
+              Samcheong Branch
+            </span>
+          </div>
+          <div class="space-y-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 font-medium">Seoul — Samcheong-dong</p>
+            <h3 class="font-serif text-2xl md:text-3xl font-light text-gallery-900 group-hover:text-gallery-700 transition">Architectures of Memory</h3>
+            <p class="font-serif italic text-gallery-700 text-sm">Haegue Yang (양혜규)</p>
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 pt-2">Oct 24, 2026 – Jan 05, 2027</p>
+          </div>
+        </article>
+
+        <!-- Exhibition Card 6 -->
+        <article class="exhibit-item group cursor-pointer" data-city="new-york" onclick="openExhibitionModal('Sublime Cartography', 'Chantal Joffe & George Condo', 'New York — Upper East Side', 'Nov 01, 2026 – Feb 02, 2027')">
+          <div class="overflow-hidden bg-gallery-100 aspect-[16/11] mb-6 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1549887534-1541e9326642?auto=format&fit=crop&w=1200&q=80" 
+              alt="Sublime Cartography" 
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              loading="lazy"
+            />
+            <span class="absolute top-4 left-4 bg-gallery-900/80 backdrop-blur-xs text-white text-[10px] tracking-widest uppercase px-2.5 py-1">
+              New York
+            </span>
+          </div>
+          <div class="space-y-1.5">
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 font-medium">New York — 828 Madison Ave</p>
+            <h3 class="font-serif text-2xl md:text-3xl font-light text-gallery-900 group-hover:text-gallery-700 transition">Sublime Cartography</h3>
+            <p class="font-serif italic text-gallery-700 text-sm">Chantal Joffe</p>
+            <p class="text-[11px] uppercase tracking-widest text-gallery-400 pt-2">Nov 01, 2026 – Feb 02, 2027</p>
+          </div>
+        </article>
+
+      </div>
+      
+      <div class="mt-16 text-center">
+        <button class="inline-flex items-center space-x-3 text-xs uppercase tracking-widest font-medium border-b border-gallery-900 pb-2 hover:opacity-60 transition">
+          <span>View Complete Global Calendar (2026 — 2027)</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </section>
+
+    <section id="viewing-room" class="bg-gallery-900 text-white py-24 px-6 md:px-12 relative overflow-hidden">
+      <div class="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        
+        <div class="lg:col-span-5 space-y-6">
+          <div class="inline-flex items-center space-x-2 text-[10px] tracking-widest uppercase border border-white/20 px-3 py-1 text-gallery-300">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Online Viewing Room • Limited 14 Days</span>
+          </div>
+
+          <h2 class="font-serif text-4xl sm:text-5xl md:text-6xl font-light tracking-tight leading-tight">
+            The Geometry of Silence
+          </h2>
+          <p class="font-serif italic text-gallery-300 text-xl">Curated works by Hiroshi Sugimoto, Agnes Martin, and Donald Judd</p>
+
+          <p class="text-sm text-gallery-400 font-light leading-relaxed max-w-lg">
+            Experience our ultra-high-resolution private digital viewing room. Explore historical context, museum provenance, and acquisition inquiries with our Senior Curators.
+          </p>
+
+          <div class="pt-4 flex items-center space-x-6 text-xs uppercase tracking-widest">
+            <div>
+              <span class="block text-2xl font-serif text-white">09</span>
+              <span class="text-gallery-400 text-[10px]">Days</span>
+            </div>
+            <span class="text-gallery-600 text-xl font-light">:</span>
+            <div>
+              <span class="block text-2xl font-serif text-white">14</span>
+              <span class="text-gallery-400 text-[10px]">Hours</span>
+            </div>
+            <span class="text-gallery-600 text-xl font-light">:</span>
+            <div>
+              <span class="block text-2xl font-serif text-white">38</span>
+              <span class="text-gallery-400 text-[10px]">Minutes</span>
+            </div>
+          </div>
+
+          <div class="pt-4 flex flex-wrap gap-4">
+            <button onclick="openInquireModal('Viewing Room Access: The Geometry of Silence')" class="bg-white text-gallery-900 px-8 py-3.5 text-xs uppercase tracking-widest hover:bg-gallery-200 transition font-medium">
+              Enter Viewing Room
+            </button>
+            <button onclick="openArtworkPreview('Agnes Martin', 'Untitled #12', '1981, Acrylic and graphite on canvas', '72 × 72 in (182.9 × 182.9 cm)', 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1400&q=80')" class="border border-white/40 text-white px-6 py-3.5 text-xs uppercase tracking-widest hover:border-white transition">
+              Preview Catalog
+            </button>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 relative">
+          <div class="relative aspect-[16/10] overflow-hidden bg-gallery-800 shadow-2xl border border-white/10 group">
+            <img 
+              src="https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=1600&q=80" 
+              alt="Viewing Room Installation" 
+              class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-8">
+              <div class="text-xs text-gallery-300 font-light flex justify-between w-full items-center">
+                <span>Installation View: Gallery Space 01 / London</span>
+                <span class="uppercase tracking-widest text-[10px] text-white">360° Interactive Tour Available</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="artists" class="py-24 max-w-[1600px] mx-auto px-6 md:px-12">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-6 border-b border-gallery-200">
+        <div>
+          <span class="text-[11px] uppercase tracking-mega text-gallery-400 block mb-2 font-medium">Roster</span>
+          <h2 class="font-serif text-3xl md:text-5xl font-light text-gallery-900 tracking-tight">Represented Artists</h2>
+        </div>
+        <a href="#artists" class="mt-4 md:mt-0 text-xs uppercase tracking-widest hover:text-gallery-400 transition flex items-center space-x-2">
+          <span>Complete Artist Roster (A—Z)</span>
+          <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+        </a>
+      </div>
+
+      <!-- Artists Showcase Grid / Horizontal Scroller -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
+        
+        <!-- Artist 1 -->
+        <div class="group cursor-pointer" onclick="openArtistModal('Park Min-Jun', 'Seoul, b. 1971', 'Park Min-Jun synthesizes centuries of East Asian ink philosophy with monumental western abstraction.', 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80')">
+          <div class="aspect-tall overflow-hidden bg-gallery-200 mb-4 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80" 
+              alt="Park Min-Jun"
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter grayscale contrast-105 group-hover:grayscale-0"
+              loading="lazy"
+            />
+          </div>
+          <h4 class="font-serif text-xl md:text-2xl font-light group-hover:underline">Park Min-Jun</h4>
+          <p class="text-[11px] uppercase tracking-widest text-gallery-400">Painting & Sculpture</p>
+        </div>
+
+        <!-- Artist 2 -->
+        <div class="group cursor-pointer" onclick="openArtistModal('Elena Rostova', 'Berlin / London, b. 1984', 'Elena Rostova explores the physical materiality of pigment and atmospheric perspective.', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80')">
+          <div class="aspect-tall overflow-hidden bg-gallery-200 mb-4 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80" 
+              alt="Elena Rostova"
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter grayscale contrast-105 group-hover:grayscale-0"
+              loading="lazy"
+            />
+          </div>
+          <h4 class="font-serif text-xl md:text-2xl font-light group-hover:underline">Elena Rostova</h4>
+          <p class="text-[11px] uppercase tracking-widest text-gallery-400">Oil & Mixed Media</p>
+        </div>
+
+        <!-- Artist 3 -->
+        <div class="group cursor-pointer" onclick="openArtistModal('Marcus Sterling', 'New York, b. 1968', 'Renowned for monumental steel, patinated bronze, and site-responsive installations worldwide.', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80')">
+          <div class="aspect-tall overflow-hidden bg-gallery-200 mb-4 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80" 
+              alt="Marcus Sterling"
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter grayscale contrast-105 group-hover:grayscale-0"
+              loading="lazy"
+            />
+          </div>
+          <h4 class="font-serif text-xl md:text-2xl font-light group-hover:underline">Marcus Sterling</h4>
+          <p class="text-[11px] uppercase tracking-widest text-gallery-400">Sculpture & Spatial Design</p>
+        </div>
+
+        <!-- Artist 4 -->
+        <div class="group cursor-pointer" onclick="openArtistModal('Aiko Tanaka', 'Kyoto / Paris, b. 1979', 'Known for ethereal kinetic lights and paper works investigating the transience of perception.', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80')">
+          <div class="aspect-tall overflow-hidden bg-gallery-200 mb-4 relative">
+            <img 
+              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80" 
+              alt="Aiko Tanaka"
+              class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter grayscale contrast-105 group-hover:grayscale-0"
+              loading="lazy"
+            />
+          </div>
+          <h4 class="font-serif text-xl md:text-2xl font-light group-hover:underline">Aiko Tanaka</h4>
+          <p class="text-[11px] uppercase tracking-widest text-gallery-400">Light, Paper & Installation</p>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="editorial" class="py-24 bg-gallery-100 border-y border-gallery-200">
+      <div class="max-w-[1600px] mx-auto px-6 md:px-12">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-6 border-b border-gallery-300">
+          <div>
+            <span class="text-[11px] uppercase tracking-mega text-gallery-400 block mb-2 font-medium">KRONOS Journal</span>
+            <h2 class="font-serif text-3xl md:text-5xl font-light text-gallery-900 tracking-tight">Essays, Books & Film</h2>
+          </div>
+          <p class="text-xs uppercase tracking-widest text-gallery-400 mt-4 md:mt-0 font-medium">
+            Issue № 48 / Autumn 2026
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+          
+          <!-- Article 1 -->
+          <article class="space-y-4 group cursor-pointer" onclick="openStoryModal('The Weight of Ether', 'Park Min-Jun in Studio Conversation', 'A 40-minute studio portrait filmed during the preparation of the monumental Seoul show.')">
+            <div class="overflow-hidden aspect-video bg-gallery-200 relative">
+              <img 
+                src="https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&w=1000&q=80" 
+                alt="Studio Conversation" 
+                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="w-12 h-12 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+                  <i data-lucide="play" class="w-4 h-4 text-black fill-black ml-0.5"></i>
+                </span>
+              </div>
+            </div>
+            <div>
+              <span class="text-[10px] tracking-widest uppercase text-gallery-400">Artist Film • 24 Min</span>
+              <h3 class="font-serif text-2xl font-light text-gallery-900 group-hover:text-gallery-700 transition mt-1">
+                The Weight of Ether: In Studio with Park Min-Jun
+              </h3>
+              <p class="text-xs text-gallery-700 leading-relaxed font-light mt-2 line-clamp-2">
+                Filmed in his outskirts atelier, the artist unpacks the meditative rhythm of mineral pigment layering.
+              </p>
+            </div>
+          </article>
+
+          <!-- Article 2 -->
+          <article class="space-y-4 group cursor-pointer" onclick="openStoryModal('The Architecture of Silence', 'Monograph Release', 'A new 320-page hardcover published by Kronos Art Editions.')">
+            <div class="overflow-hidden aspect-video bg-gallery-200">
+              <img 
+                src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80" 
+                alt="New Monograph" 
+                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            </div>
+            <div>
+              <span class="text-[10px] tracking-widest uppercase text-gallery-400">Monograph & Catalogue</span>
+              <h3 class="font-serif text-2xl font-light text-gallery-900 group-hover:text-gallery-700 transition mt-1">
+                The Architecture of Silence: Monographs 2020–2026
+              </h3>
+              <p class="text-xs text-gallery-700 leading-relaxed font-light mt-2 line-clamp-2">
+                Featuring scholarly essays by Hans Ulrich Obrist and critical texts examining postwar monochrome movements.
+              </p>
+            </div>
+          </article>
+
+          <!-- Article 3 -->
+          <article class="space-y-4 group cursor-pointer" onclick="openStoryModal('Venice Biennale Review', 'Curatorial Dispatch', 'Reflections on international pavilions and changing aesthetics of spatial installation.')">
+            <div class="overflow-hidden aspect-video bg-gallery-200">
+              <img 
+                src="https://images.unsplash.com/photo-1508997449629-303059a039c0?auto=format&fit=crop&w=1000&q=80" 
+                alt="Curatorial Dispatch" 
+                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            </div>
+            <div>
+              <span class="text-[10px] tracking-widest uppercase text-gallery-400">Critical Review</span>
+              <h3 class="font-serif text-2xl font-light text-gallery-900 group-hover:text-gallery-700 transition mt-1">
+                Material Disobedience: The 61st Venice Biennale Dispatch
+              </h3>
+              <p class="text-xs text-gallery-700 leading-relaxed font-light mt-2 line-clamp-2">
+                Kronos Director of Research reflects on sculpture, eco-feminism, and monumental installations in the Giardini.
+              </p>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <section id="locations" class="py-24 max-w-[1600px] mx-auto px-6 md:px-12">
+      <div class="mb-14 pb-6 border-b border-gallery-200 flex flex-col md:flex-row md:items-end justify-between">
+        <div>
+          <span class="text-[11px] uppercase tracking-mega text-gallery-400 block mb-2 font-medium">Visit Our Galleries</span>
+          <h2 class="font-serif text-3xl md:text-5xl font-light text-gallery-900 tracking-tight">Worldwide Spaces</h2>
+        </div>
+        <p class="text-xs text-gallery-400 uppercase tracking-widest mt-2 md:mt-0 font-medium">Free admission • No reservations required</p>
+      </div>
+
+      <!-- City Navigation Tabs -->
+      <div class="flex overflow-x-auto hide-scrollbar space-x-8 border-b border-gallery-200 text-xs uppercase tracking-widest mb-12">
+        <button onclick="switchLocation('seoul')" id="tab-seoul" class="loc-tab font-semibold pb-4 border-b-2 border-black text-black">Seoul (Hannam & Samcheong)</button>
+        <button onclick="switchLocation('newyork')" id="tab-newyork" class="loc-tab pb-4 border-b-2 border-transparent text-gallery-400 hover:text-black transition">New York (Chelsea)</button>
+        <button onclick="switchLocation('london')" id="tab-london" class="loc-tab pb-4 border-b-2 border-transparent text-gallery-400 hover:text-black transition">London (Mayfair)</button>
+        <button onclick="switchLocation('paris')" id="tab-paris" class="loc-tab pb-4 border-b-2 border-transparent text-gallery-400 hover:text-black transition">Paris (Le Marais)</button>
+        <button onclick="switchLocation('tokyo')" id="tab-tokyo" class="loc-tab pb-4 border-b-2 border-transparent text-gallery-400 hover:text-black transition">Tokyo (Roppongi)</button>
+      </div>
+
+      <!-- Dynamic Location Details Container -->
+      <div id="locationCard" class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center bg-[#F4F3F0] p-8 md:p-14 border border-gallery-200">
+        <div class="lg:col-span-5 space-y-6">
+          <div class="space-y-1">
+            <span id="locSub" class="text-[10px] tracking-mega uppercase text-gallery-400 font-semibold">Flagship Space</span>
+            <h3 id="locTitle" class="font-serif text-3xl md:text-4xl font-light text-gallery-900">KRONOS Seoul — Hannam</h3>
+          </div>
+
+          <div class="space-y-4 text-xs tracking-wider text-gallery-700">
+            <div>
+              <p class="font-semibold uppercase text-gallery-900 mb-1">Address</p>
+              <p id="locAddress">84 Hannam-daero, Yongsan-gu, Seoul, 04418 Republic of Korea</p>
+            </div>
+            <div>
+              <p class="font-semibold uppercase text-gallery-900 mb-1">Hours</p>
+              <p id="locHours">Tuesday – Saturday: 10:00 AM – 6:00 PM<br>Sunday & Monday: Closed</p>
+            </div>
+            <div>
+              <p class="font-semibold uppercase text-gallery-900 mb-1">Contact & Inquiries</p>
+              <p id="locContact">+82 (0)2 795 8820 • seoul@kronos-art.com</p>
+            </div>
+          </div>
+
+          <div class="pt-4 flex items-center space-x-4">
+            <button onclick="openInquireModal('Visit Inquiry: Seoul Hannam')" class="border border-gallery-900 px-6 py-3 text-xs uppercase tracking-widest hover:bg-gallery-900 hover:text-white transition">
+              Plan Your Visit
+            </button>
+            <button onclick="copyAddress()" class="text-xs uppercase tracking-widest text-gallery-700 hover:text-black underline underline-offset-4 flex items-center gap-1.5">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span id="copyBtnText">Copy Address</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7">
+          <div class="aspect-[16/10] overflow-hidden bg-gallery-300">
+            <img 
+              id="locImage" 
+              src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1400&q=80" 
+              alt="Gallery Space Seoul" 
+              class="w-full h-full object-cover transition-opacity duration-500"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-gallery-900 text-white py-20 px-6 md:px-12 border-t border-gallery-800">
+      <div class="max-w-3xl mx-auto text-center space-y-6">
+        <span class="text-[10px] tracking-mega uppercase text-gallery-400">Newsletter</span>
+        <h2 class="font-serif text-3xl md:text-5xl font-light">Join the Kronos Inner Circle</h2>
+        <p class="text-xs md:text-sm text-gallery-400 leading-relaxed font-light">
+          Receive private invitations to vernissages, acquisition previews for art fairs (Basel, Frieze, Art Basel Miami Beach), and critical monographs.
+        </p>
+
+        <form onsubmit="handleNewsletter(event)" class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
+          <input 
+            type="email" 
+            id="newsletterEmail" 
+            placeholder="Enter your email address" 
+            required 
+            class="w-full bg-gallery-800/80 border border-gallery-700 text-white text-xs px-4 py-3.5 focus:outline-none focus:border-white transition placeholder-gallery-500 tracking-wider"
+          />
+          <button 
+            type="submit" 
+            class="w-full sm:w-auto bg-white text-gallery-900 px-8 py-3.5 text-xs uppercase tracking-widest font-medium hover:bg-gallery-200 transition shrink-0"
+          >
+            Subscribe
+          </button>
+        </form>
+        <p id="newsletterSuccess" class="text-xs text-emerald-400 hidden pt-2 tracking-wide font-light">Thank you. You have been added to our curatorial mailing list.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-black text-gallery-300 py-16 px-6 md:px-12 border-t border-gallery-800 text-xs">
+    <div class="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 pb-16 border-b border-gallery-800">
+      
+      <!-- Brand column -->
+      <div class="lg:col-span-2 space-y-4">
+        <span class="font-serif text-3xl tracking-widest uppercase font-light text-white block">K R O N O S</span>
+        <p class="text-xs text-gallery-400 font-light max-w-sm leading-relaxed">
+          KRONOS Contemporary Art is an international modern & contemporary art gallery founded in 1994, operating primary exhibition spaces in Seoul, New York, London, Paris, and Tokyo.
+        </p>
+        <div class="pt-2 flex items-center space-x-5 text-gallery-400">
+          <a href="#" aria-label="Instagram" class="hover:text-white transition"><i data-lucide="instagram" class="w-4 h-4"></i></a>
+          <a href="#" aria-label="Youtube" class="hover:text-white transition"><i data-lucide="youtube" class="w-4 h-4"></i></a>
+          <a href="#" aria-label="Twitter" class="hover:text-white transition"><i data-lucide="twitter" class="w-4 h-4"></i></a>
+          <a href="#" aria-label="Mail" class="hover:text-white transition"><i data-lucide="mail" class="w-4 h-4"></i></a>
+        </div>
+      </div>
+
+      <!-- Links Column 1 -->
+      <div class="space-y-3">
+        <p class="text-white text-[11px] uppercase tracking-widest font-semibold mb-4">Exhibitions & Fairs</p>
+        <ul class="space-y-2 text-gallery-400">
+          <li><a href="#exhibitions" class="hover:text-white transition">Current Exhibitions</a></li>
+          <li><a href="#exhibitions" class="hover:text-white transition">Upcoming Schedule</a></li>
+          <li><a href="#exhibitions" class="hover:text-white transition">Past Archives (1994–2026)</a></li>
+          <li><a href="#viewing-room" class="hover:text-white transition">Online Viewing Rooms</a></li>
+          <li><a href="#" class="hover:text-white transition">Art Fairs & Special Projects</a></li>
+        </ul>
+      </div>
+
+      <!-- Links Column 2 -->
+      <div class="space-y-3">
+        <p class="text-white text-[11px] uppercase tracking-widest font-semibold mb-4">Publishing & Press</p>
+        <ul class="space-y-2 text-gallery-400">
+          <li><a href="#editorial" class="hover:text-white transition">Kronos Art Books</a></li>
+          <li><a href="#editorial" class="hover:text-white transition">Artist Interviews & Film</a></li>
+          <li><a href="#" class="hover:text-white transition">Press Releases</a></li>
+          <li><a href="#" class="hover:text-white transition">Museum Loans & Estates</a></li>
+          <li><a href="#" class="hover:text-white transition">Staff Directory</a></li>
+        </ul>
+      </div>
+
+      <!-- Links Column 3 -->
+      <div class="space-y-3">
+        <p class="text-white text-[11px] uppercase tracking-widest font-semibold mb-4">Legal & Inquiries</p>
+        <ul class="space-y-2 text-gallery-400">
+          <li><a href="javascript:void(0)" onclick="openInquireModal('Sales & Appraisal')" class="hover:text-white transition">Sales & Acquisitions</a></li>
+          <li><a href="javascript:void(0)" onclick="openInquireModal('Rights & Reproductions')" class="hover:text-white transition">Rights & Reproductions</a></li>
+          <li><a href="#" class="hover:text-white transition">Privacy Policy</a></li>
+          <li><a href="#" class="hover:text-white transition">Terms of Service</a></li>
+          <li><a href="#" class="hover:text-white transition">Accessibility Statement</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Copyright -->
+    <div class="max-w-[1600px] mx-auto pt-8 flex flex-col sm:flex-row justify-between items-center text-gallery-500 text-[11px] tracking-wider">
+      <p>© 2026 KRONOS Contemporary Art Gallery. All rights reserved.</p>
+      <p class="mt-4 sm:mt-0 font-light">Member of the Art Dealers Association of America (ADAA) & Gallery Association of Korea</p>
+    </div>
+  </footer>
+
+
+  <!-- 1. Exhibition / Artwork Detail Modal -->
+  <div id="artModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+    <div class="bg-white max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 md:p-10 relative">
+      <button onclick="closeModal('artModal')" class="absolute top-6 right-6 p-2 text-gallery-800 hover:text-black">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mt-4">
+        <div class="bg-gallery-100 overflow-hidden">
+          <img id="modalImg" src="" alt="Detail View" class="w-full h-auto object-cover" />
+        </div>
+        <div class="space-y-4">
+          <span id="modalMeta" class="text-[10px] uppercase tracking-mega text-gallery-400 font-semibold">Exhibition Overview</span>
+          <h3 id="modalTitle" class="font-serif text-3xl md:text-4xl font-light text-gallery-900 leading-tight"></h3>
+          <p id="modalArtist" class="font-serif italic text-gallery-700 text-lg"></p>
+          <div class="border-t border-b border-gallery-200 py-3 my-2 space-y-1 text-xs text-gallery-600">
+            <p id="modalLocationDate"></p>
+          </div>
+          <p id="modalDesc" class="text-xs text-gallery-700 leading-relaxed font-light">
+            This presentation highlights recent bodies of work exploring spatial continuity, tactile pigment surfaces, and atmospheric quietude. Catalogues raisonnés and curatorial dossier available upon request.
+          </p>
+          <div class="pt-4 flex space-x-3">
+            <button onclick="inquireFromModal()" class="bg-gallery-900 text-white px-6 py-3 text-xs uppercase tracking-widest hover:bg-gallery-700 transition font-medium">
+              Request Price & Checklist
+            </button>
+            <button onclick="closeModal('artModal')" class="border border-gallery-300 text-gallery-800 px-6 py-3 text-xs uppercase tracking-widest hover:bg-gallery-100 transition">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Inquiry Modal -->
+  <div id="inquireModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+    <div class="bg-[#FBFBF9] max-w-lg w-full p-8 md:p-10 relative border border-gallery-200">
+      <button onclick="closeModal('inquireModal')" class="absolute top-6 right-6 p-2 text-gallery-800 hover:text-black">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <span class="text-[10px] uppercase tracking-mega text-gallery-400 font-semibold block mb-1">Gallery Concierge</span>
+      <h3 class="font-serif text-2xl md:text-3xl font-light text-gallery-900 mb-2">Acquisition & Visit Inquiry</h3>
+      <p id="inquireSubject" class="text-xs text-gallery-500 mb-6 italic font-serif">Regarding: General Inquiry</p>
+
+      <form onsubmit="handleInquirySubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-[10px] uppercase tracking-widest text-gallery-500 mb-1">Your Name</label>
+          <input type="text" required class="w-full bg-white border border-gallery-300 text-xs px-3.5 py-2.5 focus:outline-none focus:border-black tracking-wide" placeholder="Full name">
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase tracking-widest text-gallery-500 mb-1">Email Address</label>
+          <input type="email" required class="w-full bg-white border border-gallery-300 text-xs px-3.5 py-2.5 focus:outline-none focus:border-black tracking-wide" placeholder="name@domain.com">
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase tracking-widest text-gallery-500 mb-1">Preferred Location</label>
+          <select class="w-full bg-white border border-gallery-300 text-xs px-3 py-2.5 focus:outline-none focus:border-black">
+            <option>Seoul (Hannam / Samcheong)</option>
+            <option>New York (Chelsea)</option>
+            <option>London (Mayfair)</option>
+            <option>Paris (Le Marais)</option>
+            <option>Tokyo (Roppongi)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase tracking-widest text-gallery-500 mb-1">Message or Specific Work</label>
+          <textarea rows="3" class="w-full bg-white border border-gallery-300 text-xs p-3 focus:outline-none focus:border-black" placeholder="Please detail your collector profile or questions regarding pricing, provenance, or exhibition tour..."></textarea>
+        </div>
+
+        <button type="submit" class="w-full bg-gallery-900 text-white text-xs uppercase tracking-widest py-3.5 hover:bg-black transition font-medium mt-2">
+          Transmit Inquiry
+        </button>
+      </form>
+      <p id="inquirySuccess" class="text-xs text-emerald-600 hidden text-center pt-3">Your inquiry has been relayed to our Senior Director. We will reply within 24 hours.</p>
+    </div>
+  </div>
+
+  <!-- 3. Global Quick Search Modal -->
+  <div id="searchModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden items-start justify-center pt-24 px-4 transition-opacity duration-300 opacity-0">
+    <div class="bg-white max-w-2xl w-full p-8 relative shadow-2xl">
+      <div class="flex items-center border-b border-gallery-300 pb-3">
+        <i data-lucide="search" class="w-5 h-5 text-gallery-400 mr-3"></i>
+        <input 
+          id="globalSearchInput" 
+          type="text" 
+          onkeyup="handleLiveSearch(this.value)" 
+          placeholder="Search artists, exhibitions, monographs, locations..." 
+          class="w-full text-base font-serif italic text-gallery-900 focus:outline-none placeholder-gallery-400"
+          autofocus
+        />
+        <button onclick="toggleSearchModal(false)" class="p-1 text-gallery-400 hover:text-black">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="mt-6">
+        <p class="text-[10px] uppercase tracking-widest text-gallery-400 font-semibold mb-3">Suggested Quick Links</p>
+        <div id="searchResults" class="space-y-2 text-xs text-gallery-700">
+          <div class="p-2 hover:bg-gallery-100 cursor-pointer flex justify-between" onclick="selectSearch('Park Min-Jun — Current Exhibition')">
+            <span><strong>Park Min-Jun</strong> — Ethereal Monoliths (Seoul & NY)</span>
+            <span class="text-gallery-400">Exhibition</span>
+          </div>
+          <div class="p-2 hover:bg-gallery-100 cursor-pointer flex justify-between" onclick="selectSearch('Online Viewing Room: Geometry of Silence')">
+            <span><strong>Geometry of Silence</strong> — Curated Online Viewing Room</span>
+            <span class="text-gallery-400">Viewing Room</span>
+          </div>
+          <div class="p-2 hover:bg-gallery-100 cursor-pointer flex justify-between" onclick="selectSearch('Haegue Yang — Architectures of Memory')">
+            <span><strong>Haegue Yang</strong> — Samcheong Branch</span>
+            <span class="text-gallery-400">Upcoming</span>
+          </div>
+          <div class="p-2 hover:bg-gallery-100 cursor-pointer flex justify-between" onclick="selectSearch('Monograph Catalogue 2026')">
+            <span><strong>Publications</strong> — New Hardcover Monograph</span>
+            <span class="text-gallery-400">Books</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide Icons
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+
+    // 1. Hero Slide Controller
+    let currentSlide = 1;
+    const totalSlides = 2;
+
+    const slidesData = [
+      {
+        location: "Seoul, Hannam-dong & New York Chelsea",
+        title: "Ethereal Monoliths",
+        artist: "Solo Exhibition by Park Min-Jun (박민준)",
+        dates: "October 15, 2026 – January 18, 2027"
+      },
+      {
+        location: "London, Mayfair & Paris Le Marais",
+        title: "Silence in Pigment",
+        artist: "Curated Group Survey: Vance, Sugimoto, Rostova",
+        dates: "November 05, 2026 – February 12, 2027"
+      }
+    ];
+
+    function updateHeroSlide() {
+      const slide1 = document.getElementById('heroSlide1');
+      const slide2 = document.getElementById('heroSlide2');
+      const title = document.getElementById('heroTitle');
+      const artist = document.getElementById('heroArtist');
+      const loc = document.getElementById('heroLocation');
+      const date = document.getElementById('heroDate');
+      const counter = document.getElementById('slideCounter');
+
+      const data = slidesData[currentSlide - 1];
+
+      if (currentSlide === 1) {
+        slide1.classList.remove('opacity-0', 'pointer-events-none');
+        slide1.classList.add('opacity-100');
+        slide2.classList.remove('opacity-100');
+        slide2.classList.add('opacity-0', 'pointer-events-none');
+        counter.textContent = "01";
+      } else {
+        slide2.classList.remove('opacity-0', 'pointer-events-none');
+        slide2.classList.add('opacity-100');
+        slide1.classList.remove('opacity-100');
+        slide1.classList.add('opacity-0', 'pointer-events-none');
+        counter.textContent = "02";
+      }
+
+      title.textContent = data.title;
+      artist.innerHTML = data.artist;
+      loc.textContent = data.location;
+      date.textContent = data.dates;
+    }
+
+    function nextSlide() {
+      currentSlide = currentSlide === totalSlides ? 1 : currentSlide + 1;
+      updateHeroSlide();
+    }
+
+    function prevSlide() {
+      currentSlide = currentSlide === 1 ? totalSlides : currentSlide - 1;
+      updateHeroSlide();
+    }
+
+    // Auto rotate hero slides gently every 9 seconds
+    setInterval(nextSlide, 9000);
+
+    // 2. Mobile Menu Toggle
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobileMenu');
+      menu.classList.toggle('hidden');
+    }
+
+    // 3. Location Tabs Data & Switcher
+    const locationsData = {
+      seoul: {
+        title: "KRONOS Seoul — Hannam & Samcheong",
+        sub: "Flagship Space",
+        address: "84 Hannam-daero, Yongsan-gu, Seoul, 04418 Republic of Korea",
+        hours: "Tuesday – Saturday: 10:00 AM – 6:00 PM / Sunday & Monday: Closed",
+        contact: "+82 (0)2 795 8820 • seoul@kronos-art.com",
+        image: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1400&q=80"
+      },
+      newyork: {
+        title: "KRONOS New York — Chelsea",
+        sub: "Main US Gallery",
+        address: "540 West 24th Street, New York, NY 10011 USA",
+        hours: "Tuesday – Saturday: 10:00 AM – 6:00 PM / Monday by appointment",
+        contact: "+1 212 555 0192 • newyork@kronos-art.com",
+        image: "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=1400&q=80"
+      },
+      london: {
+        title: "KRONOS London — Mayfair",
+        sub: "UK & European Hub",
+        address: "22 Cork Street, Mayfair, London W1S 3NG United Kingdom",
+        hours: "Monday – Saturday: 10:00 AM – 6:00 PM",
+        contact: "+44 (0)20 7493 0200 • london@kronos-art.com",
+        image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=1400&q=80"
+      },
+      paris: {
+        title: "KRONOS Paris — Le Marais",
+        sub: "Historic Quarters",
+        address: "108 Rue de Turenne, 75003 Paris France",
+        hours: "Tuesday – Saturday: 11:00 AM – 7:00 PM",
+        contact: "+33 (0)1 42 74 50 00 • paris@kronos-art.com",
+        image: "https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&w=1400&q=80"
+      },
+      tokyo: {
+        title: "KRONOS Tokyo — Roppongi",
+        sub: "East Asian Branch",
+        address: "6-10-1 Roppongi, Minato-ku, Tokyo 106-6108 Japan",
+        hours: "Tuesday – Sunday: 11:00 AM – 7:00 PM / Monday: Closed",
+        contact: "+81 (0)3 5770 1200 • tokyo@kronos-art.com",
+        image: "https://images.unsplash.com/photo-1549887534-1541e9326642?auto=format&fit=crop&w=1400&q=80"
+      }
+    };
+
+    function switchLocation(cityKey) {
+      const data = locationsData[cityKey];
+      if (!data) return;
+
+      document.querySelectorAll('.loc-tab').forEach(tab => {
+        tab.classList.remove('border-black', 'text-black', 'font-semibold');
+        tab.classList.add('border-transparent', 'text-gallery-400');
+      });
+
+      const activeTab = document.getElementById(`tab-${cityKey}`);
+      if (activeTab) {
+        activeTab.classList.add('border-black', 'text-black', 'font-semibold');
+        activeTab.classList.remove('border-transparent', 'text-gallery-400');
+      }
+
+      document.getElementById('locTitle').textContent = data.title;
+      document.getElementById('locSub').textContent = data.sub;
+      document.getElementById('locAddress').textContent = data.address;
+      document.getElementById('locHours').innerHTML = data.hours.replace('/', '<br>');
+      document.getElementById('locContact').textContent = data.contact;
+      
+      const img = document.getElementById('locImage');
+      img.style.opacity = '0.3';
+      setTimeout(() => {
+        img.src = data.image;
+        img.style.opacity = '1';
+      }, 200);
+    }
+
+    // 4. Exhibition Filter Tabs
+    function filterExhibitions(filter) {
+      const items = document.querySelectorAll('.exhibit-item');
+      const buttons = document.querySelectorAll('.exhibition-filter');
+
+      buttons.forEach(btn => {
+        btn.classList.remove('underline', 'underline-offset-8', 'font-medium', 'text-black');
+        btn.classList.add('text-gallery-400');
+      });
+      event.target.classList.add('underline', 'underline-offset-8', 'font-medium', 'text-black');
+      event.target.classList.remove('text-gallery-400');
+
+      items.forEach(item => {
+        if (filter === 'all' || item.getAttribute('data-city') === filter) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    // 5. Modal Controllers
+    let currentModalSubject = '';
+
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => modal.classList.remove('opacity-0'), 10);
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      modal.classList.add('opacity-0');
+      setTimeout(() => {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 250);
+    }
+
+    function openExhibitionModal(title, artist, location, dates) {
+      currentModalSubject = `${title} (${artist})`;
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalArtist').textContent = artist;
+      document.getElementById('modalLocationDate').innerHTML = `<strong>Location:</strong> ${location}<br><strong>Dates:</strong> ${dates}`;
+      document.getElementById('modalMeta').textContent = "Featured Exhibition";
+      document.getElementById('modalImg').src = "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?auto=format&fit=crop&w=1200&q=80";
+      openModal('artModal');
+    }
+
+    function openArtworkPreview(artist, title, medium, dims, imgUrl) {
+      currentModalSubject = `Artwork: ${title} by ${artist}`;
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalArtist').textContent = artist;
+      document.getElementById('modalLocationDate').innerHTML = `<strong>Medium:</strong> ${medium}<br><strong>Dimensions:</strong> ${dims}`;
+      document.getElementById('modalMeta').textContent = "Private Viewing Room Artwork";
+      document.getElementById('modalImg').src = imgUrl;
+      openModal('artModal');
+    }
+
+    function openArtistModal(name, bio, desc, imgUrl) {
+      currentModalSubject = `Artist Representation: ${name}`;
+      document.getElementById('modalTitle').textContent = name;
+      document.getElementById('modalArtist').textContent = bio;
+      document.getElementById('modalLocationDate').innerHTML = `<strong>Status:</strong> Exclusively Represented<br><strong>Monographs:</strong> Available via Kronos Books`;
+      document.getElementById('modalDesc').textContent = desc;
+      document.getElementById('modalMeta').textContent = "Artist Dossier";
+      document.getElementById('modalImg').src = imgUrl;
+      openModal('artModal');
+    }
+
+    function openStoryModal(title, subtitle, description) {
+      currentModalSubject = `Editorial Article: ${title}`;
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalArtist').textContent = subtitle;
+      document.getElementById('modalLocationDate').innerHTML = `<strong>Published:</strong> Kronos Gazette Autumn 2026 Edition`;
+      document.getElementById('modalDesc').textContent = description + " Complete audio, curatorial essays, and video feature will be made available for educational libraries and patrons.";
+      document.getElementById('modalMeta').textContent = "Kronos Journal";
+      document.getElementById('modalImg').src = "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&w=1000&q=80";
+      openModal('artModal');
+    }
+
+    function openInquireModal(subject) {
+      currentModalSubject = subject;
+      document.getElementById('inquireSubject').textContent = `Regarding: ${subject}`;
+      document.getElementById('inquirySuccess').classList.add('hidden');
+      openModal('inquireModal');
+    }
+
+    function inquireFromModal() {
+      closeModal('artModal');
+      setTimeout(() => {
+        openInquireModal(currentModalSubject);
+      }, 300);
+    }
+
+    // 6. Search Modal Functions
+    function toggleSearchModal(show) {
+      if (show) {
+        openModal('searchModal');
+        setTimeout(() => document.getElementById('globalSearchInput').focus(), 150);
+      } else {
+        closeModal('searchModal');
+      }
+    }
+
+    function handleLiveSearch(val) {
+      const q = val.toLowerCase().trim();
+      const resultsContainer = document.getElementById('searchResults');
+      if (!q) return;
+
+      const items = [
+        { name: "Park Min-Jun", type: "Artist / Solo Show", desc: "Hannam Flagship" },
+        { name: "Elena Rostova", type: "Artist", desc: "Berlin / London" },
+        { name: "The Geometry of Silence", type: "Online Viewing Room", desc: "Sugimoto, Martin, Judd" },
+        { name: "Haegue Yang", type: "Exhibition", desc: "Samcheong-dong" },
+        { name: "Frieze Seoul Preview", type: "Art Fair", desc: "COEX Booth A14" }
+      ];
+
+      const filtered = items.filter(i => i.name.toLowerCase().includes(q) || i.type.toLowerCase().includes(q));
+      
+      if (filtered.length > 0) {
+        resultsContainer.innerHTML = filtered.map(item => `
+          <div class="p-2.5 hover:bg-gallery-100 cursor-pointer flex justify-between border-b border-gallery-100" onclick="selectSearch('${item.name}')">
+            <span><strong>${item.name}</strong> <span class="text-gallery-500 font-light">— ${item.desc}</span></span>
+            <span class="text-gallery-400 text-[10px] uppercase tracking-wider">${item.type}</span>
+          </div>
+        `).join('');
+      } else {
+        resultsContainer.innerHTML = `<div class="p-4 text-center text-gallery-400">No records found for "${val}". Please contact our desk for archive assistance.</div>`;
+      }
+    }
+
+    function selectSearch(term) {
+      toggleSearchModal(false);
+      openExhibitionModal(term, "Kronos Contemporary Curated", "Seoul / New York", "Current Presentation");
+    }
+
+    // 7. Clipboard copy helper
+    function copyAddress() {
+      const addr = document.getElementById('locAddress').textContent;
+      const dummy = document.createElement("input");
+      document.body.appendChild(dummy);
+      dummy.setAttribute("value", addr);
+      dummy.select();
+      document.execCommand("copy");
+      document.body.removeChild(dummy);
+
+      const btnText = document.getElementById('copyBtnText');
+      btnText.textContent = "Address Copied!";
+      setTimeout(() => {
+        btnText.textContent = "Copy Address";
+      }, 2500);
+    }
+
+    // 8. Form Submissions
+    function handleNewsletter(e) {
+      e.preventDefault();
+      document.getElementById('newsletterEmail').value = '';
+      const msg = document.getElementById('newsletterSuccess');
+      msg.classList.remove('hidden');
+      setTimeout(() => msg.classList.add('hidden'), 5000);
+    }
+
+    function handleInquirySubmit(e) {
+      e.preventDefault();
+      const success = document.getElementById('inquirySuccess');
+      success.classList.remove('hidden');
+      setTimeout(() => {
+        closeModal('inquireModal');
+        e.target.reset();
+      }, 2200);
+    }
+
+    // 9. Language Switcher stub
+    function setLang(lang) {
+      document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('font-semibold', 'opacity-100'));
+      if (lang === 'EN') {
+        event.target.classList.add('font-semibold', 'opacity-100');
+      } else {
+        event.target.classList.add('font-semibold', 'opacity-100');
+      }
+    }
+  </script>
+</body>
+</html>
