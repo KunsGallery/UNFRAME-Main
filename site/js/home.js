@@ -1,4 +1,5 @@
 import './home-projects.js';
+import './home-contact.js';
 import {renderViewingRooms} from './home-viewing-rooms.js';
 import {renderNews} from './home-news.js';
 import {demo,subscribeExhibitions} from './store.js';
