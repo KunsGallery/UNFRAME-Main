@@ -11,6 +11,8 @@ import {publicHomeCover} from './home-media.js';
 import {setHeroSlides,setHeroFailure} from './home-slider.js';
 chrome(demo,true);
 new ResizeObserver(()=>document.documentElement.style.setProperty('--home-nav-height',`${document.querySelector('#site-header').getBoundingClientRect().height}px`)).observe(document.querySelector('#site-header'));
+const projects=document.querySelector('#projects');
+new ResizeObserver(()=>document.documentElement.style.setProperty('--home-project-height',`${Math.ceil(projects.getBoundingClientRect().height)}px`)).observe(projects);
 
 let galleryLinks={},generation=0,exhibitions=[],highlights=[],exhibitionsReady=false,highlightsReady=false,exhibitionsFailed=false,highlightsFailed=false;
 const cover=image=>demo?image:publicHomeCover(image,CONFIG.mediaBaseUrl);
