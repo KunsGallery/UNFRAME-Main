@@ -16,10 +16,10 @@ html{scroll-padding-top:var(--home-nav-height,98px)}
 .home-page #hero.is-loading .hero-slide{visibility:hidden!important;opacity:0!important;pointer-events:none}#hero-loading{z-index:5}.home-page #hero #hero-loading p{font-size:28px!important;letter-spacing:-.03em!important}
 
 /* Exhibition-first editorial hero: a readable information column beside the complete cover image. */
-.home-page #hero.slide-hero{background:#f6f4ee;color:#191919}
-.home-page #hero .hero-slide-image{inset:0 0 0 auto;width:72%;height:100%;padding:clamp(18px,3vw,48px) 5vw clamp(70px,8vw,110px) 0;box-sizing:border-box;object-fit:contain;object-position:right center;-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 22%,#000 100%);mask-image:linear-gradient(90deg,transparent 0%,#000 22%,#000 100%)}
-.home-page #hero .hero-slide::after{background:linear-gradient(90deg,#f6f4ee 0%,rgba(246,244,238,.98) 26%,rgba(246,244,238,.78) 38%,rgba(246,244,238,.18) 57%,transparent 72%)}
-.home-page #hero .slide-copy{top:50%;bottom:auto;left:8%;right:auto;width:min(34%,460px);max-width:460px;transform:translateY(-50%);color:#191919}
+.home-page #hero.slide-hero{height:calc(80svh - 78px);min-height:470px;background:#f6f4ee;color:#191919}
+.home-page #hero .hero-slide-image{inset:0 0 0 auto;z-index:0;width:72%;height:100%;padding:clamp(18px,3vw,48px) 5vw clamp(70px,8vw,110px) 0;box-sizing:border-box;object-fit:contain;object-position:right center;-webkit-mask-image:linear-gradient(90deg,transparent 0%,transparent 20%,rgba(0,0,0,.12) 36%,rgba(0,0,0,.48) 54%,rgba(0,0,0,.88) 72%,#000 80%,rgba(0,0,0,.72) 88%,rgba(0,0,0,.24) 96%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0%,transparent 20%,rgba(0,0,0,.12) 36%,rgba(0,0,0,.48) 54%,rgba(0,0,0,.88) 72%,#000 80%,rgba(0,0,0,.72) 88%,rgba(0,0,0,.24) 96%,transparent 100%)}
+.home-page #hero .hero-slide::after{z-index:1;background:linear-gradient(180deg,#f6f4ee 0%,rgba(246,244,238,.76) 9%,transparent 24%,transparent 78%,rgba(246,244,238,.72) 93%,#f6f4ee 100%)}
+.home-page #hero .slide-copy{top:50%;bottom:auto;left:8%;right:auto;z-index:2;width:min(34%,460px);max-width:460px;transform:translateY(-50%);color:#191919}
 .home-page #hero .slide-copy h1,.home-page #hero .slide-copy h2{font-size:clamp(38px,4.7vw,68px)!important;line-height:1.14;margin:16px 0 18px;letter-spacing:-.035em}
 .home-page #hero .slide-copy .slide-kind{color:#004aad;font-size:12px!important;font-weight:700;letter-spacing:.08em!important}
 .home-page #hero .slide-copy .slide-summary{max-width:38ch;color:#454545;font-size:15px;line-height:1.75}
@@ -32,9 +32,9 @@ html{scroll-padding-top:var(--home-nav-height,98px)}
 .home-page #hero .slide-buttons #slide-play{color:#004aad}
 .home-page #hero.slide-motion .hero-slide.is-active .hero-slide-image{animation:none}
 @media(max-width:768px){
- .home-page #hero.slide-hero{height:calc(100svh - var(--home-nav-height,111px));min-height:680px;background:#f6f4ee}
- .home-page #hero .hero-slide-image{inset:18px 0 auto;width:100%;height:48%;padding:0 7vw;object-position:center;mask-image:linear-gradient(180deg,#000 58%,transparent 100%);-webkit-mask-image:linear-gradient(180deg,#000 58%,transparent 100%)}
- .home-page #hero .hero-slide::after{background:linear-gradient(180deg,transparent 28%,rgba(246,244,238,.45) 39%,#f6f4ee 51%,#f6f4ee 100%)}
+ .home-page #hero.slide-hero{height:calc(80svh - 89px);min-height:540px;background:#f6f4ee}
+ .home-page #hero .hero-slide-image{inset:18px 0 auto;width:100%;height:48%;padding:0 7vw;object-position:center;mask-image:none;-webkit-mask-image:none}
+ .home-page #hero .hero-slide::after{background:linear-gradient(180deg,#f6f4ee 0%,rgba(246,244,238,.35) 12%,transparent 30%,transparent 44%,rgba(246,244,238,.45) 52%,#f6f4ee 66%,#f6f4ee 100%),linear-gradient(90deg,#f6f4ee 0%,rgba(246,244,238,.25) 15%,transparent 42%,transparent 100%)}
  .home-page #hero .slide-copy{top:auto;bottom:124px;left:7%;right:7%;width:auto;max-width:none;transform:none}
  .home-page #hero .slide-copy h1,.home-page #hero .slide-copy h2{font-size:38px!important;line-height:1.12;margin:10px 0 12px}
  .home-page #hero .slide-copy .slide-kind{font-size:11px!important}
