@@ -101,7 +101,7 @@ service cloud.firestore {
   function valid(data,id) {
    return id.size()<=100 && id.matches('^[A-Za-z0-9_-]+$')
     && data.keys().hasAll(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths'])
-    && data.keys().hasOnly(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths'])
+    && data.keys().hasOnly(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths','viewingRoomEnabled'])
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.slug is string && data.slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && data.slug.size()<=200
     && data.startDate is string && data.startDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -116,6 +116,7 @@ service cloud.firestore {
     && data.mapUrl is string && data.mapUrl.size()<=2000
     && data.bookingUrl is string && data.bookingUrl.size()<=2000
     && validImage(data.cover,'^$|^exhibitions/'+id+'/[^/]{1,400}$') && validGallery(data.gallery,id)
+    && (!('viewingRoomEnabled' in data) || data.viewingRoomEnabled is bool)
     && data.published is bool && data.order is int && data.order>=0 && data.order<=1000000
     && validPaths(data.imagePaths,id)
     && data.updatedAt is string && data.updatedAt.size()<=50

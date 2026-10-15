@@ -22,10 +22,21 @@ for(const count of [0,1,8,30]){const id=`rules-gallery-${count}`;const data=fixt
 await expectStatus('legacy eight-photo form',200,request('exhibitions/rules-legacy',{method:'PATCH',data:fixture('rules-legacy',8,true)}));
 const id='rules-attacks';const legal=fixture(id,1);const write=data=>request(`exhibitions/${id}`,{method:'PATCH',data});
 await expectStatus('create attack fixture',200,write(legal));
+for(const enabled of [true,false]){
+ const flagId=`rules-viewing-room-${enabled}`;
+ const data={...fixture(flagId),viewingRoomEnabled:enabled};
+ await expectStatus(`clear viewing room ${enabled}`,200,request(`exhibitions/${flagId}`,{method:'DELETE',auth:'owner'}));
+ await expectStatus(`create viewing room ${enabled}`,200,request(`exhibitions/${flagId}`,{method:'PATCH',data}));
+ await expectStatus(`update viewing room ${enabled}`,200,request(`exhibitions/${flagId}`,{method:'PATCH',data:{...data,viewingRoomEnabled:!enabled}}));
+ await expectStatus(`remove optional viewing room flag ${enabled}`,200,request(`exhibitions/${flagId}`,{method:'PATCH',data:fixture(flagId)}));
+}
 const denied=[
  ['unknown document field',{...legal,privateEmail:'secret@example.com'}],
  ['missing required field',Object.fromEntries(Object.entries(legal).filter(([key])=>key!=='title'))],
  ['invalid field type',{...legal,title:1}],
+ ['viewing room string flag',{...legal,viewingRoomEnabled:'true'}],
+ ['viewing room numeric flag',{...legal,viewingRoomEnabled:1}],
+ ['viewing room null flag',{...legal,viewingRoomEnabled:null}],
  ['oversized title',{...legal,title:'x'.repeat(201)}],
  ['invalid dates',{...legal,endDate:'2026-01-01'}],
  ['negative order',{...legal,order:-1}],

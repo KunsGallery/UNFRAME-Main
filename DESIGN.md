@@ -35,3 +35,5 @@ Homepage gallery-reference adoption (`/`, `/#news`, `/admin`): the current homep
 Homepage section rhythm: the hero fills the remaining visible viewport below the measured sticky header. On desktop, shorter main content sections use the measured Selected Projects height as their minimum and vertically center their content; taller content may grow naturally. Mobile retains content-based section heights to avoid scaling every section to the stacked four-project index. No scroll snapping is introduced.
 
 Homepage order and inquiry refinement: place the light Selected Projects archive between the dark gallery manifesto and dark Viewing Rooms. The final contact section offers distinct 대관문의 and 협업·제안 buttons and no project-specific telephone line. Until the owner supplies confirmed JOIN inquiry destinations, buttons open honest category guidance dialogs without submitting or connecting by telephone. Standard business contact details remain in the footer.
+
+전시 상세의 선택형 ‘참여 작가 · 대표작’은 기존 크림 지면 위에 가로 작품 진열대를 확장한다. 이미지 비율을 보존하고 서로 다른 높이의 배치로 벽면 리듬을 만든다. 작가 필터와 작품 상세·전체 화면은 진열대 안에서 작동하며 본문 세로 스크롤을 가로 이동으로 바꾸지 않는다. 전시별 체크박스로 사용하며 기존 전시는 기본 비활성이다.

@@ -1,3 +1,4 @@
+import {loadViewingRoom} from './exhibition-viewing-room.js';
 import {listVirtualGalleries} from './virtual-store.js';
 import {exhibitionView,bindExhibitionImages} from './exhibition-view.js';
 import {listExhibitions,getExhibition,hydrateImages,demo,subscribeExhibitions} from './store.js';
@@ -27,6 +28,8 @@ async function detail(id) {
  $('#main').innerHTML=exhibitionView(item);
  $('#share').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast('전시 링크를 복사했습니다.');}catch{toast('주소창의 링크를 복사해주세요.');}};
  bindExhibitionImages($('#main'),item,$('#lightbox'));
+ loadViewingRoom($('#main'),item);
+
 }
 chrome(demo);
 const match=location.pathname.match(/^\/exhibition\/([^/]+)\/?$/);const id=match?decodeURIComponent(match[1]):new URLSearchParams(location.search).get('id');

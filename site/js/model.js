@@ -8,6 +8,7 @@ export const stateEnglish = {current:'NOW SHOWING',upcoming:'UPCOMING',past:'ARC
 export const dateRange = item => `${item.startDate?.replaceAll('-','.')} — ${item.endDate?.replaceAll('-','.')}`;
 export const sortExhibitions = items => [...items].sort((a,b) => (a.order ?? 0) - (b.order ?? 0) || b.startDate.localeCompare(a.startDate));
 export function validateExhibition(item) {
+  if(item.viewingRoomEnabled!==undefined&&typeof item.viewingRoomEnabled!=='boolean')throw new Error('뷰잉룸 사용 여부를 확인해주세요.');
   if(!item.title?.trim()) throw new Error('전시 제목을 입력해주세요.');
   if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item.slug || '')) throw new Error('주소는 영문 소문자·숫자·하이픈으로 입력해주세요.');
   const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
