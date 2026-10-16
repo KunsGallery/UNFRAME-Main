@@ -1,3 +1,4 @@
+import {openShareCard} from './share-card.js';
 import {demo,listExhibitions,getExhibition,resolveImage,session,isStaff} from './store.js';
 import {getVirtualGallery,listVirtualGalleries} from './virtual-store.js';
 import {galleryExhibitionId} from './virtual-model.js';
@@ -5,6 +6,7 @@ import {escapeHTML as e,imageURL,dateRange,sortExhibitions} from './model.js';
 const $=selector=>document.querySelector(selector);
 let room;
 function info(art,settings){
+ document.dispatchEvent(new CustomEvent('unframe-artwork-open',{detail:{id:art.id}}));
  $('#modal-img').src=imageURL(art.image.url);$('#modal-img').alt=art.image.alt||art.title;
  for(const [id,value] of Object.entries({'modal-title-en':art.titleEn||art.title,'modal-title-ko':art.titleEn?art.title:'','modal-artist':art.artist,'modal-spec-title':art.title,'modal-spec-year':art.year,'modal-spec-medium':art.medium,'modal-spec-dimensions':`${art.heightCm} × ${art.widthCm} cm`,'modal-spec-price':art.price,'modal-desc':art.description}))$('#'+id).textContent=value;
  $('#modal-spec-price').closest('.art-spec-row').hidden=!settings.showPrices||!art.price;
@@ -37,6 +39,7 @@ async function show(id){
  const chooser=document.createElement('a');chooser.href=`/exhibition/${encodeURIComponent(parentId)}#ex-online`;chooser.className='glass-btn virtual-gallery-choice';chooser.textContent='갤러리 선택';$('.top-actions').append(chooser);
  document.querySelectorAll('[data-return]').forEach(link=>link.href=`/exhibition/${encodeURIComponent(parentId)}`);
  const artworks=await Promise.all(data.artworks.map(async art=>({...art,image:await resolveImage(art.image)})));
+ if(!preview&&exhibition.published&&settings.published){const share=document.createElement('button');share.className='action-btn-primary';share.textContent='작품 공유 카드';share.type='button';$('.modal-btn-row').append(share);let selected;document.addEventListener('unframe-artwork-open',event=>{selected=artworks.find(art=>art.id===event.detail.id);share.hidden=!selected;});share.onclick=()=>{if(selected)openShareCard({title:selected.title,artist:selected.artist,meta:[exhibition.title,selected.year,selected.medium].filter(Boolean).join(' · '),image:selected.image?.url,url:location.origin+'/exhibition/'+encodeURIComponent(parentId)});};}
  $('#works-list').innerHTML=artworks.length?artworks.map(art=>`<button type="button" class="virtual-work" data-art="${e(art.id)}"><img src="${e(imageURL(art.image.url))}" alt="${e(art.image.alt||art.title)}" loading="lazy"><strong>${e(art.title)}</strong><span>${e(art.artist)}</span></button>`).join(''):'<p>등록된 작품이 없습니다. 관리자에서 작품을 추가해주세요.</p>';
  $('#btn-list').onclick=()=>$('#works-dialog').showModal();$('#works-close').onclick=()=>$('#works-dialog').close();
  document.querySelectorAll('[data-art]').forEach(button=>button.onclick=()=>{$('#works-dialog').close();const art=artworks.find(item=>item.id===button.dataset.art);if(room)room.inspect(art.id);else info(art,settings);});

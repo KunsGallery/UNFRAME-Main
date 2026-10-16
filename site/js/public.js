@@ -1,3 +1,4 @@
+import {openShareCard,exhibitionCard} from './share-card.js';
 import {loadViewingRoom} from './exhibition-viewing-room.js';
 import {listVirtualGalleries} from './virtual-store.js';
 import {exhibitionView,bindExhibitionImages} from './exhibition-view.js';
@@ -27,6 +28,7 @@ async function detail(id) {
  try{item.virtualGalleries=await listVirtualGalleries(item.id);}catch{item.virtualGalleries=[];item.virtualGalleryError=true;}
  $('#main').innerHTML=exhibitionView(item);
  $('#share').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast('전시 링크를 복사했습니다.');}catch{toast('주소창의 링크를 복사해주세요.');}};
+ const cardButton=document.createElement('button');cardButton.type='button';cardButton.textContent='공유 카드 만들기';cardButton.onclick=()=>openShareCard(exhibitionCard(item));$('#share').after(cardButton);
  bindExhibitionImages($('#main'),item,$('#lightbox'));
  loadViewingRoom($('#main'),item);
 

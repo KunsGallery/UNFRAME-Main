@@ -1412,6 +1412,7 @@ TextureGenerator.createPlaqueTexture=function(art){
 };
 const originalOpen=GalleryApp.openModal;
 GalleryApp.openModal=function(art){
+ document.dispatchEvent(new CustomEvent('unframe-artwork-open',{detail:{id:art.id}}));
  originalOpen.call(this,art);const dialog=document.getElementById('art-modal');
  document.getElementById('modal-img').alt=art.image.alt||art.title;
  document.getElementById('modal-artist').textContent=[art.artist,art.year].filter(Boolean).join(', ');
