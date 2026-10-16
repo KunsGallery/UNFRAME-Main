@@ -1,0 +1,8 @@
+import {checkoutURL} from './product-model.js';
+import {escapeHTML as e,imageURL} from './model.js';
+// Encodes the image's display role within the existing bounded image descriptor.
+const prefix='[DETAIL] ';
+export const isDetailImage=image=>typeof image?.alt==='string'&&image.alt.startsWith(prefix);
+export const imageDescription=image=>isDetailImage(image)?image.alt.slice(prefix.length):image?.alt||'';
+export const detailDescription=(text,enabled)=>enabled?prefix+String(text||'').slice(0,1000-prefix.length):String(text||'').slice(0,1000);
+export function finishedProductView(item,images,buy){const detail=images.filter(isDetailImage),href=checkoutURL(item.checkoutUrl);if(!detail.length)return '';return `<article class="finished-product"><h1 class="sr-only">${e(item.name)} 상세페이지</h1><section class="sr-only" aria-label="상품 설명"><p>${e([item.summary,item.story,item.details,item.packaging,item.specs].filter(Boolean).join('\n'))}</p></section><div class="finished-product-images">${detail.map((im,index)=>`<figure><img src="${e(imageURL(im.url))}" alt="${e(imageDescription(im)||`${item.name} 상세 안내 ${index+1}`)}" ${index?'loading="lazy"':'fetchpriority="high"'}>${index===detail.length-1&&href?`<a class="finished-purchase-image" href="${e(href)}" target="_blank" rel="noopener noreferrer" aria-label="${e(item.name)} 아임웹에서 구매하기"><span class="sr-only">이미지 속 구매 안내 · 실제 아임웹 상품 페이지로 이동</span></a>`:''}</figure>`).join('')}</div><section class="finished-product-purchase"><h2>${e(item.name)}</h2>${item.priceLabel?`<p>${e(item.priceLabel)}</p>`:''}${buy()}<p>옵션·수량 선택과 결제는 아임웹에서 진행합니다.</p></section></article>`;}
