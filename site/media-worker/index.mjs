@@ -1,3 +1,4 @@
+import {catalog,product,image as sourcePhoto} from './imweb.mjs';
 const MAX=10*1024*1024;
 const JWKS='https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
@@ -41,8 +42,16 @@ export async function handle(request,env,fetcher=fetch){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   const url=new URL(request.url);
   if(url.pathname==='/health'&&request.method==='GET')return json({ok:true,storage:'r2'});
-  const path=parsePath(url.pathname);if(!path)fail(404,'이미지를 찾을 수 없습니다.');
   const token=request.headers.get('Authorization')?.match(/^Bearer (.+)$/)?.[1];
+  if(url.pathname.startsWith('/imweb/')){
+   if(request.method!=='GET')fail(405,'상품 가져오기는 읽기만 가능합니다.');
+   await staff(env,token,fetcher);
+   if(url.pathname==='/imweb/products'){const page=Number(url.searchParams.get('page')||1);if(!Number.isInteger(page)||page<1||page>100)fail(400,'페이지 번호를 확인해주세요.');return json(await catalog(page,fetcher));}
+   const match=/^\/imweb\/products\/([1-9][0-9]{0,9})$/.exec(url.pathname);if(match)return json(await product(match[1],fetcher));
+   if(url.pathname==='/imweb/image'){const photo=await sourcePhoto(url.searchParams.get('url'),fetcher);headers.set('Content-Type',photo.type);return new Response(photo.bytes,{headers});}
+   fail(404,'상품 가져오기 주소를 확인해주세요.');
+  }
+  const path=parsePath(url.pathname);if(!path)fail(404,'이미지를 찾을 수 없습니다.');
   if(request.method==='GET'){
    // Anonymous Firestore reads enforce published=true. Never cache this authorization decision.
    let published;
