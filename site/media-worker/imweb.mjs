@@ -9,10 +9,20 @@ async function page(path,fetcher){let response;try{response=await fetcher(SHOP+p
 export function decodeHTML(value){return String(value||'').replace(/&(quot|apos|amp|lt|gt|nbsp|#x[0-9a-f]+|#[0-9]+);/gi,(all,key)=>{const map={quot:'"',apos:"'",amp:'&',lt:'<',gt:'>',nbsp:' '};if(key[0]!=='#')return map[key.toLowerCase()]||all;const n=key[1].toLowerCase()==='x'?parseInt(key.slice(2),16):Number(key.slice(1));return n>0&&n<=0x10ffff?String.fromCodePoint(n):all;});}
 const tidy=value=>decodeHTML(value).replace(/\s+/g,' ').trim();
 export function parseCatalogEntry(raw){try{const p=JSON.parse(decodeHTML(raw)),id=String(p.idx);if(!/^[1-9][0-9]{0,9}$/.test(id)||typeof p.name!=='string')return null;return {sourceId:id,name:p.name.slice(0,200),priceLabel:Number.isFinite(p.price)?new Intl.NumberFormat('ko-KR').format(p.price)+'원':'',image:sourceImage(p.image_url),checkoutUrl:SHOP+'/shop/?idx='+id};}catch{return null;}}
-export async function catalog(pageNo,fetcher=fetch){
+async function shopPage(pageNo,fetcher=fetch){
  const records=new Map(),pages=new Set();const response=await page('/shop/?page='+pageNo,fetcher);
  const rewriter=new HTMLRewriter().on('[data-product-properties]',{element(el){const entry=parseCatalogEntry(el.getAttribute('data-product-properties'));if(entry)records.set(entry.sourceId,entry);}}).on('a[href]',{element(el){try{const u=new URL(el.getAttribute('href'),SHOP),p=Number(u.searchParams.get('page'));if(u.origin===SHOP&&/^\/shop\/?$/.test(u.pathname)&&Number.isInteger(p)&&p>0&&p<=100)pages.add(p);}catch{}}});
  await rewriter.transform(response).text();return {items:[...records.values()].slice(0,100),page:pageNo,pages:[...pages].sort((a,b)=>a-b),mode:'public',fetchedAt:new Date().toISOString()};
+}
+// The storefront may show only one category; sitemap links identify other public products.
+export function sitemapProducts(xml){const ids=new Set();for(const match of xml.matchAll(/<loc>\s*([^<]{1,2000})\s*<\/loc>/g)){try{const u=new URL(decodeHTML(match[1].trim()));if(u.protocol!=='https:'||!['unframe.kr','www.unframe.kr','unframe.imweb.me','shop.unframe.kr'].includes(u.host))continue;const path=/^\/shop_view\/([1-9][0-9]{0,9})\/?$/.exec(u.pathname);const id=path?.[1]||productNumber(u.href);if(id)ids.add(id);}catch{}}return [...ids];}
+export async function catalog(pageNo,fetcher=fetch){
+ const listing=await shopPage(1,fetcher),known=new Map(listing.items.map(item=>[item.sourceId,item]));let ids=[...known.keys()],discoveryError=false;
+ try{const response=await fetcher(SHOP+'/sitemap.xml',{redirect:'manual',signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('sitemap');const xml=new TextDecoder().decode(await bounded(response,2*1024*1024));if(!xml.includes('<urlset'))throw Error('sitemap format');ids=[...new Set([...ids,...sitemapProducts(xml)])];}catch{discoveryError=true;}
+ if(discoveryError)return {...(pageNo===1?listing:await shopPage(pageNo,fetcher)),discoveryError:true,errors:[]};
+ const pages=Array.from({length:Math.max(1,Math.ceil(ids.length/12))},(_,i)=>i+1),items=[],errors=[];
+ for(const id of ids.slice((pageNo-1)*12,pageNo*12)){if(known.has(id)){items.push(known.get(id));continue;}try{const source=await product(id,fetcher);items.push({sourceId:id,name:source.name,priceLabel:source.priceLabel,image:source.images[0]?.url||'',checkoutUrl:source.checkoutUrl});}catch{errors.push(id);}}
+ return {...listing,items,page:pageNo,pages,total:ids.length,errors,discoveryError};
 }
 export async function product(id,fetcher=fetch){
  if(!/^[1-9][0-9]{0,9}$/.test(id))error(400,'아임웹 상품 번호를 확인해주세요.');
