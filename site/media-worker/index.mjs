@@ -29,7 +29,7 @@ async function staff(env,token,fetcher){
 export function parsePath(path){
  const virtual=/^\/media\/(virtualGalleries\/([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})\/[a-f0-9-]{36}\.(jpeg|png|webp))$/.exec(path);
  if(virtual)return {key:virtual[1],collection:'virtualGalleries',id:virtual[2],artId:virtual[3],type:`image/${virtual[4]}`};
- const match=/^\/media\/((exhibitions|homeHighlights)\/([a-zA-Z0-9_-]{1,128})\/[a-f0-9-]{36}\.(jpeg|png|webp))$/.exec(path);return match?{key:match[1],collection:match[2],id:match[3],type:`image/${match[4]}`}:null;
+ const match=/^\/media\/((exhibitions|homeHighlights|products)\/([a-zA-Z0-9_-]{1,128})\/[a-f0-9-]{36}\.(jpeg|png|webp))$/.exec(path);return match?{key:match[1],collection:match[2],id:match[3],type:`image/${match[4]}`}:null;
 }
 export async function handle(request,env,fetcher=fetch){
  const origin=request.headers.get('Origin'),allowed=(env.ALLOWED_ORIGINS||'').split(',');
@@ -46,6 +46,8 @@ export async function handle(request,env,fetcher=fetch){
   if(request.method==='GET'){
    // Anonymous Firestore reads enforce published=true. Never cache this authorization decision.
    let published;
+   if(path.collection==='products'){if(!token)fail(404,'이미지를 찾을 수 없습니다.');await staff(env,token,fetcher);published=true;}
+   else
    if(path.collection==='virtualGalleries'){
     // Anonymous document reads also require a published parent exhibition in rules.
     const [gallery,artwork]=await Promise.all([document(env,`virtualGalleries/${path.id}`,null,fetcher),document(env,`virtualGalleries/${path.id}/artworks/${path.artId}`,null,fetcher)]);

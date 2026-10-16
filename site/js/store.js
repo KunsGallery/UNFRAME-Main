@@ -26,7 +26,7 @@ export async function uploadImage(file,id,onProgress=()=>{},collection='exhibiti
  if(!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error('JPG, PNG, WebP 이미지만 업로드할 수 있습니다.');
  if(file.size > 10*1024*1024) throw new Error('이미지는 10MB 이하로 올려주세요.');
  if(demo){if(file.size>2*1024*1024)throw new Error('샘플 모드에서는 2MB 이하 이미지를 사용해주세요.'); const url=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});return {url,path:'',alt:file.name};}
- if(!['exhibitions','homeHighlights','virtualGalleries'].includes(collection))throw new Error('잘못된 이미지 분류입니다.');
+ if(!['exhibitions','homeHighlights','virtualGalleries','products'].includes(collection))throw new Error('잘못된 이미지 분류입니다.');
  if(collection==='virtualGalleries'&&!/^[A-Za-z0-9_-]{1,100}$/.test(artId))throw new Error('잘못된 작품 주소입니다.');
  const path=`${collection}/${id}/${collection==='virtualGalleries'?artId+'/':''}${crypto.randomUUID()}.${file.type.split('/')[1]}`;
  const token=await mediaToken();

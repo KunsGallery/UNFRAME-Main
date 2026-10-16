@@ -265,6 +265,39 @@ service cloud.firestore {
    allow create, update: if staff() && validHighlight(request.resource.data,id);
    allow delete: if staff();
   }
+  // products/{id}: private staff inventory; no publishing field or public reads.
+  function validProductImage(image,id) {
+   // Required field access and matches() reject absent fields and non-string values.
+   return image.keys().hasOnly(['url','path','alt']) && image.url == ''
+    && image.path.matches('^products/'+id+'/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[.](jpeg|png|webp)$')
+    && image.alt.matches('^[\\s\\S]{0,1000}$');
+  }
+  function productImages0(images,id,count) { return (count<=0 ? true : (validProductImage(images[0],id) && (count<=1 ? true : (validProductImage(images[1],id) && (count<=2 ? true : (validProductImage(images[2],id) && (count<=3 ? true : (validProductImage(images[3],id) && productImages4(images,id,count))))))))); }
+  function productImages4(images,id,count) { return (count<=4 ? true : (validProductImage(images[4],id) && (count<=5 ? true : (validProductImage(images[5],id) && (count<=6 ? true : (validProductImage(images[6],id) && (count<=7 ? true : (validProductImage(images[7],id) && productImages8(images,id,count))))))))); }
+  function productImages8(images,id,count) { return (count<=8 ? true : (validProductImage(images[8],id) && (count<=9 ? true : (validProductImage(images[9],id) && (count<=10 ? true : (validProductImage(images[10],id) && (count<=11 ? true : (validProductImage(images[11],id) && true)))))))); }
+  function validProduct(data,id) {
+   return id.matches('^[A-Za-z0-9_-]{1,100}$')
+    && data.keys().hasAll(['name','summary','story','details','packaging','priceLabel','checkoutUrl','colors','specs','images','order','updatedAt'])
+    && data.keys().hasOnly(['name','summary','story','details','packaging','priceLabel','checkoutUrl','colors','specs','images','order','updatedAt'])
+    && data.name is string && data.name.size()>0 && data.name.size()<=200
+    && data.summary is string && data.summary.size()<=600
+    && data.story is string && data.story.size()<=5000
+    && data.details is string && data.details.size()<=5000
+    && data.packaging is string && data.packaging.size()<=5000
+    && data.priceLabel is string && data.priceLabel.size()<=100
+    && data.checkoutUrl is string && data.checkoutUrl.size()<=2000
+    && (data.checkoutUrl == '' || data.checkoutUrl.matches('^https://([A-Za-z0-9][A-Za-z0-9.-]*|\\[[0-9a-fA-F:]+\\])(:[0-9]{1,5})?([/?#][^\\s]*)?$'))
+    && data.colors is string && data.colors.size()<=1000
+    && data.specs is string && data.specs.size()<=5000
+    && data.updatedAt is string && data.updatedAt.size()<=50
+    && data.order is int && data.order>=0 && data.order<=1000000
+    && data.images is list && data.images.size()<=12
+    && productImages0(data.images,id,data.images.size());
+  }
+  match /products/{id} {
+   allow read, delete: if staff();
+   allow create, update: if staff() && validProduct(request.resource.data,id);
+  }
   match /{document=**} { allow read, write: if false; }
  }
 }

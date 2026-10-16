@@ -48,3 +48,12 @@ test('artist media uses its own gallery ID and never resolves a sibling gallery 
   const response=await handle(new Request('https://media.example/media/'+virtualPath),f.env,fetcher);assert.equal(response.status,visible&&referenced?200:404);assert.equal(queried.length,2);assert.ok(queried.every(url=>url.includes('/virtualGalleries/artist-one')));
  }
 });
+test('product photos stay staff-only even if a document claims published',async()=>{
+ const f=fixture({published:true}),productPath='products/unframe-pen/12345678-1234-1234-1234-123456789012.png';
+ const request=(headers={})=>new Request('https://media.example/media/'+productPath,{headers});
+ assert.equal(parsePath('/media/'+productPath).collection,'products');
+ assert.equal((await handle(request(),f.env,f.fetcher)).status,404);
+ const auth={Authorization:'Bearer '+await token()};
+ const ok=await handle(request(auth),f.env,f.fetcher);assert.equal(ok.status,200);assert.equal(ok.headers.get('Cache-Control'),'no-store');
+ const inactive=fixture({active:false});assert.equal((await handle(request(auth),inactive.env,inactive.fetcher)).status,403);
+});

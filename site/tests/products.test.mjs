@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {penProduct,validateProduct,checkoutURL} from '../js/product-model.js';
+test('pen draft leaves unknown commercial specs and checkout unset',()=>{const item=penProduct();assert.equal(item.checkoutUrl,'');assert.equal(item.priceLabel,'');assert.deepEqual(item.images,[]);assert.equal(validateProduct(item),item);});
+test('checkout accepts absolute HTTPS only, without credentials',()=>{for(const url of ['/shop','javascript:alert(1)','http://shop.example','https://user:secret@shop.example'])assert.equal(checkoutURL(url),'');assert.equal(checkoutURL('https://shop.example/product?id=123'),'https://shop.example/product?id=123');assert.throws(()=>validateProduct({...penProduct(),checkoutUrl:'javascript:alert(1)'}));});
+test('product authoring bounds copy, image count and sort order',()=>{assert.throws(()=>validateProduct({...penProduct(),name:''}));assert.throws(()=>validateProduct({...penProduct(),story:'x'.repeat(5001)}));assert.throws(()=>validateProduct({...penProduct(),images:Array(13).fill({url:'image',path:'',alt:''})}));assert.throws(()=>validateProduct({...penProduct(),order:-1}));});

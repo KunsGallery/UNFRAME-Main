@@ -333,4 +333,54 @@ for(const galleryId of [upgradeParent,upgradeArtist]){
  await expectStatus('enhanced settings unpublished parent denied',403,request(`virtualGalleries/${galleryId}`,{auth:null}));
  await expectStatus('enhanced artwork unpublished parent denied',403,request(`virtualGalleries/${galleryId}/artworks/${artid}`,{auth:null}));
 }
+// Product inventory is private even if a trusted backend injects publishing metadata.
+function productFixture(productId,count=0){return {name:'시드 펜',summary:'',story:'',details:'',packaging:'',priceLabel:'',checkoutUrl:'',colors:'',specs:'',images:Array.from({length:count},()=>({url:'',path:`products/${productId}/11111111-2222-4333-8444-555555555555.jpeg`,alt:'상품 사진'})),order:0,updatedAt:new Date().toISOString()};}
+for(const count of [0,1,12]){
+ const productId=`rules-product-${count}`;const path=`products/${productId}`;const data=productFixture(productId,count);
+ await expectStatus(`product ${count} images clear`,200,request(path,{method:'DELETE',auth:'owner'}));
+ await expectStatus(`product ${count} images create`,200,request(path,{method:'PATCH',data}));
+ await expectStatus(`product ${count} images update`,200,request(path,{method:'PATCH',data:{...data,summary:'수정'}}));
+ await expectStatus(`product ${count} staff read`,200,request(path));
+}
+const productId='rules-private-product';const productPath=`products/${productId}`;const product=productFixture(productId,1);
+const badProducts=[
+ ['published field',{...product,published:true}],['unknown field',{...product,role:'admin'}],
+ ['missing name',Object.fromEntries(Object.entries(product).filter(([key])=>key!=='name'))],
+ ['empty name',{...product,name:''}],['name type',{...product,name:1}],['long name',{...product,name:'x'.repeat(201)}],
+ ...[['summary',601],['story',5001],['details',5001],['packaging',5001],['priceLabel',101],['colors',1001],['specs',5001],['updatedAt',51],['checkoutUrl',2001]].map(([key,size])=>[`oversized ${key}`,{...product,[key]:'x'.repeat(size)}]),
+ ['checkout http',{...product,checkoutUrl:'http://example.com'}],['checkout javascript',{...product,checkoutUrl:'javascript:alert(1)'}],['checkout relative',{...product,checkoutUrl:'/shop'}],['checkout missing host',{...product,checkoutUrl:'https://'}],
+ ['checkout whitespace',{...product,checkoutUrl:'https://example.com/a b'}],['checkout query without host',{...product,checkoutUrl:'https://?checkout'}],
+ ['negative order',{...product,order:-1}],['large order',{...product,order:1000001}],['fractional order',{...product,order:0.5}],
+ ['thirteen images',productFixture(productId,13)],['images type',{...product,images:{}}],
+ ['image extra field',{...product,images:[{...product.images[0],caption:'secret'}]}],
+ ['image missing alt',{...product,images:[{url:'',path:product.images[0].path}]}],
+ ['image nonempty url',{...product,images:[{...product.images[0],url:'https://example.com/image.jpeg'}]}],
+ ['image wrong namespace',{...product,images:[{...product.images[0],path:product.images[0].path.replace('products/','exhibitions/')}]}],
+ ['image another product',{...product,images:[{...product.images[0],path:product.images[0].path.replace(productId,'other-product')}]}],
+ ['image nested path',{...product,images:[{...product.images[0],path:product.images[0].path.replace('/11111111','/nested/11111111')}]}],
+ ['image traversal',{...product,images:[{...product.images[0],path:product.images[0].path.replace('/11111111','/../11111111')}]}],
+ ['image extension',{...product,images:[{...product.images[0],path:product.images[0].path.replace('.jpeg','.svg')}]}],
+ ['image nonuuid',{...product,images:[{...product.images[0],path:`products/${productId}/name.jpeg`}]}],
+ ['image alt type',{...product,images:[{...product.images[0],alt:1}]}],['image oversized alt',{...product,images:[{...product.images[0],alt:'x'.repeat(1001)}]}],
+ ['last image invalid',{...productFixture(productId,12),images:[...productFixture(productId,11).images,{...product.images[0],path:'products/other/11111111-2222-4333-8444-555555555555.jpeg'}]}],
+];
+for(const [label,data] of badProducts){
+ await expectStatus(`product ${label}: clear`,200,request(productPath,{method:'DELETE',auth:'owner'}));
+ await expectStatus(`product ${label}: create denied`,403,request(productPath,{method:'PATCH',data}));
+ await expectStatus(`product ${label}: seed`,200,request(productPath,{method:'PATCH',data:product}));
+ await expectStatus(`product ${label}: update denied`,403,request(productPath,{method:'PATCH',data}));
+}
+for(const auth of [null,token({email:'other@example.com'}),token({email:'inactive@example.com'}),token({email_verified:false}),token({firebase:{sign_in_provider:'password'}})]){
+ for(const [label,path,method,data] of [['get',productPath,'GET',null],['list','products','GET',null],['create','products/rules-new-private','PATCH',productFixture('rules-new-private')],['update',productPath,'PATCH',product],['delete',productPath,'DELETE',null]])await expectStatus(`unapproved product ${label} denied`,403,request(path,{method,data,auth}));
+}
+await expectStatus('staff product collection list',200,request('products'));
+await expectStatus('seed malicious product published field as trusted backend',200,request(productPath,{method:'PATCH',data:{...product,published:true},auth:'owner'}));
+await expectStatus('malicious published flag grants no public product read',403,request(productPath,{auth:null}));
+await expectStatus('staff can remove invalid published flag',200,request(productPath,{method:'PATCH',data:product}));
+await expectStatus('https checkout accepted',200,request(productPath,{method:'PATCH',data:{...product,checkoutUrl:'https://example.com/checkout?item=pen'}}));
+for(const extension of ['png','webp'])await expectStatus(`product ${extension} accepted`,200,request(productPath,{method:'PATCH',data:{...product,images:[{...product.images[0],path:product.images[0].path.replace('.jpeg',`.${extension}`)}]}}));
+await expectStatus('staff product delete',200,request(productPath,{method:'DELETE'}));
+await expectStatus('unsafe product ID denied',403,request('products/rules.product',{method:'PATCH',data:productFixture('rules.product')}));
+await expectStatus('oversized product ID denied',403,request(`products/${'p'.repeat(101)}`,{method:'PATCH',data:productFixture('p'.repeat(101))}));
+
 console.log(`Firestore emulator: ${checks} checks passed.`);
