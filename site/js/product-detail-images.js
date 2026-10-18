@@ -18,8 +18,18 @@ export function sourceEditorial(item){
  original:source?`<details class="product-source-original"><summary>기존 상품 상세정보 전체 보기</summary><div>${paragraphs(source)}</div></details>`:''
  };
 }
+// Replace legacy baked-in CTA captions with a real, consistently named button.
+// Coordinates belong only to the exact approved legacy image, never arbitrary new uploads.
+function purchaseOverlay(item,image,href){
+ const boxes={
+ 'products/unframe-pen/710f689c-a274-413f-a16d-efab06766649.png':'left:6.8%;top:89.7%;width:39.7%;height:2.8%',
+ 'products/imweb-2/3a96ae0e-34af-4b83-86b8-72162e7db992.png':'left:7.4%;top:89.9%;width:45.5%;height:3.5%'
+ };
+ const box=boxes[image.path];
+ return `<a class="finished-purchase-image${box?' finished-purchase-label':''}" ${box?`style="${box}"`:''} href="${e(href)}" target="_blank" rel="noopener noreferrer" aria-label="${e(item.name)} 구매하기">${box?'구매하기 ↗':'<span class="sr-only">구매하기</span>'}<span class="sr-only"> · 새 창에서 열기</span></a>`;
+}
 export function finishedProductView(item,images,buy){
  const detail=images.filter(isDetailImage),href=checkoutURL(item.checkoutUrl);if(!detail.length)return '';
  const source=sourceEditorial(item);
- return `<article class="finished-product"><h1 class="sr-only">${e(item.name)} 상세페이지</h1><section class="sr-only" aria-label="상품 설명"><p>${e([item.summary,item.story,item.packaging,item.specs].filter(Boolean).join('\n'))}</p></section><div class="finished-product-images">${detail.map((im,index)=>`${index===detail.length-1?source.information:''}<figure><img src="${e(imageURL(im.url))}" alt="${e(imageDescription(im)||`${item.name} 상세 안내 ${index+1}`)}" ${index?'loading="lazy"':'fetchpriority="high"'}>${index===detail.length-1&&href&&item.id!=='imweb-3'?`<a class="finished-purchase-image" href="${e(href)}" target="_blank" rel="noopener noreferrer" aria-label="${e(item.name)} 아임웹에서 구매하기"><span class="sr-only">이미지 속 구매 안내 · 실제 아임웹 상품 페이지로 이동</span></a>`:''}</figure>${index===0?source.concept:''}`).join('')}${source.original}</div><section class="finished-product-purchase"><h2>${e(item.name)}</h2>${item.priceLabel?`<p>${e(item.priceLabel)}</p>`:''}${buy()}<p>${item.id==='imweb-3'?'일정·조건 확인 후 예약금 결제는 아임웹에서 진행합니다.':'옵션·수량 선택과 결제는 아임웹에서 진행합니다.'}</p></section></article>`;
+ return `<article class="finished-product"><h1 class="sr-only">${e(item.name)} 상세페이지</h1><section class="sr-only" aria-label="상품 설명"><p>${e([item.summary,item.story,item.packaging,item.specs].filter(Boolean).join('\n'))}</p></section><div class="finished-product-images">${detail.map((im,index)=>`${index===detail.length-1?source.information:''}<figure><img src="${e(imageURL(im.url))}" alt="${e(imageDescription(im)||`${item.name} 상세 안내 ${index+1}`)}" ${index?'loading="lazy"':'fetchpriority="high"'}>${index===detail.length-1&&href&&item.id!=='imweb-3'?purchaseOverlay(item,im,href):''}</figure>${index===0?source.concept:''}`).join('')}${source.original}</div><section class="finished-product-purchase"><h2>${e(item.name)}</h2>${item.priceLabel?`<p>${e(item.priceLabel)}</p>`:''}${buy()}<p>${item.id==='imweb-3'?'일정·조건 확인 후 예약금 결제는 아임웹에서 진행합니다.':'옵션·수량 선택과 결제는 아임웹에서 진행합니다.'}</p></section></article>`;
 }

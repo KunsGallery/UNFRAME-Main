@@ -23,3 +23,6 @@ test('missing imported headings create no invented concept or commercial facts',
 });
 
 test('rental approved image pages keep reservation action but have no false clickable form hotspot',()=>{const html=finishedProductView({id:'imweb-3',name:'대관 예약금',checkoutUrl:'https://unframe.imweb.me/shop/?idx=3'},[{url:'/rental1.png',alt:detailDescription('대관시안 1',true)},{url:'/rental2.png',alt:detailDescription('대관시안 2',true)}],()=>'<a>아임웹에서 예약금 결제</a>');assert.ok(html.includes('/rental1.png'));assert.ok(html.includes('/rental2.png'));assert.ok(html.includes('아임웹에서 예약금 결제'));assert.ok(!html.includes('class="finished-purchase-image"'));});
+
+test('legacy artwork and pen image purchase captions use a real purchase-only button',()=>{for(const path of ['products/unframe-pen/710f689c-a274-413f-a16d-efab06766649.png','products/imweb-2/3a96ae0e-34af-4b83-86b8-72162e7db992.png']){const html=finishedProductView({name:'상품',checkoutUrl:'https://unframe.imweb.me/shop/?idx=2'},[{path,url:'/old.png',alt:detailDescription('상세',true)}],()=>'<a>구매하기</a>');assert.ok(html.includes('finished-purchase-label'));assert.ok(html.includes('구매하기 ↗'));assert.ok(!html.includes('아임웹에서 구매하기'));}}
+);

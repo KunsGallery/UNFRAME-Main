@@ -11,7 +11,7 @@ export function rentalProductView(item,images){
  const refunds=rules?[...rules.matchAll(refundPattern)]:[];
  const ruleNotes=rules?.replace(refundPattern,'').trim();
  const href=checkoutURL(item.checkoutUrl);
- const buy=href?`<a class="rental-buy" href="${e(href)}" target="_blank" rel="noopener noreferrer">아임웹에서 예약금 결제<span aria-hidden="true">↗</span><span class="sr-only">새 창에서 열기</span></a>`:'<p>관리자에서 실제 예약금 결제 주소를 연결해주세요.</p>';
+ const buy=href?`<a class="rental-buy" href="${e(href)}" target="_blank" rel="noopener noreferrer">구매하기<span aria-hidden="true">↗</span><span class="sr-only">새 창에서 열기</span></a>`:'<p>관리자에서 실제 예약금 결제 주소를 연결해주세요.</p>';
  return `<article class="rental-editorial">
  <!-- THESIS: A gallery reservation unfolds as an editorial invitation, then an exact payment guide. OWN-WORLD: UNFRAME cobalt, cream, oversized sans and hairline divisions. STORY: Understand the reservation, review costs and existing conditions, continue to Imweb. FIRST VIEWPORT: Large Your Art / Our Space beside the named deposit, with a direct guide anchor. FORM: Existing UNFRAME editorial extension. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
  <section class="rental-hero"><div><h1>Your art.<br>Our space.</h1><p class="rental-hero-korean">당신의 전시가<br>시작되는 자리.</p><a class="rental-guide-link" href="#rental-guide">대관 예약 안내 살펴보기 ↓</a></div><div class="rental-hero-side"><p>UNFRAME<br>Artistic Space & Gallery</p><div><h2>${e(item.name)}</h2><p class="rental-deposit">${e(item.priceLabel||'금액 확인 필요')}</p>${percent?`<p>총 대관료의 ${e(percent)} · 예약금</p>`:''}<p class="rental-small">전시 일정 확정을 위한 결제입니다.<br>아래 비용과 예약 조건을 확인해주세요.</p></div></div></section>
