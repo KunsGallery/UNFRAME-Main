@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 1040" role="img" aria-labelledby="title desc">
+<title id="title">UNFRAME 기본 평면 개념도</title><desc id="desc">가로 8미터, 세로 6.2미터 직사각형. 바닥면적 49.6제곱미터. 층고3.8미터. 출입구와 시설 위치는 확인 전이므로 표시하지 않음.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse"><path d="M8 4 0 0 0 8Z" fill="#004aad"/></marker></defs>
+<rect width="1120" height="1040" fill="#f6f4ee"/>
+<g font-family="sans-serif" fill="#171717"><text x="140" y="48" font-size="28">UNFRAME · 기본 평면 개념도</text><text x="140" y="82" font-size="16">제공 치수 기반 · 실제 시공 및 설치 도면이 아닙니다</text>
+<rect x="140" y="180" width="800" height="620" fill="none" stroke="#171717" stroke-width="4"/>
+<g fill="none" stroke="#004aad" stroke-width="1.5"><path d="M140 168V120M940 168V120M128 180H80M128 800H80"/><path d="M144 136H936M96 184V796" marker-start="url(#arrow)" marker-end="url(#arrow)"/></g>
+<g fill="#004aad" font-size="22"><text x="540" y="122" text-anchor="middle">8,000 mm</text><text x="68" y="490" text-anchor="middle" transform="rotate(-90 68 490)">6,200 mm</text><text x="540" y="216" text-anchor="middle">A</text><text x="910" y="498" text-anchor="middle">B</text><text x="540" y="780" text-anchor="middle">C</text><text x="168" y="498" text-anchor="middle">D</text></g>
+<text x="540" y="468" text-anchor="middle" font-size="36">49.6㎡</text><text x="540" y="508" text-anchor="middle" font-size="22">층고 3,800 mm</text>
+<text x="140" y="866" font-size="20">전시 공간: 가로 8m × 세로 6.2m / 층고 3.8m</text><text x="140" y="906" font-size="17">A–D는 전시 배치 협의를 위한 벽면 식별 기호입니다.</text>
+<text x="140" y="950" font-size="17">출입구·기둥·전기·소방 시설 위치는 미확인으로 표시하지 않았습니다.</text><text x="140" y="982" font-size="17">실제 유효 벽면 길이와 반입 동선은 현장 확인이 필요합니다.</text></g></svg>

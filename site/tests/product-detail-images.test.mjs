@@ -21,3 +21,5 @@ test('missing imported headings create no invented concept or commercial facts',
  const html=finishedProductView({name:'다른 상품',details:'일반 상품 설명'},[{url:'/a.png',alt:detailDescription('상세',true)}],()=>'<button>구매</button>');
  assert.ok(!html.includes('class="product-source-concept"'));assert.ok(!html.includes('class="product-source-information"'));assert.ok(html.includes('일반 상품 설명'));
 });
+
+test('rental approved image pages keep reservation action but have no false clickable form hotspot',()=>{const html=finishedProductView({id:'imweb-3',name:'대관 예약금',checkoutUrl:'https://unframe.imweb.me/shop/?idx=3'},[{url:'/rental1.png',alt:detailDescription('대관시안 1',true)},{url:'/rental2.png',alt:detailDescription('대관시안 2',true)}],()=>'<a>아임웹에서 예약금 결제</a>');assert.ok(html.includes('/rental1.png'));assert.ok(html.includes('/rental2.png'));assert.ok(html.includes('아임웹에서 예약금 결제'));assert.ok(!html.includes('class="finished-purchase-image"'));});
