@@ -114,5 +114,15 @@ test('artist intro is optional and limited to 600 characters',()=>{
 import {ENTRY_VIEW} from '../js/virtual-links.js';
 test('visitors enter facing the front wall',()=>{
  assert.equal(ENTRY_VIEW.yaw,WALL_VIEWS.front.yaw);
- assert.deepEqual(ENTRY_VIEW.position,[0,2.5]);
+ assert.deepEqual(ENTRY_VIEW.position,[1,0]);
+});
+import {introHTML} from '../js/virtual-intro.js';
+test('entry info shows shared exhibition details and the artist intro, escaped',()=>{
+ const exhibition={title:'Resonance',startDate:'2026-10-01',endDate:'2026-11-15',location:'UNFRAME 성수',summary:'빛과 소리의 공명.'};
+ const html=introHTML({exhibition,settings:{artistName:'김하늘',artistNote:'<b>회화</b>와 소리를 다룹니다.'}});
+ for(const part of ['Resonance','2026.10.01','UNFRAME 성수','빛과 소리의 공명.','김하늘','&lt;b&gt;회화'])assert.ok(html.includes(part),part);
+ assert.doesNotMatch(html,/<b>회화/);
+ const whole=introHTML({exhibition,settings:{}});
+ assert.doesNotMatch(whole,/작가 소개/);
+ assert.doesNotMatch(introHTML({exhibition:{title:'미리보기 전시'},settings:{artistName:'작가'}}),/undefined/);
 });

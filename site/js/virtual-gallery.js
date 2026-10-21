@@ -3,6 +3,7 @@ import {demo,listExhibitions,getExhibition,resolveImage,session,isStaff} from '.
 import {getVirtualGallery,listVirtualGalleries} from './virtual-store.js';
 import {submissionPreview} from './submission-store.js';
 import {artFromHash,hashFor} from './virtual-links.js';
+import {introHTML} from './virtual-intro.js';
 import {galleryExhibitionId} from './virtual-model.js';
 import {escapeHTML as e,imageURL,dateRange,sortExhibitions} from './model.js';
 const $=selector=>document.querySelector(selector);
@@ -70,6 +71,7 @@ async function show(id){
  $('#preview-mode').hidden=!(preview||demo);$('#preview-mode').textContent=submissionId?'승인 전 업로드 미리보기 · 아직 공개되지 않았습니다.':demo?'샘플 체험 · 실제 전시가 아닙니다.':'관리자 미리보기 · 저장된 설정을 확인하는 화면입니다.';
  $('#gallery-title').textContent=settings.title;$('#gallery-subtitle').textContent=settings.subtitle;$('#start-title').textContent=settings.title;$('#start-subtitle').textContent=settings.subtitle||`${exhibition.title}의 작품을 온라인 공간에서 만나보세요.`;
  document.title=`${settings.title} — UNFRAME Virtual Gallery`;
+ $('#start-info').innerHTML=introHTML({exhibition,settings});
  $('#gallery-subtitle').textContent=[settings.artistName?settings.artistName+' · '+exhibition.title:'',settings.subtitle].filter(Boolean).join(' / ');
  if(submissionId)document.querySelectorAll('[data-return]').forEach(link=>{link.href=`/artist-studio/${encodeURIComponent(submissionId)}`;link.textContent='← 업로드 화면으로';});
  else{const chooser=document.createElement('a');chooser.href=`/exhibition/${encodeURIComponent(parentId)}#ex-online`;chooser.className='glass-btn virtual-gallery-choice';chooser.textContent='갤러리 선택';$('.top-actions').append(chooser);
