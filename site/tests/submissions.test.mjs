@@ -50,3 +50,111 @@ test('submission image paths stay inside their own submission',()=>{
  assert.equal(isSubmissionPath(path,'sub2'),false);
  assert.equal(isSubmissionPath('virtualGalleries/sub1/art1/x.webp','sub1'),false);
 });
+import {createInvite,getInvite,claimInvite,getSubmission,saveSubmissionSettings,saveSubmissionArtwork,deleteSubmissionArtwork,setSubmissionStatus,listSubmissions,countPending,extendSubmission,rejectSubmission,approveSubmission,purgeExpiredSubmissions,myGalleries,createRevision,artistLogin,DEMO_ARTIST_EMAIL} from '../js/submission-store.js';
+import {getVirtualGallery} from '../js/virtual-store.js';
+import {emptyArtwork} from '../js/virtual-model.js';
+const exhibition={id:'resonance',title:'Resonance: 빛과 소리의 공명'};
+function memoryStorage(){const values=new Map();globalThis.localStorage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)};return values;}
+const work=(id,extra={})=>({...emptyArtwork(),id,title:`작품 ${id}`,artist:'김하늘',year:'2026',medium:'캔버스에 유채',image:{url:'',path:`virtualSubmissions/SUB/${id}/12345678-1234-1234-1234-123456789012.webp`,alt:'정면 이미지'},...extra});
+async function invitedDraft(){
+ const invite=await createInvite(exhibition,{artistName:'김하늘',invitedEmail:''});
+ await artistLogin();await claimInvite(invite.id);
+ const fix=art=>({...art,image:{...art.image,path:art.image.path.replace('SUB',invite.id)}});
+ return {id:invite.id,fix};
+}
+test('invited artist uploads, requests review and staff approval publishes a new artist gallery',async()=>{
+ memoryStorage();
+ const invite=await createInvite(exhibition,{artistName:'김하늘',invitedEmail:''});
+ assert.equal(invite.status,'invited');assert.equal(invite.exhibitionTitle,exhibition.title);
+ assert.equal((await getInvite(invite.id)).artistName,'김하늘');
+ await artistLogin();const claimed=await claimInvite(invite.id);
+ assert.equal(claimed.ownerEmail,DEMO_ARTIST_EMAIL);assert.equal(claimed.status,'draft');
+ await saveSubmissionSettings(invite.id,{theme:'wood',wallColor:'#ffffff',lighting:'focused',ceiling:'plain',published:true});
+ const art={...work('a1'),image:{url:'',path:`virtualSubmissions/${invite.id}/a1/12345678-1234-1234-1234-123456789012.webp`,alt:'정면'}};
+ await saveSubmissionArtwork(invite.id,art);
+ await setSubmissionStatus(invite.id,'submitted');
+ assert.equal(await countPending(),1);
+ await assert.rejects(saveSubmissionArtwork(invite.id,work('a2')),/심사/);
+ const copied=[];
+ const galleryId=await approveSubmission(invite.id,{publish:true,copy:async pairs=>{copied.push(...pairs);}});
+ const gallery=await getVirtualGallery(galleryId,{admin:true});
+ assert.equal(gallery.settings.published,true);assert.equal(gallery.settings.artistEmail,DEMO_ARTIST_EMAIL);
+ assert.equal(gallery.settings.theme,'wood');assert.equal(gallery.settings.exhibitionId,'resonance');
+ assert.equal(gallery.artworks.length,1);assert.equal(gallery.artworks[0].year,'2026');assert.equal(gallery.artworks[0].medium,'캔버스에 유채');
+ assert.match(gallery.artworks[0].image.path,new RegExp(`^virtualGalleries/${galleryId}/a1/`));
+ assert.deepEqual(copied,[{from:art.image.path,to:gallery.artworks[0].image.path}]);
+ assert.equal(await getInvite(invite.id),null);assert.equal(await getSubmission(invite.id),null);
+ assert.deepEqual((await myGalleries()).map(item=>item.id),[galleryId]);
+ delete globalThis.localStorage;
+});
+test('submitted requests can be cancelled, rejected with a note and edited again',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionArtwork(id,fix(work('a1')));
+ await setSubmissionStatus(id,'submitted');await setSubmissionStatus(id,'draft');
+ await setSubmissionStatus(id,'submitted');
+ await assert.rejects(rejectSubmission(id,' '),/사유/);
+ await rejectSubmission(id,'이미지 해상도를 높여주세요.');
+ const {submission}=await getSubmission(id);
+ assert.equal(submission.status,'rejected');assert.equal(submission.reviewNote,'이미지 해상도를 높여주세요.');
+ await saveSubmissionArtwork(id,fix(work('a2')));await deleteSubmissionArtwork(id,'a1');
+ assert.deepEqual((await getSubmission(id)).artworks.map(art=>art.id),['a2']);
+ delete globalThis.localStorage;
+});
+test('invited email locks the claim to that account',async()=>{
+ memoryStorage();
+ const invite=await createInvite(exhibition,{artistName:'작가',invitedEmail:'someone@example.com'});
+ await artistLogin();await assert.rejects(claimInvite(invite.id),/다른 계정/);
+ delete globalThis.localStorage;
+});
+test('expired uploads disappear for artists and are purged by staff',async()=>{
+ const values=memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionArtwork(id,fix(work('a1')));
+ const key='unframe-virtual-submissions-demo-v1',all=JSON.parse(values.get(key));
+ all[id].submission.touchedAt=new Date(Date.now()-11*86400000).toISOString();values.set(key,JSON.stringify(all));
+ assert.equal(await getInvite(id),null);assert.equal(await getSubmission(id),null);
+ await assert.rejects(saveSubmissionArtwork(id,fix(work('a2'))),/기한/);
+ assert.equal((await listSubmissions('resonance')).length,1);
+ assert.equal(await purgeExpiredSubmissions(),1);
+ assert.equal((await listSubmissions('resonance')).length,0);
+ delete globalThis.localStorage;
+});
+test('extending a submission resets the ten-day clock',async()=>{
+ const values=memoryStorage();const {id}=await invitedDraft();
+ const key='unframe-virtual-submissions-demo-v1',all=JSON.parse(values.get(key));
+ all[id].submission.touchedAt=new Date(Date.now()-9*86400000).toISOString();values.set(key,JSON.stringify(all));
+ await extendSubmission(id);
+ const [item]=await listSubmissions('resonance');
+ assert.ok(item.expiresAt-Date.now()>9.9*86400000);
+ delete globalThis.localStorage;
+});
+test('approve is idempotent after partial failure',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionArtwork(id,fix(work('a1')));await saveSubmissionArtwork(id,fix(work('a2',{wall:'left'})));
+ await setSubmissionStatus(id,'submitted');
+ await assert.rejects(approveSubmission(id,{publish:true,copy:async()=>{throw new Error('복사 실패');}}),/복사 실패/);
+ assert.ok(await getSubmission(id));
+ const galleryId=await approveSubmission(id,{publish:true,copy:async()=>{}});
+ const gallery=await getVirtualGallery(galleryId,{admin:true});
+ assert.equal(gallery.artworks.length,2);
+ delete globalThis.localStorage;
+});
+test('revision approval removes dropped artworks and keeps existing images',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionArtwork(id,fix(work('a1')));await saveSubmissionArtwork(id,fix(work('a2',{wall:'left'})));
+ await setSubmissionStatus(id,'submitted');
+ const galleryId=await approveSubmission(id,{publish:true,copy:async()=>{}});
+ const revision=await createRevision(galleryId);
+ const draft=await getSubmission(revision);
+ assert.equal(draft.submission.targetGalleryId,galleryId);assert.equal(draft.artworks.length,2);
+ assert.match(draft.artworks[0].image.path,/^virtualGalleries\//);
+ await deleteSubmissionArtwork(revision,'a2');
+ await saveSubmissionArtwork(revision,{...draft.artworks[0],title:'고친 제목'});
+ await setSubmissionStatus(revision,'submitted');
+ const removed=[];
+ assert.equal(await approveSubmission(revision,{publish:false,copy:async()=>{},remove:async path=>removed.push(path)}),galleryId);
+ const gallery=await getVirtualGallery(galleryId,{admin:true});
+ assert.deepEqual(gallery.artworks.map(art=>art.title),['고친 제목']);
+ assert.equal(gallery.settings.published,true);
+ assert.equal(removed.length,1);assert.match(removed[0],new RegExp(`^virtualGalleries/${galleryId}/a2/`));
+ delete globalThis.localStorage;
+});
