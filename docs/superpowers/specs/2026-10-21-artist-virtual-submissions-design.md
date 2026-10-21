@@ -38,7 +38,7 @@
 | `reviewNote` | 문자열 ≤1000 (반려 사유) | 직원 |
 | `settings` | `{theme, wallColor, lighting, ceiling}` (기존 허용 값) | 작가·직원 |
 | `createdAt` | timestamp | 생성 시 |
-| `expiresAt` | timestamp = 마지막 쓰기 시각 + 10일 | 모든 쓰기에서 규칙이 강제 |
+| `touchedAt` | 서버 timestamp(마지막 쓰기 시각). 만료 = `touchedAt` + 10일 | 모든 쓰기에서 규칙이 `request.time`과 같도록 강제 |
 
 작품: `virtualSubmissions/{submissionId}/artworks/{artId}` — 기존 `validArtwork`와 같은 필드·한도(작품명·작가·세로·가로·벽면·형태 필수, 연도·재료·설명 등 선택). 이미지 경로는 `virtualSubmissions/{submissionId}/{artId}/{uuid}.{ext}`이며, 수정본에서는 대상 갤러리의 기존 경로 `virtualGalleries/{targetGalleryId}/{artId}/…`도 허용한다.
 
@@ -48,11 +48,11 @@
 
 ## 2. 보안 규칙 (Firestore)
 
-- **만료:** 작가 관련 모든 읽기·쓰기는 `resource.data.expiresAt > request.time`일 때만 허용한다. 모든 쓰기(직원 포함)는 `request.resource.data.expiresAt == request.time + duration.value(10,'d')`여야 한다.
+- **만료:** 작가 관련 모든 읽기·쓰기는 `resource.data.touchedAt + duration.value(10,'d') > request.time`일 때만 허용한다. 모든 쓰기(직원 포함)는 `request.resource.data.touchedAt == request.time`이어야 한다(클라이언트는 serverTimestamp 사용).
 - **초대 열람:** 로그인 전 링크 첫 화면을 위해 `get`만 허용한다(목록 조회 불가). 조건은 미귀속(`ownerEmail==''`)이고 만료 전인 문서다.
 - **귀속(claim):** 검증된 Google 로그인이면서 `ownerEmail==''`일 때, `ownerEmail`을 자기 이메일로, `status`를 `draft`로 바꾸는 업데이트만 허용한다. `invitedEmail`이 있으면 그 이메일과 같아야 한다.
-- **작가 편집:** `ownerEmail == request.auth.token.email`이고 상태가 `draft`/`rejected`일 때 `settings`, `status`, `expiresAt`만 바꿀 수 있다. 상태 전이는 `draft|rejected → submitted`와 `submitted → draft`(요청 취소)만 허용한다. `submitted` 상태에서는 상태 되돌리기 외의 수정을 막는다.
-- **작가 작품 쓰기:** 부모 제출함의 주인이고, 편집 가능 상태이며, 만료 전이어야 한다. 같은 일괄 쓰기에서 부모의 `expiresAt`도 갱신되어야 한다(`getAfter`). 그래서 작품을 저장할 때마다 기한이 연장된다.
+- **작가 편집:** `ownerEmail == request.auth.token.email`이고 상태가 `draft`/`rejected`일 때 `settings`, `status`, `touchedAt`만 바꿀 수 있다. 상태 전이는 `draft|rejected → submitted`와 `submitted → draft`(요청 취소)만 허용한다. `submitted` 상태에서는 상태 되돌리기 외의 수정을 막는다.
+- **작가 작품 쓰기:** 부모 제출함의 주인이고, 편집 가능 상태이며, 만료 전이어야 한다. 같은 일괄 쓰기에서 부모의 `touchedAt`도 갱신되어야 한다(`getAfter`). 그래서 작품을 저장할 때마다 기한이 연장된다.
 - **수정본 생성:** 작가가 직접 만들 수 있다. 조건은 대상 갤러리의 `artistEmail`이 자기 이메일과 같고, `ownerEmail`이 자기 이메일이며, `status`가 `draft`인 것이다.
 - **직원:** 초대 생성, 반려(`reviewNote`), 기한 연장, 삭제를 할 수 있다. 읽기는 만료 여부와 관계없이 가능하다(정리용).
 - **작가가 할 수 없는 것:** 공개 여부 변경, `virtualGalleries` 쓰기, 다른 제출함 목록 조회.
@@ -77,7 +77,7 @@
 - **심사 화면:** 3D 미리보기와 작품 목록을 보여준다. 수정본이면 작품마다 변경·추가·삭제 표시가 붙는다. 버튼은 **승인 후 공개**, **승인만**, **반려(사유)** 세 가지다.
   - **승인 절차:** 이미지 복사 → 갤러리 설정·작품 쓰기 → 수정본에서 빠진 작품·이미지 삭제 → 제출함·제출함 이미지 삭제.
   - 단계 중간에 실패하면 제출함을 남겨 두고 오류를 안내한다. 다시 승인해도 결과가 같다(멱등).
-- **만료 정리:** `/admin`에 들어오면 만료된 제출함(`expiresAt < now`)을 조회해 이미지·작품·문서를 삭제하고, 결과를 알림으로 한 번 표시한다.
+- **만료 정리:** `/admin`에 들어오면 만료된 제출함(`touchedAt` + 10일 < 현재)을 조회해 이미지·작품·문서를 삭제하고, 결과를 알림으로 한 번 표시한다.
 
 ### 작가 (`/artist-studio/{id}`)
 
