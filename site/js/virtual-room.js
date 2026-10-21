@@ -2,7 +2,7 @@ import {environmentOptions,surfaceTexture,materialTexture,buildOutdoor,canvasSid
 import {layoutArtworks,artworkMount} from './virtual-model.js';
 import {createTour} from './virtual-tour.js';
 import {mountHud} from './virtual-hud.js';
-import {wallViewpoint} from './virtual-links.js';
+import {wallViewpoint,ENTRY_VIEW} from './virtual-links.js';
 import {bindTouchLook} from './virtual-input.js';
 import {QUALITY,deviceQuality,downgrade} from './virtual-quality.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
@@ -449,8 +449,8 @@ let artworksData=[],gallerySettings,quality='medium';
       player: {
         height: 1.75,
         speed: 5.5,
-        position: new THREE.Vector3(0, 1.75, 2.5),
-        yaw: 0,
+        position: new THREE.Vector3(ENTRY_VIEW.position[0], 1.75, ENTRY_VIEW.position[1]),
+        yaw: ENTRY_VIEW.yaw,
         pitch: 0,
         bounds: {
           minX: -7.0,
@@ -559,7 +559,7 @@ let artworksData=[],gallerySettings,quality='medium';
           200
         );
         this.camera.position.copy(this.player.position);
-        this.camera.rotation.order = 'YXZ';
+        this.camera.rotation.set(0, this.player.yaw, 0, 'YXZ');
       },
 
       setupLights: function() {
@@ -1315,15 +1315,15 @@ let artworksData=[],gallerySettings,quality='medium';
 
       resetCamera: function() {
         this.closeModal();
-        const defaultPos = new THREE.Vector3(0, 1.75, 2.5);
+        const defaultPos = new THREE.Vector3(ENTRY_VIEW.position[0], 1.75, ENTRY_VIEW.position[1]);
         new TWEEN.Tween(this.camera.position)
           .to(defaultPos, window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:1000)
           .easing(TWEEN.Easing.Cubic.Out)
           .onComplete(() => {
             this.player.position.copy(defaultPos);
-            this.player.yaw = 0;
+            this.player.yaw = ENTRY_VIEW.yaw;
             this.player.pitch = 0;
-            this.camera.rotation.set(0, 0, 0, 'YXZ');
+            this.camera.rotation.set(0, ENTRY_VIEW.yaw, 0, 'YXZ');
           })
           .start();
       },

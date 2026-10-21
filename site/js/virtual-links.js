@@ -8,3 +8,5 @@ export function artFromHash(hash,ids){
 }
 export const WALL_VIEWS={front:{label:'전면 벽',position:[-1.5,0],yaw:Math.PI/2},left:{label:'좌측 벽',position:[0,0.5],yaw:Math.PI},right:{label:'우측 벽',position:[0,-0.5],yaw:0}};
 export const wallViewpoint=wall=>Object.hasOwn(WALL_VIEWS,wall)?WALL_VIEWS[wall]:null;
+// Arrival and the "입구로" reset stand at the room's entrance looking at the front wall.
+export const ENTRY_VIEW={position:[0,2.5],yaw:Math.PI/2};

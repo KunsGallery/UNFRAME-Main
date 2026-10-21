@@ -111,3 +111,8 @@ test('artist intro is optional and limited to 600 characters',()=>{
  assert.throws(()=>validateGallery({...gallery,artistNote:'가'.repeat(601)}),/600/);
  assert.throws(()=>validateGallery({...gallery,artistNote:5}),/600/);
 });
+import {ENTRY_VIEW} from '../js/virtual-links.js';
+test('visitors enter facing the front wall',()=>{
+ assert.equal(ENTRY_VIEW.yaw,WALL_VIEWS.front.yaw);
+ assert.deepEqual(ENTRY_VIEW.position,[0,2.5]);
+});
