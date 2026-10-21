@@ -59,3 +59,59 @@ test('product photos stay staff-only even if a document claims published',async(
 });
 
 test('storefront import routes require verified active staff and remain read-only',async()=>{const f=fixture();const base='https://media.example/imweb/';assert.equal((await handle(new Request(base+'products'),f.env,f.fetcher)).status,401);const authorization='Bearer '+await token();const inactive=fixture({active:false});assert.equal((await handle(new Request(base+'products',{headers:{Authorization:authorization}}),inactive.env,inactive.fetcher)).status,403);assert.equal((await handle(new Request(base+'products',{method:'POST',headers:{Authorization:authorization}}),f.env,f.fetcher)).status,405);assert.equal((await handle(new Request(base+'products?page=999999',{headers:{Authorization:authorization}}),f.env,f.fetcher)).status,400);assert.equal((await handle(new Request(base+'image?url=https://127.0.0.1/a.png',{headers:{Authorization:authorization}}),f.env,f.fetcher)).status,400);});
+// Invited artists: ownership comes from the submission document read with the artist's own token.
+const subPath='virtualSubmissions/AbCdEfGhIjKlMnOpQrStUv/art/12345678-1234-1234-1234-123456789012.png';
+function artistFixture({owner='artist@example.com',status='draft',touchedDaysAgo=1,objects=0,staff=false,gallery}={}){
+ const stored=[];const env={FIREBASE_PROJECT_ID:'unframe-main',ALLOWED_ORIGINS:'https://unframe-main.netlify.app',MEDIA:{async get(k){return k.includes('aaaaaaaa-')?null:{body:png,httpEtag:'"t"'};},async put(k,v,o){stored.push({k,o});},async delete(k){stored.push({deleted:k});},async list({prefix,limit}){return {objects:Array.from({length:Math.min(objects,limit)},(_,i)=>({key:prefix+i}))};}}};
+ const touched=new Date(Date.now()-touchedDaysAgo*86400000).toISOString();
+ const fetcher=async(url,init)=>{
+  if(url.includes('googleapis.com/service_accounts'))return Response.json({keys:[jwk]});
+  if(url.includes('/staffEmails/'))return staff?Response.json({fields:{active:{booleanValue:true},email:{stringValue:'artist@example.com'}}}):new Response('',{status:403});
+  if(url.includes('/virtualSubmissions/'))return init?.headers?.Authorization?Response.json({fields:{ownerEmail:{stringValue:owner},status:{stringValue:status},touchedAt:{timestampValue:touched}}}):new Response('',{status:403});
+  if(url.includes('/virtualGalleries/')&&gallery&&!url.includes('/artworks/'))return init?.headers?.Authorization?Response.json({fields:{published:{booleanValue:false},artistEmail:{stringValue:gallery}}}):new Response('',{status:403});
+  return new Response('',{status:403});
+ };
+ return {env,fetcher,stored};
+}
+const artistAuth=async()=>'Bearer '+await token({email:'artist@example.com'});
+const subReq=async(method,extra={},p=subPath)=>new Request('https://media.example/media/'+p,{method,headers:{Authorization:await artistAuth(),...(method==='PUT'?{'Content-Type':'image/png','Content-Length':String(png.length)}:{}),...extra},body:method==='PUT'?png:undefined});
+test('submission owner uploads, previews and deletes their own images',async()=>{
+ const f=artistFixture();
+ assert.deepEqual(parsePath('/media/'+subPath),{key:subPath,collection:'virtualSubmissions',id:'AbCdEfGhIjKlMnOpQrStUv',artId:'art',type:'image/png'});
+ assert.equal((await handle(await subReq('PUT'),f.env,f.fetcher)).status,200);assert.equal(f.stored[0].k,subPath);
+ assert.equal((await handle(await subReq('GET'),f.env,f.fetcher)).status,200);
+ assert.equal((await handle(await subReq('DELETE'),f.env,f.fetcher)).status,200);
+});
+test('submission images reject other accounts, anonymous readers, locked and expired uploads',async()=>{
+ assert.equal((await handle(await subReq('PUT'),artistFixture({owner:'other@example.com'}).env,artistFixture({owner:'other@example.com'}).fetcher)).status,403);
+ const f=artistFixture();assert.equal((await handle(new Request('https://media.example/media/'+subPath),f.env,f.fetcher)).status,404);
+ const locked=artistFixture({status:'submitted'});assert.equal((await handle(await subReq('PUT'),locked.env,locked.fetcher)).status,403);
+ assert.equal((await handle(await subReq('GET'),locked.env,locked.fetcher)).status,200);
+ const expired=artistFixture({touchedDaysAgo:11});assert.equal((await handle(await subReq('PUT'),expired.env,expired.fetcher)).status,403);
+ assert.equal((await handle(await subReq('GET'),expired.env,expired.fetcher)).status,403);
+});
+test('a submission holds at most sixty stored images',async()=>{
+ const f=artistFixture({objects:60});const response=await handle(await subReq('PUT'),f.env,f.fetcher);
+ assert.equal(response.status,409);assert.equal(f.stored.length,0);
+});
+test('bound artists read their own unpublished gallery images; others cannot',async()=>{
+ const galleryPath='virtualGalleries/artist-x/art/12345678-1234-1234-1234-123456789012.png';
+ const mine=artistFixture({gallery:'artist@example.com'});assert.equal((await handle(await subReq('GET',{},galleryPath),mine.env,mine.fetcher)).status,200);
+ const theirs=artistFixture({gallery:'other@example.com'});assert.equal((await handle(await subReq('GET',{},galleryPath),theirs.env,theirs.fetcher)).status,403);
+});
+const copyReq=async(items,auth)=>new Request('https://media.example/copy',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({items})});
+test('staff copy approved submission images into the gallery with the same file name',async()=>{
+ const to='virtualGalleries/artist-x/art/12345678-1234-1234-1234-123456789012.png';
+ const f=artistFixture({staff:true});const response=await handle(await copyReq([{from:subPath,to}],await artistAuth()),f.env,f.fetcher);
+ assert.equal(response.status,200);assert.deepEqual(await response.json(),{copied:1});
+ assert.equal(f.stored[0].k,to);assert.equal(f.stored[0].o.httpMetadata.contentType,'image/png');
+});
+test('copy is staff-only and refuses paths outside the submission-to-gallery pattern',async()=>{
+ const to='virtualGalleries/artist-x/art/12345678-1234-1234-1234-123456789012.png';
+ const artist=artistFixture();assert.equal((await handle(await copyReq([{from:subPath,to}],await artistAuth()),artist.env,artist.fetcher)).status,403);
+ const f=artistFixture({staff:true});
+ for(const items of [[{from:subPath,to:to.replace('virtualGalleries','exhibitions')}],[{from:to,to}],[{from:subPath,to:to.replace('/art/','/other/')}],[{from:subPath,to:to.replace('1234-123456789012.png','1234-123456789013.png')}],Array.from({length:25},()=>({from:subPath,to})),[]])
+  assert.equal((await handle(await copyReq(items,await artistAuth()),f.env,f.fetcher)).status,400);
+ assert.equal((await handle(await copyReq([{from:subPath.replace('12345678-1234','aaaaaaaa-1234'),to:to.replace('12345678-1234','aaaaaaaa-1234')}],await artistAuth()),f.env,f.fetcher)).status,404);
+ assert.equal(f.stored.length,0);
+});
