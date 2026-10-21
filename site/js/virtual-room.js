@@ -1,5 +1,7 @@
 import {environmentOptions,surfaceTexture,materialTexture,buildOutdoor,canvasSideMaterials} from './virtual-environment.js';
 import {layoutArtworks,artworkMount} from './virtual-model.js';
+import {createTour} from './virtual-tour.js';
+import {mountHud} from './virtual-hud.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
 let artworksData=[],gallerySettings;
     const TextureGenerator = {
@@ -945,14 +947,14 @@ let artworksData=[],gallerySettings;
 
           // 4. Detailed 3D Plaque Caption
           const plaqueTexture = TextureGenerator.createPlaqueTexture(art);
-          const plaqueGeo = new THREE.PlaneGeometry(0.34, 0.24);
+          const plaqueGeo = new THREE.PlaneGeometry(0.44, 0.22);
           const plaqueMat = new THREE.MeshStandardMaterial({
             map: plaqueTexture,
             roughness: 0.35,
             metalness: 0.05
           });
           const plaque = new THREE.Mesh(plaqueGeo, plaqueMat);
-          plaque.position.set(w / 2 + 0.36, -h / 2 + 0.15, 0.006);
+          plaque.position.set(w / 2 + 0.30, -h / 2 + 0.11, 0.006);
           plaque.castShadow = true;
           plaque.userData = { isArtwork: true, data: art, index: index };
           group.add(plaque);
@@ -1401,17 +1403,35 @@ GalleryApp.rebalanceArtworksOnWalls=function(){artworksData=layoutArtworks(artwo
 GalleryApp.requestPointerLock=function(){};
 GalleryApp.buildSunbeams=function(){}; // Daylight and real window shadows replace a luminous overlay plane.
 GalleryApp.buildOutdoorGarden=function(){this.outdoorEnvironment=buildOutdoor(THREE,this.scene,this.renderer,()=>TextureGenerator.createPhotorealisticForestTexture());};
+// Caption sits 8cm beside the work at a 2:1 ratio with large type, readable from viewing distance.
 TextureGenerator.createPlaqueTexture=function(art){
- const canvas=document.createElement('canvas');canvas.width=768;canvas.height=512;
- const context=canvas.getContext('2d');context.fillStyle='#f6f4ee';context.fillRect(0,0,768,512);context.fillStyle='#19211e';
- context.font='600 40px Noto Sans KR';context.fillText(art.title,35,65,690);
- context.font='26px Noto Sans KR';
- const lines=[art.artist,art.year,art.medium,art.dimensions,...(gallerySettings.showPrices&&art.price?[art.price]:[])].filter(Boolean);
- lines.forEach((line,index)=>context.fillText(line,35,125+index*57,690));
+ const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=512;
+ const context=canvas.getContext('2d');context.fillStyle='#f6f4ee';context.fillRect(0,0,1024,512);context.fillStyle='#19211e';
+ context.font='600 64px Noto Sans KR';context.fillText(art.title,48,96,928);
+ context.font='42px Noto Sans KR';
+ const lines=[art.artist,[art.year,art.medium].filter(Boolean).join(' · '),art.dimensions,...(gallerySettings.showPrices&&art.price?[art.price]:[])].filter(Boolean);
+ lines.slice(0,4).forEach((line,index)=>context.fillText(line,48,190+index*80,928));
  const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;return texture;
 };
+// Guided tour: stand in front of each work without a dialog; details open on request.
+let tour=createTour([]),tourDetail=false;
+const tourBar=document.getElementById('tour-bar');
+function showTourStop(stop){
+ if(!stop)return endTour();
+ const art=artworksData.find(work=>work.id===stop.id);
+ document.getElementById('tour-progress').textContent=`${stop.index} / ${stop.total}`;
+ document.getElementById('tour-title').textContent=[art.title,art.artist].filter(Boolean).join(' · ');
+ document.getElementById('tour-prev').disabled=stop.index===1;
+ document.getElementById('tour-forward').textContent=stop.index===stop.total?'투어 마치기':'다음';
+ tourBar.hidden=false;GalleryApp.inspectArtwork(art);
+}
+function endTour(){tour.stop();GalleryApp.isTourActive=false;tourBar.hidden=true;GalleryApp.closeModal();}
+GalleryApp.startTour=function(){if(!artworksData.length)return;this.closeModal();tour=createTour(artworksData.map(art=>art.id));this.isTourActive=true;document.getElementById('start-overlay').classList.add('hidden');showTourStop(tour.start());};
+GalleryApp.nextTourStop=function(){if(this.isTourActive)showTourStop(tour.next());};
 const originalOpen=GalleryApp.openModal;
 GalleryApp.openModal=function(art){
+ if(this.isTourActive&&!tourDetail)return;
+ tourDetail=false;
  document.dispatchEvent(new CustomEvent('unframe-artwork-open',{detail:{id:art.id}}));
  originalOpen.call(this,art);const dialog=document.getElementById('art-modal');
  document.getElementById('modal-img').alt=art.image.alt||art.title;
@@ -1425,7 +1445,7 @@ GalleryApp.openModal=function(art){
 };
 GalleryApp.closeModal=function(){
  const dialog=document.getElementById('art-modal');dialog.classList.remove('active');if(dialog.open)dialog.close();
- this.isInspectMode=false;this.camera.rotation.set(this.player.pitch,this.player.yaw,0,'YXZ');
+ this.isInspectMode=this.isTourActive;this.camera.rotation.set(this.player.pitch,this.player.yaw,0,'YXZ');
 };
 export function mountRoom(settings,works){
  layoutArtworks(works); // Validate true-size placement before allocating the scene.
@@ -1449,8 +1469,13 @@ export function mountRoom(settings,works){
  for(const button of document.querySelectorAll('.nav-btn'))button.addEventListener('pointerleave',release);
  document.getElementById('art-modal').addEventListener('cancel',event=>{event.preventDefault();GalleryApp.closeModal();});
  document.getElementById('tour-next').onclick=()=>{GalleryApp.closeModal();GalleryApp.nextTourStop();};
- document.getElementById('tour-stop').onclick=()=>{GalleryApp.isTourActive=false;GalleryApp.closeModal();};
- document.getElementById('btn-close').addEventListener('click',()=>{GalleryApp.isTourActive=false;});
+ document.getElementById('tour-stop').onclick=endTour;
+ document.getElementById('tour-end').onclick=endTour;
+ document.getElementById('tour-forward').onclick=()=>GalleryApp.nextTourStop();
+ document.getElementById('tour-prev').onclick=()=>{if(GalleryApp.isTourActive)showTourStop(tour.prev());};
+ document.getElementById('tour-detail').onclick=()=>{const stop=tour.current();if(!stop)return;tourDetail=true;GalleryApp.openModal(artworksData.find(art=>art.id===stop.id));};
+ document.getElementById('btn-close').addEventListener('click',()=>{if(GalleryApp.isTourActive)endTour();});
+ mountHud();
  const stop=()=>{GalleryApp.disposed=true;cancelAnimationFrame(GalleryApp.animationFrame);TWEEN.removeAll();GalleryApp.outdoorEnvironment?.dispose();GalleryApp.scene.traverse(object=>{object.geometry?.dispose();for(const material of [object.material].flat().filter(Boolean)){for(const texture of new Set([material.map,material.bumpMap,material.emissiveMap].filter(Boolean)))texture.dispose();material.dispose();}});GalleryApp.renderer.dispose();};
  // Back/forward cache retains the live room; dispose only when leaving for good.
  window.addEventListener('pagehide',event=>{if(!event.persisted)stop();});

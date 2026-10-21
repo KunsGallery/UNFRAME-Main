@@ -50,3 +50,20 @@ test('optional finishes preserve legacy defaults and physical canvas dimensions'
 });
 
 test('legacy environment uses general lighting and plain ceiling without replacing outdoor visibility',()=>{assert.deepEqual(environmentOptions({outdoor:true}),{lighting:'general',ceiling:'plain',outdoor:true});assert.equal(environmentOptions({outdoor:false}).outdoor,false);});
+import {createTour} from '../js/virtual-tour.js';
+import {inputHint} from '../js/virtual-hud.js';
+test('guided tour walks forward and back and ends after the last artwork',()=>{
+ const tour=createTour(['a','b','c']);
+ assert.equal(tour.current(),null);
+ assert.deepEqual(tour.start(),{id:'a',index:1,total:3});
+ assert.deepEqual(tour.prev(),{id:'a',index:1,total:3});
+ assert.deepEqual(tour.next(),{id:'b',index:2,total:3});
+ assert.deepEqual(tour.next(),{id:'c',index:3,total:3});
+ assert.equal(tour.next(),null);assert.equal(tour.current(),null);
+ tour.start();tour.stop();assert.equal(tour.current(),null);
+ assert.equal(createTour([]).start(),null);
+});
+test('input hints match the device',()=>{
+ assert.doesNotMatch(inputHint(true),/WASD/);assert.match(inputHint(true),/드래그|손가락/);
+ assert.match(inputHint(false),/WASD/);
+});

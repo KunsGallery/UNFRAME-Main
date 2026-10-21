@@ -7,3 +7,25 @@
 .gallery-title{word-break:keep-all;overflow-wrap:anywhere}
 
 .virtual-gallery-choice{display:inline-block;text-decoration:none;text-align:center;font-size:12px}.top-actions{flex-wrap:wrap}
+/* Quiet viewing chrome: one menu, compact title after entry, fade while idle. */
+.hud-menu{display:none}
+body.hud-entered .hud-menu{display:inline-flex;margin-left:auto}
+body.hud-entered .top-right-panel{display:flex;flex-direction:column;align-items:flex-end}
+body.hud-entered .hud-menu-items{display:none;margin-top:10px}
+body.hud-entered .top-right-panel.menu-open .hud-menu-items{display:block}
+body.hud-entered .gallery-subtitle,body.hud-entered #preview-mode{display:none}
+body.hud-entered .top-header{padding-top:12px;padding-bottom:12px}
+body.hud-entered .gallery-title{font-size:clamp(17px,2vw,22px)}
+.top-header,.top-right-panel,.nav-controls-container,.bottom-left-panel,#tour-bar{transition:opacity .6s ease}
+body.hud-idle .top-header,body.hud-idle .bottom-left-panel{opacity:0;pointer-events:none}
+body.hud-idle .top-right-panel:not(.menu-open),body.hud-idle .nav-controls-container{opacity:.35}
+body.hud-idle #tour-bar{opacity:.55}
+#tour-bar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 32px);padding:12px 16px;background:rgba(246,244,238,.94);color:var(--ink);border:1px solid rgba(25,33,30,.12)}
+#tour-progress{font-size:12px;font-weight:600;color:var(--blue);letter-spacing:.04em}
+#tour-title{font-size:14px;font-weight:500;max-width:36ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tour-bar-actions{display:flex;gap:6px;flex-wrap:wrap}
+.tour-bar-actions button{border:1px solid rgba(25,33,30,.25);background:#fff;color:var(--ink);padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
+.tour-bar-actions #tour-forward{background:var(--blue);border-color:var(--blue);color:#fff}
+body:has(#tour-bar:not([hidden])) .nav-controls-container,body:has(#tour-bar:not([hidden])) .bottom-left-panel{display:none}
+@media(max-width:700px){#tour-bar{bottom:12px;gap:8px;padding:10px}#tour-title{max-width:100%;flex-basis:100%;text-align:center}}
+@media(prefers-reduced-motion:reduce){.top-header,.top-right-panel,.nav-controls-container,.bottom-left-panel,#tour-bar{transition:none}}
