@@ -126,3 +126,16 @@ test('entry info shows shared exhibition details and the artist intro, escaped',
  assert.doesNotMatch(whole,/작가 소개/);
  assert.doesNotMatch(introHTML({exhibition:{title:'미리보기 전시'},settings:{artistName:'작가'}}),/undefined/);
 });
+import {previewOverrides,lookFromMessage,previewURL} from '../js/virtual-embed.js';
+test('embedded preview accepts only valid unsaved space settings',()=>{
+ assert.deepEqual(previewOverrides('?embed=1&theme=wood&wallColor=%232f3d35&lighting=focused&ceiling=plain'),{embed:true,settings:{theme:'wood',wallColor:'#2f3d35',lighting:'focused',ceiling:'plain'}});
+ assert.deepEqual(previewOverrides('?embed=1&theme=neon&wallColor=red&lighting=x'),{embed:true,settings:{}});
+ assert.deepEqual(previewOverrides(''),{embed:false,settings:{}});
+ assert.equal(previewURL('AbCdEfGhIjKlMnOpQrStUv',{theme:'wood',wallColor:'#2f3d35',lighting:'general',ceiling:'luminous',artistNote:'x'}),'/virtual-gallery/submission/AbCdEfGhIjKlMnOpQrStUv?embed=1&theme=wood&wallColor=%232f3d35&lighting=general&ceiling=luminous');
+});
+test('live look messages carry only floor and wall colour',()=>{
+ assert.deepEqual(lookFromMessage({type:'unframe-look',theme:'black',wallColor:'#3a3c3b',lighting:'focused'}),{theme:'black',wallColor:'#3a3c3b'});
+ assert.equal(lookFromMessage({type:'other',theme:'black',wallColor:'#3a3c3b'}),null);
+ assert.equal(lookFromMessage({type:'unframe-look',theme:'black',wallColor:'javascript:alert(1)'}),null);
+ assert.equal(lookFromMessage(null),null);
+});

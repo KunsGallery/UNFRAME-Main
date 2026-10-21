@@ -4,6 +4,7 @@ import {getVirtualGallery,listVirtualGalleries} from './virtual-store.js';
 import {submissionPreview} from './submission-store.js';
 import {artFromHash,hashFor} from './virtual-links.js';
 import {introHTML} from './virtual-intro.js';
+import {previewOverrides,lookFromMessage} from './virtual-embed.js';
 import {galleryExhibitionId} from './virtual-model.js';
 import {escapeHTML as e,imageURL,dateRange,sortExhibitions} from './model.js';
 const $=selector=>document.querySelector(selector);
@@ -64,6 +65,9 @@ async function show(id){
  if(preview&&!submissionId&&!authorized&&!demo)throw new Error('관리자 미리보기는 승인된 Google 계정으로 로그인한 뒤 이용해주세요.');
  const data=submissionId?await submissionPreview(submissionId):await getVirtualGallery(id,{admin:authorized||preview&&demo});
  if(submissionId&&!data)throw new Error('미리볼 수 없는 업로드입니다. 기한이 지났거나, 처리되었거나, 다른 계정의 업로드입니다.');
+ // The artist studio frames this page with unsaved space settings and streams look changes.
+ const embedded=submissionId?previewOverrides(location.search):{embed:false,settings:{}};
+ if(embedded.embed){Object.assign(data.settings,embedded.settings);document.body.classList.add('embed-preview');}
  const parentId=data?galleryExhibitionId(id,data.settings):id;
  const exhibition=submissionId?{id:parentId,title:data.settings.exhibitionTitle,published:false}:data?await getExhibition(parentId):null;
  if(!exhibition||!data||(!submissionId&&!authorized&&!demo&&(!exhibition.published||!data.settings.published)))throw new Error('공개된 버추얼 갤러리를 찾을 수 없습니다. 전시 목록에서 확인해주세요.');
@@ -85,6 +89,7 @@ async function show(id){
   watchLoading();
   const {mountRoom}=await import('./virtual-room.js');room=mountRoom(settings,artworks);
   bindArtworkLinks(artworks);
+  if(embedded.embed){$('#start-overlay').classList.add('hidden');addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;const look=lookFromMessage(event.data);if(look)room.applyLook(look);});}
  }catch(error){
   $('#start-subtitle').textContent='이 기기에서 3D 공간을 시작하지 못했습니다. 작품 목록에서 이미지와 설명을 감상할 수 있습니다.';
   $('#enter-gallery-btn').textContent='작품 목록으로 감상하기';$('#enter-gallery-btn').disabled=false;

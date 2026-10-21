@@ -40,3 +40,4 @@ body:has(#tour-bar:not([hidden])) .nav-controls-container,body:has(#tour-bar:not
 .start-info strong{display:block;font-size:16px;font-weight:600;color:var(--ink)}
 .start-info em{display:block;font-style:normal;font-size:13px;color:#5a625f;margin-top:4px}
 .start-info p{font-size:14px;line-height:1.75;color:#3d4642;margin:8px 0 0;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+body.embed-preview .top-header,body.embed-preview .top-right-panel,body.embed-preview .nav-controls-container,body.embed-preview .bottom-left-panel,body.embed-preview #crosshair,body.embed-preview #tour-bar{display:none!important}
