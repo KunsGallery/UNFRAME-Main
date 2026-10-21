@@ -2,6 +2,7 @@ import {environmentOptions,surfaceTexture,materialTexture,buildOutdoor,canvasSid
 import {layoutArtworks,artworkMount} from './virtual-model.js';
 import {createTour} from './virtual-tour.js';
 import {mountHud} from './virtual-hud.js';
+import {wallViewpoint} from './virtual-links.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
 let artworksData=[],gallerySettings;
     const TextureGenerator = {
@@ -1444,8 +1445,16 @@ GalleryApp.openModal=function(art){
  if(!dialog.open)dialog.showModal();
 };
 GalleryApp.closeModal=function(){
- const dialog=document.getElementById('art-modal');dialog.classList.remove('active');if(dialog.open)dialog.close();
+ const dialog=document.getElementById('art-modal');dialog.classList.remove('active');
+ if(dialog.open){dialog.close();document.dispatchEvent(new CustomEvent('unframe-artwork-close'));}
  this.isInspectMode=this.isTourActive;this.camera.rotation.set(this.player.pitch,this.player.yaw,0,'YXZ');
+};
+GalleryApp.goToWall=function(view){
+ if(this.isTourActive)endTour();this.closeModal();
+ const target=new THREE.Vector3(view.position[0],this.player.height,view.position[1]);
+ new TWEEN.Tween(this.camera.position).to(target,matchMedia('(prefers-reduced-motion: reduce)').matches?0:900).easing(TWEEN.Easing.Cubic.Out)
+  .onComplete(()=>{this.player.position.copy(target);}).start();
+ this.player.yaw=view.yaw;this.player.pitch=0;this.camera.rotation.set(0,view.yaw,0,'YXZ');
 };
 export function mountRoom(settings,works){
  layoutArtworks(works); // Validate true-size placement before allocating the scene.
@@ -1479,5 +1488,6 @@ export function mountRoom(settings,works){
  const stop=()=>{GalleryApp.disposed=true;cancelAnimationFrame(GalleryApp.animationFrame);TWEEN.removeAll();GalleryApp.outdoorEnvironment?.dispose();GalleryApp.scene.traverse(object=>{object.geometry?.dispose();for(const material of [object.material].flat().filter(Boolean)){for(const texture of new Set([material.map,material.bumpMap,material.emissiveMap].filter(Boolean)))texture.dispose();material.dispose();}});GalleryApp.renderer.dispose();};
  // Back/forward cache retains the live room; dispose only when leaving for good.
  window.addEventListener('pagehide',event=>{if(!event.persisted)stop();});
- return {inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
+ for(const button of document.querySelectorAll('[data-wall]'))button.addEventListener('click',()=>{const view=wallViewpoint(button.dataset.wall);if(view)GalleryApp.goToWall(view);});
+ return {close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
 }

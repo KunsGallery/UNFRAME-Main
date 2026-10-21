@@ -67,3 +67,21 @@ test('input hints match the device',()=>{
  assert.doesNotMatch(inputHint(true),/WASD/);assert.match(inputHint(true),/드래그|손가락/);
  assert.match(inputHint(false),/WASD/);
 });
+import {artFromHash,hashFor,wallViewpoint,WALL_VIEWS} from '../js/virtual-links.js';
+test('artwork deep links resolve only known ids',()=>{
+ assert.equal(hashFor('sample-1'),'#art-sample-1');
+ assert.equal(artFromHash('#art-sample-1',['sample-0','sample-1']),'sample-1');
+ assert.equal(artFromHash('#art-unknown',['sample-1']),null);
+ assert.equal(artFromHash('',['sample-1']),null);
+ assert.equal(artFromHash('#art-'+encodeURIComponent('작품 1'),['작품 1']),'작품 1');
+});
+test('wall shortcuts stand inside the room facing their wall',()=>{
+ const bounds={minX:-7,maxX:6.8,minZ:-6,maxZ:6};
+ for(const wall of ['front','left','right']){
+  const view=wallViewpoint(wall);
+  assert.ok(view.position[0]>=bounds.minX&&view.position[0]<=bounds.maxX&&view.position[1]>=bounds.minZ&&view.position[1]<=bounds.maxZ,wall);
+ }
+ assert.equal(wallViewpoint('front').yaw,Math.PI/2);assert.equal(wallViewpoint('right').yaw,0);assert.equal(wallViewpoint('left').yaw,Math.PI);
+ assert.deepEqual(Object.keys(WALL_VIEWS),['front','left','right']);
+ assert.equal(wallViewpoint('ceiling'),null);
+});

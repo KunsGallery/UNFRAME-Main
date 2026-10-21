@@ -29,3 +29,7 @@ body.hud-idle #tour-bar{opacity:.55}
 body:has(#tour-bar:not([hidden])) .nav-controls-container,body:has(#tour-bar:not([hidden])) .bottom-left-panel{display:none}
 @media(max-width:700px){#tour-bar{bottom:12px;gap:8px;padding:10px}#tour-title{max-width:100%;flex-basis:100%;text-align:center}}
 @media(prefers-reduced-motion:reduce){.top-header,.top-right-panel,.nav-controls-container,.bottom-left-panel,#tour-bar{transition:none}}
+.wall-jumps{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;justify-content:flex-end}
+#start-progress{font-size:13px;color:#5a625f;min-height:1.4em;margin:6px 0 10px}
+.artwork-modal-img-wrap{overflow:hidden}.artwork-modal-img{cursor:zoom-in;transition:transform .25s ease}.artwork-modal-img.is-zoomed{transform:scale(2);cursor:zoom-out}
+@media(prefers-reduced-motion:reduce){.artwork-modal-img{transition:none}}
