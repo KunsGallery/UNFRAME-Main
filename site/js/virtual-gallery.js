@@ -1,6 +1,7 @@
 import {openShareCard} from './share-card.js';
 import {demo,listExhibitions,getExhibition,resolveImage,session,isStaff} from './store.js';
 import {getVirtualGallery,listVirtualGalleries} from './virtual-store.js';
+import {submissionPreview} from './submission-store.js';
 import {galleryExhibitionId} from './virtual-model.js';
 import {escapeHTML as e,imageURL,dateRange,sortExhibitions} from './model.js';
 const $=selector=>document.querySelector(selector);
@@ -24,20 +25,24 @@ async function index(){
  await Promise.allSettled(exhibits.filter(exhibition=>publicItems.some(item=>item.exhibition.id===exhibition.id)).map(async exhibition=>{const image=await resolveImage(exhibition.cover);if(!image?.url)return;document.querySelectorAll(`[data-exhibition="${exhibition.id}"]`).forEach(link=>{const img=document.createElement('img');img.src=image.url;img.alt=exhibition.cover?.alt||exhibition.title;img.loading='lazy';link.prepend(img);});}));
 }
 async function show(id){
- const preview=new URLSearchParams(location.search).get('preview')==='1';
- const authorized=preview&&await isStaff(await session());
- if(preview&&!authorized&&!demo)throw new Error('관리자 미리보기는 승인된 Google 계정으로 로그인한 뒤 이용해주세요.');
- const data=await getVirtualGallery(id,{admin:authorized||preview&&demo});
+ // Artist uploads preview under /virtual-gallery/submission/{id}; Firestore rules limit it to the owner and staff.
+ const submissionId=id.startsWith('submission/')?id.slice(11):'';
+ const preview=!!submissionId||new URLSearchParams(location.search).get('preview')==='1';
+ const authorized=!submissionId&&preview&&await isStaff(await session());
+ if(preview&&!submissionId&&!authorized&&!demo)throw new Error('관리자 미리보기는 승인된 Google 계정으로 로그인한 뒤 이용해주세요.');
+ const data=submissionId?await submissionPreview(submissionId):await getVirtualGallery(id,{admin:authorized||preview&&demo});
+ if(submissionId&&!data)throw new Error('미리볼 수 없는 업로드입니다. 기한이 지났거나, 처리되었거나, 다른 계정의 업로드입니다.');
  const parentId=data?galleryExhibitionId(id,data.settings):id;
- const exhibition=data?await getExhibition(parentId):null;
- if(!exhibition||!data||(!authorized&&!demo&&(!exhibition.published||!data.settings.published)))throw new Error('공개된 버추얼 갤러리를 찾을 수 없습니다. 전시 목록에서 확인해주세요.');
+ const exhibition=submissionId?{id:parentId,title:data.settings.exhibitionTitle,published:false}:data?await getExhibition(parentId):null;
+ if(!exhibition||!data||(!submissionId&&!authorized&&!demo&&(!exhibition.published||!data.settings.published)))throw new Error('공개된 버추얼 갤러리를 찾을 수 없습니다. 전시 목록에서 확인해주세요.');
  const {settings}=data;
- $('#preview-mode').hidden=!(preview||demo);$('#preview-mode').textContent=demo?'샘플 체험 · 실제 전시가 아닙니다.':'관리자 미리보기 · 저장된 설정을 확인하는 화면입니다.';
+ $('#preview-mode').hidden=!(preview||demo);$('#preview-mode').textContent=submissionId?'승인 전 업로드 미리보기 · 아직 공개되지 않았습니다.':demo?'샘플 체험 · 실제 전시가 아닙니다.':'관리자 미리보기 · 저장된 설정을 확인하는 화면입니다.';
  $('#gallery-title').textContent=settings.title;$('#gallery-subtitle').textContent=settings.subtitle;$('#start-title').textContent=settings.title;$('#start-subtitle').textContent=settings.subtitle||`${exhibition.title}의 작품을 온라인 공간에서 만나보세요.`;
  document.title=`${settings.title} — UNFRAME Virtual Gallery`;
  $('#gallery-subtitle').textContent=[settings.artistName?settings.artistName+' · '+exhibition.title:'',settings.subtitle].filter(Boolean).join(' / ');
- const chooser=document.createElement('a');chooser.href=`/exhibition/${encodeURIComponent(parentId)}#ex-online`;chooser.className='glass-btn virtual-gallery-choice';chooser.textContent='갤러리 선택';$('.top-actions').append(chooser);
- document.querySelectorAll('[data-return]').forEach(link=>link.href=`/exhibition/${encodeURIComponent(parentId)}`);
+ if(submissionId)document.querySelectorAll('[data-return]').forEach(link=>{link.href=`/artist-studio/${encodeURIComponent(submissionId)}`;link.textContent='← 업로드 화면으로';});
+ else{const chooser=document.createElement('a');chooser.href=`/exhibition/${encodeURIComponent(parentId)}#ex-online`;chooser.className='glass-btn virtual-gallery-choice';chooser.textContent='갤러리 선택';$('.top-actions').append(chooser);
+ document.querySelectorAll('[data-return]').forEach(link=>link.href=`/exhibition/${encodeURIComponent(parentId)}`);}
  const artworks=await Promise.all(data.artworks.map(async art=>({...art,image:await resolveImage(art.image)})));
  if(!preview&&exhibition.published&&settings.published){const share=document.createElement('button');share.className='action-btn-primary';share.textContent='작품 공유 카드';share.type='button';$('.modal-btn-row').append(share);let selected;document.addEventListener('unframe-artwork-open',event=>{selected=artworks.find(art=>art.id===event.detail.id);share.hidden=!selected;});share.onclick=()=>{if(selected)openShareCard({title:selected.title,artist:selected.artist,meta:[exhibition.title,selected.year,selected.medium].filter(Boolean).join(' · '),image:selected.image?.url,url:location.origin+'/exhibition/'+encodeURIComponent(parentId)});};}
  $('#works-list').innerHTML=artworks.length?artworks.map(art=>`<button type="button" class="virtual-work" data-art="${e(art.id)}"><img src="${e(imageURL(art.image.url))}" alt="${e(art.image.alt||art.title)}" loading="lazy"><strong>${e(art.title)}</strong><span>${e(art.artist)}</span></button>`).join(''):'<p>등록된 작품이 없습니다. 관리자에서 작품을 추가해주세요.</p>';
@@ -55,5 +60,5 @@ async function show(id){
   $('#btn-help').onclick=()=>$('#start-overlay').classList.remove('hidden');$('#btn-tour').disabled=true;$('.nav-controls-container').hidden=true;
  }
 }
-const match=location.pathname.match(/^\/virtual-gallery\/([^/]+)\/?$/);
+const match=location.pathname.match(/^\/virtual-gallery\/((?:submission\/)?[^/]+)\/?$/);
 try{if(match)await show(decodeURIComponent(match[1]));else await index();}catch(error){if($('#start-title')){$('#start-title').textContent='갤러리를 열 수 없습니다.';$('#start-subtitle').textContent=error.message;$('#start-help').hidden=true;$('#enter-gallery-btn').hidden=true;$('.top-right-panel').hidden=true;$('.nav-controls-container').hidden=true;}else if($('#gallery-index'))$('#gallery-index').textContent='갤러리를 불러오지 못했습니다. 잠시 후 다시 방문해주세요.';}

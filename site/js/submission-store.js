@@ -53,6 +53,12 @@ async function editable(id){
  return {...data,email};
 }
 
+// The 3D room renders a submission like a private gallery; access follows getSubmission.
+export async function submissionPreview(id){
+ const data=await getSubmission(id);if(!data)return null;const sub=data.submission;
+ return {settings:{title:`${sub.artistName} · 업로드 미리보기`,subtitle:`${sub.exhibitionTitle} · 승인 전 미리보기`,published:false,brightness:1,speed:2.5,outdoor:true,showPrices:false,...sub.settings,exhibitionId:sub.exhibitionId,exhibitionTitle:sub.exhibitionTitle,artistName:sub.artistName},artworks:data.artworks};
+}
+
 // ---- artist writes ----
 export async function claimInvite(id){
  const email=await artistEmail(),invite=await getInvite(id);

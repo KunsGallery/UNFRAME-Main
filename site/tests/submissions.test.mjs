@@ -179,3 +179,34 @@ test('pending notice summarises review requests',()=>{
  const html=pendingNoticeHTML([card({status:'submitted'}),card({id:'ZZZZZZZZZZZZZZZZZZZZZZ',status:'submitted',artistName:'박작가'})]);
  assert.match(html,/심사 대기 2건/);assert.match(html,/data-review="ZZZZZZZZZZZZZZZZZZZZZZ"/);
 });
+import {studioState,studioError} from '../js/artist-studio-model.js';
+test('studio state follows sign-in, ownership and review status',()=>{
+ const base={id:'x',ownerEmail:'',status:'invited'};
+ assert.equal(studioState({invite:base,user:null}),'landing');
+ assert.equal(studioState({invite:null,user:null}),'signin');
+ assert.equal(studioState({invite:null,user:{email:'a@b.com'}}),'unavailable');
+ assert.equal(studioState({invite:base,user:{email:'a@b.com'}}),'landing');
+ assert.equal(studioState({invite:{...base,ownerEmail:'a@b.com',status:'draft'},user:{email:'a@b.com'}}),'editor');
+ assert.equal(studioState({invite:{...base,ownerEmail:'a@b.com',status:'rejected'},user:{email:'a@b.com'}}),'editor');
+ assert.equal(studioState({invite:{...base,ownerEmail:'a@b.com',status:'submitted'},user:{email:'a@b.com'}}),'locked');
+ assert.equal(studioState({invite:{...base,ownerEmail:'c@d.com',status:'draft'},user:{email:'a@b.com'}}),'unavailable');
+});
+test('rule rejections become an artist-facing explanation',()=>{
+ assert.match(studioError({code:'permission-denied'}),/기한이 지났거나 권한이 없습니다/);
+ assert.equal(studioError(new Error('작품 제목과 작가명을 입력해주세요.')),'작품 제목과 작가명을 입력해주세요.');
+ assert.match(studioError({}),/저장하지 못했습니다/);
+});
+import {submissionPreview} from '../js/submission-store.js';
+import {validateGallery} from '../js/virtual-model.js';
+test('submission preview renders as a private gallery with the artist settings',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionSettings(id,{theme:'urethane',wallColor:'#eeeeee',lighting:'focused',ceiling:'plain'});
+ await saveSubmissionArtwork(id,fix(work('a1')));
+ const preview=await submissionPreview(id);
+ assert.equal(preview.settings.published,false);assert.equal(preview.settings.theme,'urethane');
+ assert.equal(preview.settings.exhibitionId,'resonance');assert.match(preview.settings.title,/김하늘/);
+ const {exhibitionId,artistName,order,exhibitionTitle,...plain}=preview.settings;assert.doesNotThrow(()=>validateGallery(plain));
+ assert.equal(preview.artworks.length,1);
+ assert.equal(await submissionPreview('missingmissingmissing00'),null);
+ delete globalThis.localStorage;
+});

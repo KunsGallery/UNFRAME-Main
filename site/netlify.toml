@@ -80,3 +80,17 @@
   from = "/virtual-gallery/:id"
   to = "/virtual-gallery.html"
   status = 200
+
+[[redirects]]
+  from = "/virtual-gallery/submission/:id"
+  to = "/virtual-gallery.html"
+  status = 200
+[[redirects]]
+  from = "/artist-studio/:id"
+  to = "/artist-studio.html"
+  status = 200
+[[headers]]
+  for = "/artist-studio*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"
