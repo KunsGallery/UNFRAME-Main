@@ -3,8 +3,10 @@ import {layoutArtworks,artworkMount} from './virtual-model.js';
 import {createTour} from './virtual-tour.js';
 import {mountHud} from './virtual-hud.js';
 import {wallViewpoint} from './virtual-links.js';
+import {bindTouchLook} from './virtual-input.js';
+import {QUALITY,deviceQuality,downgrade} from './virtual-quality.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
-let artworksData=[],gallerySettings;
+let artworksData=[],gallerySettings,quality='medium';
     const TextureGenerator = {
       createSeamlessHerringbone: function(isWood = false) {
         const S = 512;
@@ -533,8 +535,8 @@ let artworksData=[],gallerySettings;
           powerPreference: "high-performance"
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-        this.renderer.shadowMap.enabled = true;
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY[quality].pixelRatio));
+        this.renderer.shadowMap.enabled = QUALITY[quality].shadows;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 0.94;
@@ -569,8 +571,8 @@ let artworksData=[],gallerySettings;
         sunLight.position.set(24, 18, -6);
         sunLight.target.position.set(0, 0, 0);
         sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 1024;
-        sunLight.shadow.mapSize.height = 1024;
+        sunLight.shadow.mapSize.width = QUALITY[quality].shadowSize;
+        sunLight.shadow.mapSize.height = QUALITY[quality].shadowSize;
         sunLight.shadow.camera.near = 1;
         sunLight.shadow.camera.far = 60;
         sunLight.shadow.camera.left = -16;
@@ -1403,7 +1405,7 @@ let artworksData=[],gallerySettings;
 GalleryApp.rebalanceArtworksOnWalls=function(){artworksData=layoutArtworks(artworksData);};
 GalleryApp.requestPointerLock=function(){};
 GalleryApp.buildSunbeams=function(){}; // Daylight and real window shadows replace a luminous overlay plane.
-GalleryApp.buildOutdoorGarden=function(){this.outdoorEnvironment=buildOutdoor(THREE,this.scene,this.renderer,()=>TextureGenerator.createPhotorealisticForestTexture());};
+GalleryApp.buildOutdoorGarden=function(){this.outdoorEnvironment=buildOutdoor(THREE,this.scene,this.renderer,()=>TextureGenerator.createPhotorealisticForestTexture(),{leafCount:QUALITY[quality].leaves});};
 // Caption sits 8cm beside the work at a 2:1 ratio with large type, readable from viewing distance.
 TextureGenerator.createPlaqueTexture=function(art){
  const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=512;
@@ -1456,23 +1458,23 @@ GalleryApp.goToWall=function(view){
   .onComplete(()=>{this.player.position.copy(target);}).start();
  this.player.yaw=view.yaw;this.player.pitch=0;this.camera.rotation.set(0,view.yaw,0,'YXZ');
 };
+// If the first three seconds after entry average under 40fps, step down one quality level.
+function watchFrameRate(){
+ let frames=0;const start=performance.now();
+ const tick=()=>{if(GalleryApp.disposed)return;frames++;if(performance.now()-start<3000)return requestAnimationFrame(tick);
+  if(document.hidden||frames/3>=40||quality==='low')return;
+  quality=downgrade(quality);const level=QUALITY[quality];
+  GalleryApp.renderer.setPixelRatio(Math.min(window.devicePixelRatio,level.pixelRatio));
+  if(!level.shadows&&GalleryApp.renderer.shadowMap.enabled){GalleryApp.renderer.shadowMap.enabled=false;GalleryApp.scene.traverse(object=>{for(const material of [object.material].flat().filter(Boolean))material.needsUpdate=true;});}
+ };
+ requestAnimationFrame(tick);
+}
 export function mountRoom(settings,works){
  layoutArtworks(works); // Validate true-size placement before allocating the scene.
- gallerySettings=settings;
+ gallerySettings=settings;quality=deviceQuality();
  artworksData=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:`${work.heightCm} × ${work.widthCm} cm`}));
  GalleryApp.init();
- const canvas=GalleryApp.container;let touching=null,pressPoint=null,moved=false;
- canvas.style.touchAction='none';
- canvas.addEventListener('pointerdown',event=>{moved=false;pressPoint={x:event.clientX,y:event.clientY};if(event.pointerType==='touch'){touching={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);}});
- canvas.addEventListener('pointermove',event=>{
-  if(pressPoint&&event.buttons&&Math.abs(event.clientX-pressPoint.x)+Math.abs(event.clientY-pressPoint.y)>4)moved=true;
-  if(!touching||GalleryApp.isInspectMode)return;
-  const dx=event.clientX-touching.x,dy=event.clientY-touching.y;if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
-  GalleryApp.player.yaw-=dx*.0035;GalleryApp.player.pitch=Math.max(-Math.PI/2.5,Math.min(Math.PI/2.5,GalleryApp.player.pitch-dy*.0035));
-  GalleryApp.camera.rotation.set(GalleryApp.player.pitch,GalleryApp.player.yaw,0,'YXZ');touching={x:event.clientX,y:event.clientY};
- });
- canvas.addEventListener('pointerup',()=>{touching=null;});canvas.addEventListener('pointercancel',()=>{touching=null;});
- canvas.addEventListener('click',event=>{if(moved){event.preventDefault();event.stopImmediatePropagation();}},true);
+ bindTouchLook(GalleryApp.container,GalleryApp);
  const release=()=>{for(const key of Object.keys(GalleryApp.keys))GalleryApp.keys[key]=false;};
  window.addEventListener('blur',release);document.addEventListener('visibilitychange',release);
  for(const button of document.querySelectorAll('.nav-btn'))button.addEventListener('pointerleave',release);
@@ -1485,6 +1487,7 @@ export function mountRoom(settings,works){
  document.getElementById('tour-detail').onclick=()=>{const stop=tour.current();if(!stop)return;tourDetail=true;GalleryApp.openModal(artworksData.find(art=>art.id===stop.id));};
  document.getElementById('btn-close').addEventListener('click',()=>{if(GalleryApp.isTourActive)endTour();});
  mountHud();
+ document.getElementById('enter-gallery-btn').addEventListener('click',watchFrameRate,{once:true});
  const stop=()=>{GalleryApp.disposed=true;cancelAnimationFrame(GalleryApp.animationFrame);TWEEN.removeAll();GalleryApp.outdoorEnvironment?.dispose();GalleryApp.scene.traverse(object=>{object.geometry?.dispose();for(const material of [object.material].flat().filter(Boolean)){for(const texture of new Set([material.map,material.bumpMap,material.emissiveMap].filter(Boolean)))texture.dispose();material.dispose();}});GalleryApp.renderer.dispose();};
  // Back/forward cache retains the live room; dispose only when leaving for good.
  window.addEventListener('pagehide',event=>{if(!event.persisted)stop();});

@@ -85,3 +85,14 @@ test('wall shortcuts stand inside the room facing their wall',()=>{
  assert.deepEqual(Object.keys(WALL_VIEWS),['front','left','right']);
  assert.equal(wallViewpoint('ceiling'),null);
 });
+import {pickQuality,QUALITY,downgrade} from '../js/virtual-quality.js';
+test('render quality follows device capacity and steps down once at a time',()=>{
+ assert.equal(pickQuality({memory:2,cores:8,width:1440}),'low');
+ assert.equal(pickQuality({memory:8,cores:8,width:1440}),'high');
+ assert.equal(pickQuality({memory:4,cores:4,width:390}),'medium');
+ assert.equal(pickQuality({memory:undefined,cores:undefined,width:1280}),'medium');
+ assert.equal(pickQuality({memory:8,cores:2,width:1440}),'low');
+ assert.equal(downgrade('high'),'medium');assert.equal(downgrade('medium'),'low');assert.equal(downgrade('low'),'low');
+ assert.deepEqual(QUALITY.low,{pixelRatio:1,shadows:false,shadowSize:512,leaves:400});
+ assert.equal(QUALITY.high.leaves,2600);assert.equal(QUALITY.medium.shadowSize,1024);
+});
