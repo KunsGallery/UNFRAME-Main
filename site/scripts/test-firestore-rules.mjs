@@ -8,7 +8,7 @@ const origin=`http://${host}`;
 const base=`${origin}/v1/projects/${project}/databases/(default)/documents`;
 const token=(extra={})=>`${Buffer.from(JSON.stringify({alg:'none',typ:'JWT'})).toString('base64url')}.${Buffer.from(JSON.stringify({sub:'staff-user',user_id:'staff-user',email:'staff@example.com',email_verified:true,firebase:{sign_in_provider:'google.com'},aud:project,iss:`https://securetoken.google.com/${project}`,iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+3600,...extra})).toString('base64url')}.`;
 const staff=token();
-function field(value){if(typeof value==='string')return {stringValue:value};if(typeof value==='boolean')return {booleanValue:value};if(typeof value==='number')return Number.isInteger(value)?{integerValue:String(value)}:{doubleValue:value};if(value===null)return {nullValue:null};if(Array.isArray(value))return {arrayValue:{values:value.map(field)}};return {mapValue:{fields:Object.fromEntries(Object.entries(value).map(([key,item])=>[key,field(item)]))}};}
+function field(value){if(value instanceof Date)return {timestampValue:value.toISOString()};if(typeof value==='string')return {stringValue:value};if(typeof value==='boolean')return {booleanValue:value};if(typeof value==='number')return Number.isInteger(value)?{integerValue:String(value)}:{doubleValue:value};if(value===null)return {nullValue:null};if(Array.isArray(value))return {arrayValue:{values:value.map(field)}};return {mapValue:{fields:Object.fromEntries(Object.entries(value).map(([key,item])=>[key,field(item)]))}};}
 async function request(path,{method='GET',data,auth=staff}={}){const response=await fetch(`${base}/${path}`,{method,headers:{'Content-Type':'application/json',...(auth?{Authorization:`Bearer ${auth}`}:{})},...(data?{body:JSON.stringify({fields:field(data).mapValue.fields})}:{})});return {status:response.status,text:await response.text()};}
 async function expectStatus(label,expected,promise){const result=await promise;assert.equal(result.status,expected,`${label}: ${result.text}`);checks++;}
 let checks=0;
@@ -382,5 +382,97 @@ for(const extension of ['png','webp'])await expectStatus(`product ${extension} a
 await expectStatus('staff product delete',200,request(productPath,{method:'DELETE'}));
 await expectStatus('unsafe product ID denied',403,request('products/rules.product',{method:'PATCH',data:productFixture('rules.product')}));
 await expectStatus('oversized product ID denied',403,request(`products/${'p'.repeat(101)}`,{method:'PATCH',data:productFixture('p'.repeat(101))}));
+
+// Artist submissions: invite links, account binding, ten-day expiry from server time.
+const docName=path=>`projects/${project}/databases/(default)/documents/${path}`;
+const artistToken=token({sub:'artist-user',user_id:'artist-user',email:'artist@example.com'});
+const otherToken=token({sub:'other-user',user_id:'other-user',email:'other@example.com'});
+const touch=fields=>fields.map(fieldPath=>({fieldPath,setToServerValue:'REQUEST_TIME'}));
+const put=(path,data,{mask,stamp=['touchedAt']}={})=>({update:{name:docName(path),fields:field(data).mapValue.fields},...(mask?{updateMask:{fieldPaths:mask}}:{}),updateTransforms:touch(stamp)});
+const remove=path=>({delete:docName(path)});
+async function commit(writes,auth=staff){const response=await fetch(`${base}:commit`,{method:'POST',headers:{'Content-Type':'application/json',...(auth?{Authorization:`Bearer ${auth}`}:{})},body:JSON.stringify({writes})});return {status:response.status,text:await response.text()};}
+const subSettings={theme:'white',wallColor:'#f6f4ee',lighting:'general',ceiling:'luminous'};
+const invite=(extra={})=>({exhibitionId:artistParent,exhibitionTitle:'단체전',artistName:'김하늘',invitedEmail:'',ownerEmail:'',targetGalleryId:'',status:'invited',reviewNote:'',settings:subSettings,approvedGalleryId:'',...extra});
+const subId=suffix=>`RulesSub${suffix}`.padEnd(22,'x');
+const subArtwork=(sid,aid=artid,extra={})=>({...artwork,image:{...artwork.image,path:`virtualSubmissions/${sid}/${aid}/11111111-2222-4333-8444-555555555555.jpeg`},...extra});
+const subWork=(sid,data,aid=artid,auth=artistToken)=>commit([put(`virtualSubmissions/${sid}/artworks/${aid}`,data,{stamp:[]}),put(`virtualSubmissions/${sid}`,{},{mask:[]})],auth);
+async function resetSubmission(sid){for(const aid of [artid,'second-art'])await request(`virtualSubmissions/${sid}/artworks/${aid}`,{method:'DELETE',auth:'owner'});await request(`virtualSubmissions/${sid}`,{method:'DELETE',auth:'owner'});}
+await expectStatus('re-seed artist parent for submissions',200,request(`exhibitions/${artistParent}`,{method:'PATCH',data:fixture(artistParent)}));
+const open=subId('Open'),locked=subId('Locked'),old=subId('Old');
+for(const sid of [open,locked,old])await resetSubmission(sid);
+await expectStatus('artist cannot create an invite',403,commit([put(`virtualSubmissions/${open}`,invite(),{stamp:['touchedAt','createdAt']})],artistToken));
+await expectStatus('invite requires server touch time',403,request(`virtualSubmissions/${open}`,{method:'PATCH',data:{...invite(),touchedAt:new Date(Date.now()+86400000*30),createdAt:new Date()}}));
+await expectStatus('invite requires an existing exhibition',403,commit([put(`virtualSubmissions/${open}`,invite({exhibitionId:'missing-exhibition'}),{stamp:['touchedAt','createdAt']})]));
+await expectStatus('short invite id denied',403,commit([put('virtualSubmissions/short',invite(),{stamp:['touchedAt','createdAt']})]));
+await expectStatus('staff creates invite',200,commit([put(`virtualSubmissions/${open}`,invite(),{stamp:['touchedAt','createdAt']})]));
+await expectStatus('staff creates email-locked invite',200,commit([put(`virtualSubmissions/${locked}`,invite({invitedEmail:'artist2@example.com'}),{stamp:['touchedAt','createdAt']})]));
+await expectStatus('anonymous reads unclaimed invite',200,request(`virtualSubmissions/${open}`,{auth:null}));
+const anonList=await fetch(`${base}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'virtualSubmissions'}]}})});
+assert.equal(anonList.status,403);checks++;
+await expectStatus('email-locked invite rejects another account',403,commit([put(`virtualSubmissions/${locked}`,{ownerEmail:'artist@example.com',status:'draft'},{mask:['ownerEmail','status']})],artistToken));
+await expectStatus('claim must use own email',403,commit([put(`virtualSubmissions/${open}`,{ownerEmail:'other@example.com',status:'draft'},{mask:['ownerEmail','status']})],artistToken));
+await expectStatus('claim cannot change artist name',403,commit([put(`virtualSubmissions/${open}`,{ownerEmail:'artist@example.com',status:'draft',artistName:'다른 이름'},{mask:['ownerEmail','status','artistName']})],artistToken));
+await expectStatus('artist claims invite',200,commit([put(`virtualSubmissions/${open}`,{ownerEmail:'artist@example.com',status:'draft'},{mask:['ownerEmail','status']})],artistToken));
+await expectStatus('claimed invite is no longer public',403,request(`virtualSubmissions/${open}`,{auth:null}));
+await expectStatus('other account cannot read claimed invite',403,request(`virtualSubmissions/${open}`,{auth:otherToken}));
+await expectStatus('other account cannot re-claim',403,commit([put(`virtualSubmissions/${open}`,{ownerEmail:'other@example.com',status:'draft'},{mask:['ownerEmail','status']})],otherToken));
+await expectStatus('owner reads submission',200,request(`virtualSubmissions/${open}`,{auth:artistToken}));
+await expectStatus('owner updates settings',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,theme:'wood'}},{mask:['settings']})],artistToken));
+await expectStatus('owner cannot set invalid settings',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,theme:'neon'}},{mask:['settings']})],artistToken));
+for(const [label,key,value] of [['review note','reviewNote','승인해주세요'],['owner email','ownerEmail','other@example.com'],['exhibition','exhibitionId',otherParent],['target gallery','targetGalleryId','artist-rules-one'],['approved gallery','approvedGalleryId','artist-rules-one']])
+ await expectStatus(`owner cannot change ${label}`,403,commit([put(`virtualSubmissions/${open}`,{[key]:value},{mask:[key]})],artistToken));
+await expectStatus('owner cannot skip the touch time',403,request(`virtualSubmissions/${open}?updateMask.fieldPaths=settings`,{method:'PATCH',auth:artistToken,data:{settings:subSettings}}));
+await expectStatus('artwork write requires parent touch in same batch',403,commit([put(`virtualSubmissions/${open}/artworks/${artid}`,subArtwork(open),{stamp:[]})],artistToken));
+await expectStatus('owner saves artwork with parent touch',200,subWork(open,subArtwork(open)));
+await expectStatus('artwork image must stay in own submission',403,subWork(open,subArtwork(open,artid,{image:{...artwork.image,path:`virtualSubmissions/${locked}/${artid}/11111111-2222-4333-8444-555555555555.jpeg`}})));
+await expectStatus('artwork image cannot borrow another gallery',403,subWork(open,artistArtwork('artist-rules-one')));
+await expectStatus('artwork keeps standard validation',403,subWork(open,subArtwork(open,artid,{widthCm:900})));
+await expectStatus('other account cannot write artwork',403,subWork(open,subArtwork(open),artid,otherToken));
+await expectStatus('owner reads artworks',200,request(`virtualSubmissions/${open}/artworks/${artid}`,{auth:artistToken}));
+await expectStatus('other account cannot read artworks',403,request(`virtualSubmissions/${open}/artworks/${artid}`,{auth:otherToken}));
+await expectStatus('owner submits for review',200,commit([put(`virtualSubmissions/${open}`,{status:'submitted'},{mask:['status']})],artistToken));
+await expectStatus('submitted locks artwork edits',403,subWork(open,subArtwork(open,'second-art'),'second-art'));
+await expectStatus('submitted locks settings',403,commit([put(`virtualSubmissions/${open}`,{settings:subSettings},{mask:['settings']})],artistToken));
+await expectStatus('artist cannot reject',403,commit([put(`virtualSubmissions/${open}`,{status:'rejected'},{mask:['status']})],artistToken));
+await expectStatus('owner cancels review request',200,commit([put(`virtualSubmissions/${open}`,{status:'draft'},{mask:['status']})],artistToken));
+await expectStatus('owner resubmits',200,commit([put(`virtualSubmissions/${open}`,{status:'submitted'},{mask:['status']})],artistToken));
+await expectStatus('staff cannot rewrite artist fields',403,commit([put(`virtualSubmissions/${open}`,{ownerEmail:'staff@example.com'},{mask:['ownerEmail']})]));
+await expectStatus('staff rejects with note',200,commit([put(`virtualSubmissions/${open}`,{status:'rejected',reviewNote:'이미지를 바꿔주세요.'},{mask:['status','reviewNote']})]));
+await expectStatus('owner edits a rejected upload',200,subWork(open,subArtwork(open,'second-art'),'second-art'));
+await expectStatus('staff extends deadline',200,commit([put(`virtualSubmissions/${open}`,{},{mask:[]})]));
+await expectStatus('staff records approved gallery',200,commit([put(`virtualSubmissions/${open}`,{approvedGalleryId:'artist-approved-x'},{mask:['approvedGalleryId']})]));
+await expectStatus('staff lists submissions',200,(async()=>{const r=await fetch(`${base}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${staff}`},body:JSON.stringify({structuredQuery:{from:[{collectionId:'virtualSubmissions'}]}})});return {status:r.status,text:await r.text()};})());
+// Expiry: seeded through the emulator admin bypass with a touch time eleven days ago.
+await expectStatus('seed expired submission',200,request(`virtualSubmissions/${old}`,{method:'PATCH',auth:'owner',data:{...invite({ownerEmail:'artist@example.com',status:'draft'}),createdAt:new Date(Date.now()-11*86400000),touchedAt:new Date(Date.now()-11*86400000)}}));
+await expectStatus('seed expired artwork',200,request(`virtualSubmissions/${old}/artworks/${artid}`,{method:'PATCH',auth:'owner',data:subArtwork(old)}));
+await expectStatus('owner cannot read expired submission',403,request(`virtualSubmissions/${old}`,{auth:artistToken}));
+await expectStatus('owner cannot read expired artwork',403,request(`virtualSubmissions/${old}/artworks/${artid}`,{auth:artistToken}));
+await expectStatus('owner cannot revive expired submission',403,commit([put(`virtualSubmissions/${old}`,{status:'submitted'},{mask:['status']})],artistToken));
+await expectStatus('owner cannot write expired artwork',403,subWork(old,subArtwork(old)));
+await expectStatus('staff reads expired submission',200,request(`virtualSubmissions/${old}`));
+await expectStatus('artist cannot delete submission',403,commit([remove(`virtualSubmissions/${old}`)],artistToken));
+await expectStatus('staff deletes expired artwork',200,commit([remove(`virtualSubmissions/${old}/artworks/${artid}`)]));
+await expectStatus('staff deletes expired submission',200,commit([remove(`virtualSubmissions/${old}`)]));
+// Approved galleries: the bound artist reads their own gallery and opens revisions, never writes it.
+const owned='artist-rules-owned';
+await request(`virtualGalleries/${owned}/artworks/${artid}`,{method:'DELETE',auth:'owner'});await request(`virtualGalleries/${owned}`,{method:'DELETE',auth:'owner'});
+await expectStatus('gallery accepts artist email',200,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:'artist@example.com'})}));
+await expectStatus('gallery rejects non-string artist email',403,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:5})}));
+await expectStatus('owned gallery artwork',200,request(`virtualGalleries/${owned}/artworks/${artid}`,{method:'PATCH',data:artistArtwork(owned)}));
+await expectStatus('bound artist reads private gallery',200,request(`virtualGalleries/${owned}`,{auth:artistToken}));
+await expectStatus('bound artist reads private artwork',200,request(`virtualGalleries/${owned}/artworks/${artid}`,{auth:artistToken}));
+await expectStatus('other account cannot read private gallery',403,request(`virtualGalleries/${owned}`,{auth:otherToken}));
+await expectStatus('bound artist cannot write gallery',403,request(`virtualGalleries/${owned}`,{method:'PATCH',auth:artistToken,data:artistSettings(owned,{published:true,artistEmail:'artist@example.com'})}));
+const myQuery=await fetch(`${base}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${artistToken}`},body:JSON.stringify({structuredQuery:{from:[{collectionId:'virtualGalleries'}],where:{fieldFilter:{field:{fieldPath:'artistEmail'},op:'EQUAL',value:{stringValue:'artist@example.com'}}}}})});
+assert.equal(myQuery.status,200,await myQuery.clone().text());assert.deepEqual((await myQuery.json()).filter(item=>item.document).map(item=>item.document.name.split('/').at(-1)),[owned]);checks++;
+const revision=subId('Revision'),stolen=subId('Stolen');for(const sid of [revision,stolen])await resetSubmission(sid);
+const revisionDoc=invite({targetGalleryId:owned,ownerEmail:'artist@example.com',status:'draft'});
+const keptArtwork={...artistArtwork(owned)};
+await expectStatus('other account cannot open a revision',403,commit([put(`virtualSubmissions/${stolen}`,{...revisionDoc,ownerEmail:'other@example.com'},{stamp:['touchedAt','createdAt']}),put(`virtualSubmissions/${stolen}/artworks/${artid}`,keptArtwork,{stamp:[]})],otherToken));
+await expectStatus('revision must target a gallery',403,commit([put(`virtualSubmissions/${stolen}`,{...revisionDoc,targetGalleryId:''},{stamp:['touchedAt','createdAt']})],artistToken));
+await expectStatus('revision cannot start submitted',403,commit([put(`virtualSubmissions/${stolen}`,{...revisionDoc,status:'submitted'},{stamp:['touchedAt','createdAt']})],artistToken));
+await expectStatus('bound artist opens a revision with existing artwork',200,commit([put(`virtualSubmissions/${revision}`,revisionDoc,{stamp:['touchedAt','createdAt']}),put(`virtualSubmissions/${revision}/artworks/${artid}`,keptArtwork,{stamp:[]})],artistToken));
+await expectStatus('revision may keep gallery images',200,subWork(revision,{...keptArtwork,title:'고친 제목'}));
+await expectStatus('revision may add submission images',200,subWork(revision,subArtwork(revision,'second-art'),'second-art'));
 
 console.log(`Firestore emulator: ${checks} checks passed.`);

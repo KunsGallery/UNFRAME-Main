@@ -29,7 +29,7 @@ function checkArtworkImage(submission,art){
 export async function artistSession(){if(demo)return localStorage.getItem(artistKey)?{email:DEMO_ARTIST_EMAIL,demo:true}:null;const user=await session();return user?.emailVerified?user:null;}
 export async function artistLogin(){if(demo){localStorage.setItem(artistKey,'1');return {email:DEMO_ARTIST_EMAIL,demo:true};}return login();}
 export async function artistLogout(){if(demo){localStorage.removeItem(artistKey);return;}return logout();}
-async function artistEmail(){const user=await artistSession();if(!user)throw new Error('Google 로그인이 필요합니다.');return user.email.toLowerCase();}
+async function artistEmail(){const user=await artistSession();if(!user)throw new Error('Google 로그인이 필요합니다.');return user.email;}
 
 // ---- reads ----
 export async function getInvite(id){
@@ -58,7 +58,7 @@ export async function claimInvite(id){
  const email=await artistEmail(),invite=await getInvite(id);
  if(!invite)throw new Error('기한이 지났거나 이미 다른 계정에 연결된 초대입니다.');
  if(invite.ownerEmail)return invite.ownerEmail===email?invite:Promise.reject(new Error('다른 계정에 연결된 초대입니다.'));
- if(invite.invitedEmail&&invite.invitedEmail!==email)throw new Error(`이 초대는 다른 계정(${invite.invitedEmail})으로만 사용할 수 있습니다. 해당 Google 계정으로 다시 로그인해주세요.`);
+ if(invite.invitedEmail&&invite.invitedEmail!==email.toLowerCase())throw new Error(`이 초대는 다른 계정(${invite.invitedEmail})으로만 사용할 수 있습니다. 해당 Google 계정으로 다시 로그인해주세요.`);
  if(demo){const all=read();Object.assign(all[id].submission,{ownerEmail:email,status:'draft',touchedAt:nowISO()});write(all);return shape(id,all[id].submission);}
  const f=await firestoreClient();await f.db.updateDoc(f.db.doc(f.d,'virtualSubmissions',id),{ownerEmail:email,status:'draft',touchedAt:f.db.serverTimestamp()});
  return getInvite(id);
