@@ -39,10 +39,10 @@ async function submissionAccess(env,token,fetcher,path,write){
  if(record?.ownerEmail?.stringValue!==user.email||!(touched+SUBMISSION_DAYS*86400000>Date.now()))fail(403,'업로드 권한이 없거나 기한이 지났습니다.');
  if(write&&!['draft','rejected'].includes(record?.status?.stringValue))fail(403,'심사 요청 중에는 이미지를 바꿀 수 없습니다.');
 }
-// Staff-only cleanup of everything under one submission, including unsaved or replaced uploads.
-async function purgeSubmission(env,id){
+// Staff-only cleanup of everything under one submission or gallery, including unreferenced uploads.
+async function purgePrefix(env,prefix){
  let deleted=0,cursor;
- do{const listed=await env.MEDIA.list({prefix:`virtualSubmissions/${id}/`,limit:1000,cursor});for(const object of listed.objects){await env.MEDIA.delete(object.key);deleted++;}cursor=listed.truncated?listed.cursor:undefined;}while(cursor);
+ do{const listed=await env.MEDIA.list({prefix,limit:1000,cursor});for(const object of listed.objects){await env.MEDIA.delete(object.key);deleted++;}cursor=listed.truncated?listed.cursor:undefined;}while(cursor);
  return deleted;
 }
 async function copySubmissionImages(request,env,token,fetcher){
@@ -82,7 +82,9 @@ export async function handle(request,env,fetcher=fetch){
    fail(404,'상품 가져오기 주소를 확인해주세요.');
   }
   const purge=/^\/purge\/([A-Za-z0-9]{22})$/.exec(url.pathname);
-  if(purge){if(request.method!=='POST')fail(405,'지원하지 않는 요청입니다.');await staff(env,token,fetcher);return json({deleted:await purgeSubmission(env,purge[1])});}
+  if(purge){if(request.method!=='POST')fail(405,'지원하지 않는 요청입니다.');await staff(env,token,fetcher);return json({deleted:await purgePrefix(env,`virtualSubmissions/${purge[1]}/`)});}
+  const purgeGallery=/^\/purge-gallery\/([A-Za-z0-9_-]{1,100})$/.exec(url.pathname);
+  if(purgeGallery){if(request.method!=='POST')fail(405,'지원하지 않는 요청입니다.');await staff(env,token,fetcher);return json({deleted:await purgePrefix(env,`virtualGalleries/${purgeGallery[1]}/`)});}
   if(url.pathname==='/copy'){if(request.method!=='POST')fail(405,'지원하지 않는 요청입니다.');return json({copied:await copySubmissionImages(request,env,token,fetcher)});}
   const path=parsePath(url.pathname);if(!path)fail(404,'이미지를 찾을 수 없습니다.');
   if(path.collection==='virtualSubmissions'){

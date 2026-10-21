@@ -123,3 +123,11 @@ test('staff purge every stored object of a submission; artists cannot',async()=>
  assert.deepEqual(f.stored.map(item=>item.deleted),[0,1,2].map(i=>`virtualSubmissions/AbCdEfGhIjKlMnOpQrStUv/${i}`));
  assert.equal((await handle(new Request('https://media.example/purge/../exhibitions',{method:'POST',headers:{Authorization:await artistAuth()}}),f.env,f.fetcher)).status,404);
 });
+test('staff purge every stored object of a gallery; artists cannot; ids are validated',async()=>{
+ const purgeReq=async(id)=>new Request('https://media.example/purge-gallery/'+id,{method:'POST',headers:{Authorization:await artistAuth()}});
+ const artist=artistFixture({objects:2});assert.equal((await handle(await purgeReq('artist-x'),artist.env,artist.fetcher)).status,403);assert.equal(artist.stored.length,0);
+ const f=artistFixture({staff:true,objects:2});const response=await handle(await purgeReq('artist-x'),f.env,f.fetcher);
+ assert.equal(response.status,200);assert.deepEqual(await response.json(),{deleted:2});
+ assert.deepEqual(f.stored.map(item=>item.deleted),['virtualGalleries/artist-x/0','virtualGalleries/artist-x/1']);
+ assert.equal((await handle(await purgeReq('..%2Fexhibitions'),f.env,f.fetcher)).status,404);
+});

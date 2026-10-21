@@ -1,9 +1,10 @@
 import {demo,getExhibition,resolveImage,uploadImage,removeImage} from './store.js';
 import {getVirtualGallery,saveVirtualSettings,saveVirtualArtwork,deleteVirtualArtwork,listVirtualGalleries} from './virtual-store.js';
-import {THEMES,WALLS,FRAMES,LIGHTING,CEILINGS,CANVAS_EDGES,wallColorOptions,defaultGallery,defaultArtistGallery,emptyArtwork,validateArtwork,layoutArtworks} from './virtual-model.js';
+import {THEMES,WALLS,FRAMES,LIGHTING,CEILINGS,CANVAS_EDGES,wallColorOptions,galleryDeleteName,deleteNameMatches,defaultGallery,defaultArtistGallery,emptyArtwork,validateArtwork,layoutArtworks} from './virtual-model.js';
 import {escapeHTML as e,imageURL} from './model.js';
 import {$,toast,confirmDelete} from './ui.js';
 import {adminSubmissions} from './admin-submissions.js';
+import {deleteGalleryCompletely} from './submission-store.js';
 let galleryId,exhibition,settings,artworks=[],exists=false,environmentDirty=false,artDirty=false,busy=false,back;
 const badge=required=>`<small class="field-badge">${required?'필수':'선택'}</small>`;
 const input=(name,label,value,{required=false,type='text',max=200,min,upper}={})=>`<label class="field"><span>${label} ${badge(required)}</span><input name="${name}" value="${e(value)}" type="${type}" ${required?'required':''} ${type==='number'?`min="${min}" max="${upper}" step="any"`:`maxlength="${max}"`}></label>`;
@@ -16,12 +17,18 @@ export async function adminVirtual(id,onBack){
   const parent=await getExhibition(id);if(!parent)throw new Error('전시를 찾을 수 없습니다.');
   const galleries=await listVirtualGalleries(id,{admin:true});
   const root=galleries.find(item=>item.id===id),artists=galleries.filter(item=>item.settings.artistName);
-  const row=item=>`<article class="virtual-gallery-row"><div><h3>${e(item.settings.artistName||'전시 전체 갤러리')}</h3><p>${e(item.settings.title)}</p><small>${item.settings.published?'갤러리 공개':'비공개'}${!parent.published?' · 연결 전시가 비공개이므로 방문자는 볼 수 없습니다.':''}${item.settings.artistName?` · 노출 순서 ${item.settings.order}`:''}</small></div><div class="actions"><button class="button secondary" data-gallery-manage="${e(item.id)}" aria-label="${e(item.settings.artistName||'전시 전체')} 작품 · 공간 관리">작품 · 공간 관리</button><a class="text-link" href="/virtual-gallery/${encodeURIComponent(item.id)}?preview=1" target="_blank" rel="noopener">저장된 갤러리 미리보기 ↗</a></div></article>`;
+  const row=item=>`<article class="virtual-gallery-row"><div><h3>${e(item.settings.artistName||'전시 전체 갤러리')}</h3><p>${e(item.settings.title)}</p><small>${item.settings.published?'갤러리 공개':'비공개'}${!parent.published?' · 연결 전시가 비공개이므로 방문자는 볼 수 없습니다.':''}${item.settings.artistName?` · 노출 순서 ${item.settings.order}`:''}</small></div><div class="actions"><button class="button secondary" data-gallery-manage="${e(item.id)}" aria-label="${e(item.settings.artistName||'전시 전체')} 작품 · 공간 관리">작품 · 공간 관리</button><a class="text-link" href="/virtual-gallery/${encodeURIComponent(item.id)}?preview=1" target="_blank" rel="noopener">저장된 갤러리 미리보기 ↗</a><button class="text-link danger-text" data-gallery-delete="${e(item.id)}">갤러리 삭제</button></div></article>`;
   $('#main').innerHTML=`<section class="admin-wrap virtual-admin"><div class="admin-title"><div><button class="text-link" id="galleries-back">← 전시 관리</button><h1>전시 · 작가별 갤러리</h1><p>${e(parent.title)} · 작가별 공간 ${artists.length}개</p></div></div>${demo?'<div class="notice">샘플 체험 · 실제 Firebase나 R2에는 저장되지 않습니다.</div>':''}<p class="help">전시 전체 공간과 참여 작가별 공간을 함께 운영할 수 있습니다. 공개한 갤러리는 전시 상세페이지에 자동 연결됩니다. 각 작가의 작품과 환경, 공개 여부는 개별적으로 관리합니다.</p><section class="editor-section"><h2>전시 전체 갤러리</h2>${root?row(root):'<p>아직 전시 전체 공간이 없습니다. 작가별 공간만 운영해도 괜찮습니다.</p><button class="button secondary" id="create-whole-gallery">전시 전체 공간 설정</button>'}</section><section class="editor-section"><h2>참여 작가별 갤러리</h2><div>${artists.length?artists.map(row).join(''):'<p class="virtual-empty">작가별 공간이 아직 없습니다. 아래에서 참여 작가를 추가해주세요.</p>'}</div></section><form id="create-artist-gallery" class="editor-section"><h2>작가별 갤러리 추가</h2><div class="field-row">${input('artistName','참여 작가명','',{required:true,max:300})}${input('order','갤러리 노출 순서',Math.min(1000000,Math.max(-1,...artists.map(item=>item.settings.order))+1),{required:true,type:'number',min:0,upper:1000000})}</div><p class="help">비공개 공간으로 생성합니다. 작품을 등록한 뒤 공간 설정에서 공개를 선택해주세요. 등록한 작가명은 새 작품의 기본 작가명으로 들어갑니다.</p><button class="button" type="submit">작가별 갤러리 만들기</button><p class="form-status" role="alert" id="artist-gallery-status"></p></form></section>`;
   $('#galleries-back').onclick=()=>{if(canLeave())onBack();};
   const returnToHub=()=>adminVirtual(id,onBack);
   $('.virtual-admin>.help').insertAdjacentHTML('afterend','<section class="editor-section invite-entry"><h2>작가 업로드 초대</h2><p class="help">작가에게 업로드 링크를 보내 직접 작품을 올리게 하고, 언프레임이 승인한 뒤 공개합니다.</p><button class="button" id="open-submissions">작가 초대 · 심사 관리</button></section>');
   $('#open-submissions').onclick=()=>{if(canLeave())adminSubmissions(id,returnToHub);};
+  document.querySelectorAll('[data-gallery-delete]').forEach(button=>button.onclick=async()=>{
+   const item=galleries.find(gallery=>gallery.id===button.dataset.galleryDelete);if(!item||!await confirmGalleryDelete(item))return;
+   button.disabled=true;toast('갤러리를 삭제하는 중입니다…');
+   try{const cleaned=await deleteGalleryCompletely(item.id);toast(cleaned?'갤러리와 작품 이미지를 모두 삭제했습니다.':'갤러리는 삭제했습니다. 일부 이미지는 저장소에서 정리하지 못했습니다.');await returnToHub();}
+   catch(error){toast(error.message||'갤러리를 삭제하지 못했습니다.');button.disabled=false;}
+  });
   document.querySelectorAll('[data-gallery-manage]').forEach(button=>button.onclick=()=>{if(canLeave())openGallery(button.dataset.galleryManage,returnToHub,id);});
   if($('#create-whole-gallery'))$('#create-whole-gallery').onclick=()=>{if(canLeave())openGallery(id,returnToHub,id);};
   const form=$('#create-artist-gallery');form.oninput=()=>{environmentDirty=true;};
@@ -29,6 +36,23 @@ export async function adminVirtual(id,onBack){
    try{busy=true;for(const control of form.elements)control.disabled=true;$('#artist-gallery-status').textContent='작가별 공간을 만드는 중…';await saveVirtualSettings(newId,defaultArtistGallery(parent,name,order),[]);environmentDirty=false;busy=false;await openGallery(newId,returnToHub,id);toast('비공개 작가 갤러리를 만들었습니다. 작품을 추가해주세요.');}catch(error){$('#artist-gallery-status').textContent=error.message||'갤러리를 만들지 못했습니다.';busy=false;for(const control of form.elements)control.disabled=false;}
   };
  }catch(error){toast(error.message||'갤러리 목록을 불러오지 못했습니다.');}
+}
+// Irreversible: the confirm button unlocks only after the exact gallery name is typed.
+function confirmGalleryDelete(item){
+ const name=galleryDeleteName(item.settings);
+ const dialog=document.createElement('dialog');dialog.className='gallery-delete-dialog';dialog.setAttribute('aria-labelledby','gallery-delete-title');
+ dialog.innerHTML=`<h2 id="gallery-delete-title">갤러리를 삭제할까요?</h2><p>「${e(name)}」 갤러리와 등록된 작품, 저장된 이미지가 모두 삭제됩니다. 이 갤러리로 진행 중인 작가 수정본도 함께 삭제되며 복구할 수 없습니다.</p><p class="help">메인 슬라이드나 소식에 이 갤러리 주소를 연결했다면 링크가 열리지 않게 됩니다.</p><label class="field"><span>확인을 위해 <b>${e(name)}</b>을(를) 입력해주세요</span><input autocomplete="off"></label><div class="actions"><button class="button secondary" value="cancel">취소</button><button class="button danger" value="confirm" disabled>영구 삭제</button></div>`;
+ document.body.append(dialog);
+ const input=dialog.querySelector('input'),confirmButton=dialog.querySelector('[value="confirm"]');
+ input.oninput=()=>{confirmButton.disabled=!deleteNameMatches(input.value,name);};
+ return new Promise(resolve=>{
+  // Resolve from the controls themselves; dialog 'close' events can arrive late in background tabs.
+  const finish=value=>{if(dialog.open)dialog.close();dialog.remove();resolve(value);};
+  dialog.querySelector('[value="cancel"]').onclick=()=>finish(false);
+  confirmButton.onclick=()=>finish(deleteNameMatches(input.value,name));
+  dialog.addEventListener('cancel',event=>{event.preventDefault();finish(false);});
+  dialog.showModal();input.focus();
+ });
 }
 async function openGallery(id,onBack,parentId=id){
  galleryId=id;

@@ -35,6 +35,11 @@ export async function saveVirtualArtwork(id,artwork){
  data.image={url:'',path:artwork.image.path,alt:artwork.image.alt};
  const f=await firestoreClient();await f.db.setDoc(f.db.doc(f.d,'virtualGalleries',id,'artworks',artId),data);
 }
+export async function deleteVirtualGallery(id){
+ if(demo){const all=read();delete all[id];localSave(all);return;}
+ const f=await firestoreClient(),works=await f.db.getDocs(f.db.collection(f.d,'virtualGalleries',id,'artworks')),batch=f.db.writeBatch(f.d);
+ for(const work of works.docs)batch.delete(work.ref);batch.delete(f.db.doc(f.d,'virtualGalleries',id));await batch.commit();
+}
 export async function deleteVirtualArtwork(id,artId){
  if(demo){const all=read();all[id].artworks=all[id].artworks.filter(work=>work.id!==artId);localSave(all);return;}
  const f=await firestoreClient();await f.db.deleteDoc(f.db.doc(f.d,'virtualGalleries',id,'artworks',artId));

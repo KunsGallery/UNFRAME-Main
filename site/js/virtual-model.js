@@ -8,6 +8,9 @@ export const WALL_COLORS={'#f6f4ee':'웜 화이트','#fafaf8':'퓨어 화이트'
 export const wallColorOptions=current=>Object.hasOwn(WALL_COLORS,current)||!/^#[0-9a-fA-F]{6}$/.test(current||'')?WALL_COLORS:{...WALL_COLORS,[current]:`기존 색상 (${current})`};
 export const CANVAS_EDGES={natural:'자연색 캔버스',black:'검정 측면',image:'이미지 감싸기'};
 export const defaultGallery=exhibition=>({title:exhibition.title,subtitle:exhibition.summary||'',published:false,lighting:'general',ceiling:'luminous',theme:'white',wallColor:'#f6f4ee',brightness:1,speed:2.5,outdoor:true,showPrices:false});
+// Deleting a gallery is confirmed by typing the name staff see in the gallery list.
+export const galleryDeleteName=settings=>settings.artistName||settings.title;
+export const deleteNameMatches=(input,expected)=>!!expected&&String(input||'').trim()===expected.trim();
 export const galleryExhibitionId=(id,settings)=>settings.exhibitionId||id;
 export const defaultArtistGallery=(exhibition,artistName,order=0)=>({...defaultGallery(exhibition),title:`${artistName} · ${exhibition.title}`.slice(0,200),subtitle:'',exhibitionId:exhibition.id,artistName,order});
 export const sortVirtualGalleries=items=>[...items].sort((a,b)=>Number(!!a.settings.artistName)-Number(!!b.settings.artistName)||(a.settings.order||0)-(b.settings.order||0)||a.settings.title.localeCompare(b.settings.title));

@@ -248,3 +248,24 @@ test('artist intro travels from the upload to the approved gallery and into revi
  assert.equal((await getSubmission(revision)).submission.settings.artistNote,'빛과 소리를 그립니다.');
  delete globalThis.localStorage;
 });
+import {deleteGalleryCompletely} from '../js/submission-store.js';
+import {galleryDeleteName,deleteNameMatches} from '../js/virtual-model.js';
+test('deleting a gallery removes its artworks, stored images and pending revisions',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionArtwork(id,fix(work('a1')));await setSubmissionStatus(id,'submitted');
+ const galleryId=await approveSubmission(id,{publish:true,copy:async()=>{}});
+ const revision=await createRevision(galleryId);
+ const purged=[];
+ await deleteGalleryCompletely(galleryId,{purge:async target=>purged.push(target)});
+ assert.equal(await getVirtualGallery(galleryId,{admin:true}),null);
+ assert.equal(await getSubmission(revision,{staff:true}),null);
+ assert.deepEqual(purged,[galleryId]);
+ delete globalThis.localStorage;
+});
+test('gallery deletion asks for the artist or gallery name',()=>{
+ assert.equal(galleryDeleteName({artistName:'김하늘',title:'김하늘 · 공간'}),'김하늘');
+ assert.equal(galleryDeleteName({title:'Resonance 전체'}),'Resonance 전체');
+ assert.equal(deleteNameMatches(' 김하늘 ','김하늘'),true);
+ assert.equal(deleteNameMatches('김하','김하늘'),false);
+ assert.equal(deleteNameMatches('','김하늘'),false);
+});

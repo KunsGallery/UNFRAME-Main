@@ -1,5 +1,5 @@
-import {demo,firestoreClient,session,login,logout,getExhibition,removeImage,copyImages,purgeSubmissionImages} from './store.js';
-import {getVirtualGallery,listVirtualGalleries,saveVirtualSettings,saveVirtualArtwork,deleteVirtualArtwork} from './virtual-store.js';
+import {demo,firestoreClient,session,login,logout,getExhibition,removeImage,copyImages,purgeSubmissionImages,purgeGalleryImages} from './store.js';
+import {getVirtualGallery,listVirtualGalleries,saveVirtualSettings,saveVirtualArtwork,deleteVirtualArtwork,deleteVirtualGallery} from './virtual-store.js';
 import {validateArtwork,layoutArtworks,defaultArtistGallery,galleryExhibitionId,THEMES,LIGHTING,CEILINGS} from './virtual-model.js';
 import {EXPIRY_DAYS,newSubmissionId,expiryFrom,isExpired,artistCanEdit,canTransition,validateInvite,isSubmissionPath} from './submission-model.js';
 // Artist uploads stay in virtualSubmissions until staff approve them; rules and the media
@@ -174,6 +174,15 @@ export async function deleteSubmission(id,{remove=removeImage,purge=purgeSubmiss
  }
  for(const art of data.artworks)if(isSubmissionPath(art.image?.path,id))await remove(art.image.path).catch(()=>{});
  await purge(id).catch(error=>console.warn('업로드 이미지 일부를 정리하지 못했습니다.',id,error));
+}
+// Removes a gallery, any uploads still pointing at it, and every stored image under it.
+// Returns false when the documents are gone but image cleanup needs a retry.
+export async function deleteGalleryCompletely(galleryId,{purge=purgeGalleryImages}={}){
+ const related=demo?Object.entries(read()).filter(([,item])=>[item.submission.targetGalleryId,item.submission.approvedGalleryId].includes(galleryId)).map(([id])=>id)
+  :[...new Set([...(await staffQuery(['targetGalleryId','==',galleryId])),...(await staffQuery(['approvedGalleryId','==',galleryId]))].map(item=>item.id))];
+ for(const id of related)await deleteSubmission(id);
+ await deleteVirtualGallery(galleryId);
+ try{await purge(galleryId);return true;}catch(error){console.warn('갤러리 이미지를 정리하지 못했습니다.',galleryId,error);return false;}
 }
 export async function purgeExpiredSubmissions(){
  const cutoff=new Date(Date.now()-EXPIRY_DAYS*86400000);
