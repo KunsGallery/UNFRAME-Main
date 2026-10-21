@@ -184,7 +184,7 @@ service cloud.firestore {
   function validVirtualGallery(data,exid) {
    return virtualId(exid)
     && data.keys().hasAll(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt'])
-    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order','lighting','ceiling','artistEmail'])
+    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order','lighting','ceiling','artistEmail','artistNote'])
     && validVirtualAssociation(data,exid)
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.subtitle is string && data.subtitle.size()<=1000
@@ -192,6 +192,7 @@ service cloud.firestore {
     && (!('lighting' in data) || data.lighting in ['general','focused'])
     && (!('ceiling' in data) || data.ceiling in ['plain','luminous'])
     && (!('artistEmail' in data) || (data.artistEmail is string && data.artistEmail.size()>0 && data.artistEmail.size()<=320))
+    && (!('artistNote' in data) || (data.artistNote is string && data.artistNote.size()<=600))
     && data.wallColor is string && data.wallColor.matches('^#[0-9a-fA-F]{6}$')
     && data.brightness is number && data.brightness>=0.5 && data.brightness<=1.8
     && data.speed is number && data.speed>=1 && data.speed<=5
@@ -263,7 +264,8 @@ service cloud.firestore {
   function submissionOwner(data) { return googleUser() && data.ownerEmail == request.auth.token.email; }
   function submissionPath(sid) { return /databases/$(database)/documents/virtualSubmissions/$(sid); }
   function validSubmissionSettings(s) {
-   return s is map && s.keys().hasAll(['theme','wallColor','lighting','ceiling']) && s.keys().hasOnly(['theme','wallColor','lighting','ceiling'])
+   return s is map && s.keys().hasAll(['theme','wallColor','lighting','ceiling']) && s.keys().hasOnly(['theme','wallColor','lighting','ceiling','artistNote'])
+    && (!('artistNote' in s) || (s.artistNote is string && s.artistNote.size()<=600))
     && s.theme in ['white','black','herringbone-wood','wood','urethane']
     && s.wallColor is string && s.wallColor.matches('^#[0-9a-fA-F]{6}$')
     && s.lighting in ['general','focused'] && s.ceiling in ['plain','luminous'];

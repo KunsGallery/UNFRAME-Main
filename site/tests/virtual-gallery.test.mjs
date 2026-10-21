@@ -96,3 +96,18 @@ test('render quality follows device capacity and steps down once at a time',()=>
  assert.deepEqual(QUALITY.low,{pixelRatio:1,shadows:false,shadowSize:512,leaves:400});
  assert.equal(QUALITY.high.leaves,2600);assert.equal(QUALITY.medium.shadowSize,1024);
 });
+import {WALL_COLORS,wallColorOptions} from '../js/virtual-model.js';
+test('wall colours come from a curated gallery palette, keeping legacy custom colours',()=>{
+ assert.equal(Object.keys(WALL_COLORS).length,7);
+ for(const hex of Object.keys(WALL_COLORS))assert.match(hex,/^#[0-9a-f]{6}$/);
+ assert.equal(WALL_COLORS['#f6f4ee'],'웜 화이트');
+ assert.deepEqual(Object.keys(wallColorOptions('#f6f4ee')),Object.keys(WALL_COLORS));
+ const legacy=wallColorOptions('#123456');
+ assert.equal(Object.keys(legacy).length,8);assert.match(legacy['#123456'],/기존 색상/);
+});
+test('artist intro is optional and limited to 600 characters',()=>{
+ const gallery=defaultGallery({title:'전시',summary:''});
+ assert.doesNotThrow(()=>validateGallery({...gallery,artistNote:'회화와 소리를 함께 다룹니다.'}));
+ assert.throws(()=>validateGallery({...gallery,artistNote:'가'.repeat(601)}),/600/);
+ assert.throws(()=>validateGallery({...gallery,artistNote:5}),/600/);
+});

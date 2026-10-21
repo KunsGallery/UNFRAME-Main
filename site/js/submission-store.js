@@ -16,6 +16,7 @@ const EXPIRED='업로드 기한이 지나 더 이상 수정할 수 없습니다.
 export function pickSubmissionSettings(settings={}){
  const data={theme:settings.theme||'white',wallColor:settings.wallColor||'#f6f4ee',lighting:settings.lighting||'general',ceiling:settings.ceiling||'luminous'};
  if(!Object.hasOwn(THEMES,data.theme)||!/^#[0-9a-fA-F]{6}$/.test(data.wallColor)||!Object.hasOwn(LIGHTING,data.lighting)||!Object.hasOwn(CEILINGS,data.ceiling))throw new Error('공간 설정 값을 확인해주세요.');
+ if(settings.artistNote!==undefined){const note=String(settings.artistNote).trim();if(note.length>600)throw new Error('작가 소개는 600자 이내로 입력해주세요.');data.artistNote=note;}
  return data;
 }
 const artworkData=artwork=>{const {id,...data}=artwork;return {...data,updatedAt:nowISO(),image:{url:demo?artwork.image.url:'',path:artwork.image.path,alt:artwork.image.alt}};};

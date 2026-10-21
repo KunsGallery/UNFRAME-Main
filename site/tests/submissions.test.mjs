@@ -233,3 +233,18 @@ test('pending notice warns how many days remain',()=>{
  const html=pendingNoticeHTML([card({status:'submitted',expiresAt:new Date(Date.now()+1.5*86400000)})]);
  assert.match(html,/2일 남음/);assert.match(html,/is-urgent/);
 });
+import {pickSubmissionSettings} from '../js/submission-store.js';
+test('artist intro travels from the upload to the approved gallery and into revisions',async()=>{
+ assert.throws(()=>pickSubmissionSettings({artistNote:'가'.repeat(601)}),/600/);
+ assert.equal(pickSubmissionSettings({artistNote:'  소개  '}).artistNote,'소개');
+ assert.equal(Object.hasOwn(pickSubmissionSettings({}),'artistNote'),false);
+ memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionSettings(id,{theme:'white',wallColor:'#2f3d35',lighting:'general',ceiling:'plain',artistNote:'빛과 소리를 그립니다.'});
+ await saveSubmissionArtwork(id,fix(work('a1')));await setSubmissionStatus(id,'submitted');
+ assert.equal((await submissionPreview(id)).settings.artistNote,'빛과 소리를 그립니다.');
+ const galleryId=await approveSubmission(id,{publish:true,copy:async()=>{}});
+ assert.equal((await getVirtualGallery(galleryId,{admin:true})).settings.artistNote,'빛과 소리를 그립니다.');
+ const revision=await createRevision(galleryId);
+ assert.equal((await getSubmission(revision)).submission.settings.artistNote,'빛과 소리를 그립니다.');
+ delete globalThis.localStorage;
+});

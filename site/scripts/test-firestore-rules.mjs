@@ -418,6 +418,9 @@ await expectStatus('other account cannot read claimed invite',403,request(`virtu
 await expectStatus('other account cannot re-claim',403,commit([put(`virtualSubmissions/${open}`,{ownerEmail:'other@example.com',status:'draft'},{mask:['ownerEmail','status']})],otherToken));
 await expectStatus('owner reads submission',200,request(`virtualSubmissions/${open}`,{auth:artistToken}));
 await expectStatus('owner updates settings',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,theme:'wood'}},{mask:['settings']})],artistToken));
+await expectStatus('owner writes artist intro',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,artistNote:'빛과 소리를 그립니다.'}},{mask:['settings']})],artistToken));
+await expectStatus('artist intro over 600 chars denied',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,artistNote:'가'.repeat(601)}},{mask:['settings']})],artistToken));
+await expectStatus('unknown settings key denied',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,published:true}},{mask:['settings']})],artistToken));
 await expectStatus('owner cannot set invalid settings',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,theme:'neon'}},{mask:['settings']})],artistToken));
 for(const [label,key,value] of [['review note','reviewNote','승인해주세요'],['owner email','ownerEmail','other@example.com'],['exhibition','exhibitionId',otherParent],['target gallery','targetGalleryId','artist-rules-one'],['approved gallery','approvedGalleryId','artist-rules-one']])
  await expectStatus(`owner cannot change ${label}`,403,commit([put(`virtualSubmissions/${open}`,{[key]:value},{mask:[key]})],artistToken));
@@ -457,6 +460,8 @@ await expectStatus('staff deletes expired submission',200,commit([remove(`virtua
 const owned='artist-rules-owned';
 await request(`virtualGalleries/${owned}/artworks/${artid}`,{method:'DELETE',auth:'owner'});await request(`virtualGalleries/${owned}`,{method:'DELETE',auth:'owner'});
 await expectStatus('gallery accepts artist email',200,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:'artist@example.com'})}));
+await expectStatus('gallery accepts artist intro',200,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:'artist@example.com',artistNote:'작가 소개'})}));
+await expectStatus('gallery rejects long artist intro',403,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:'artist@example.com',artistNote:'가'.repeat(601)})}));
 await expectStatus('gallery rejects non-string artist email',403,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:5})}));
 await expectStatus('owned gallery artwork',200,request(`virtualGalleries/${owned}/artworks/${artid}`,{method:'PATCH',data:artistArtwork(owned)}));
 await expectStatus('bound artist reads private gallery',200,request(`virtualGalleries/${owned}`,{auth:artistToken}));
