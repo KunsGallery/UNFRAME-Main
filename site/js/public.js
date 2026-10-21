@@ -1,8 +1,8 @@
 import {openShareCard,exhibitionCard} from './share-card.js';
 import {loadViewingRoom} from './exhibition-viewing-room.js';
-import {listVirtualGalleries} from './virtual-store.js';
+import {listVirtualGalleries,getVirtualGallery} from './virtual-store.js';
 import {exhibitionView,bindExhibitionImages} from './exhibition-view.js';
-import {listExhibitions,getExhibition,hydrateImages,demo,subscribeExhibitions} from './store.js';
+import {listExhibitions,getExhibition,hydrateImages,demo,subscribeExhibitions,resolveImage} from './store.js';
 import {escapeHTML as e,imageURL,safeURL,dateRange,exhibitionState,stateLabels,stateEnglish,filterExhibitions,sortExhibitions} from './model.js';
 import {$,chrome,errorView,toast} from './ui.js';
 let renderVersion=0;
@@ -26,6 +26,8 @@ async function detail(id) {
  const [item]=await hydrateImages([raw]);document.title=`${item.title} — UNFRAME`;
  document.querySelector('meta[name="description"]').content=item.summary;
  try{item.virtualGalleries=await listVirtualGalleries(item.id);}catch{item.virtualGalleries=[];item.virtualGalleryError=true;}
+ // Each artist card shows its first work and the number of works; a failed lookup leaves a plain card.
+ await Promise.allSettled(item.virtualGalleries.map(async space=>{const data=await getVirtualGallery(space.id);if(!data)return;space.count=data.artworks.length;const first=data.artworks[0];if(first)space.cover=await resolveImage(first.image);}));
  $('#main').innerHTML=exhibitionView(item);
  $('#share').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast('전시 링크를 복사했습니다.');}catch{toast('주소창의 링크를 복사해주세요.');}};
  const cardButton=document.createElement('button');cardButton.type='button';cardButton.textContent='공유 카드 만들기';cardButton.onclick=()=>openShareCard(exhibitionCard(item));$('#share').after(cardButton);
