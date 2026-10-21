@@ -1,4 +1,4 @@
-import {demo,firestoreClient,session,login,logout,getExhibition,removeImage,copyImages} from './store.js';
+import {demo,firestoreClient,session,login,logout,getExhibition,removeImage,copyImages,purgeSubmissionImages} from './store.js';
 import {getVirtualGallery,listVirtualGalleries,saveVirtualSettings,saveVirtualArtwork,deleteVirtualArtwork} from './virtual-store.js';
 import {validateArtwork,layoutArtworks,defaultArtistGallery,galleryExhibitionId,THEMES,LIGHTING,CEILINGS} from './virtual-model.js';
 import {EXPIRY_DAYS,newSubmissionId,expiryFrom,isExpired,artistCanEdit,canTransition,validateInvite,isSubmissionPath} from './submission-model.js';
@@ -75,7 +75,7 @@ export async function saveSubmissionSettings(id,settings){
  if(demo){const all=read();Object.assign(all[id].submission,{settings:data,touchedAt:nowISO()});write(all);return;}
  const f=await firestoreClient();await f.db.updateDoc(f.db.doc(f.d,'virtualSubmissions',id),{settings:data,touchedAt:f.db.serverTimestamp()});
 }
-export async function saveSubmissionArtwork(id,artwork){
+export async function saveSubmissionArtwork(id,artwork,{remove=removeImage}={}){
  const {submission,artworks}=await editable(id);
  if(!artistCanEdit(submission.status))throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
  validateArtwork(artwork);checkArtworkImage(submission,artwork);
@@ -84,11 +84,17 @@ export async function saveSubmissionArtwork(id,artwork){
  if(others.filter(art=>art.wall===artwork.wall).length>=WALL_LIMIT)throw new Error('한 벽면에는 최대 8점을 배치할 수 있습니다. 다른 벽면을 선택해주세요.');
  layoutArtworks([...others,artwork]);
  const data=artworkData(artwork);
- if(demo){const all=read(),list=all[id].artworks,index=list.findIndex(art=>art.id===artwork.id);if(index<0)list.push({...data,id:artwork.id});else list[index]={...data,id:artwork.id};all[id].submission.touchedAt=nowISO();write(all);return;}
+ if(demo){const all=read(),list=all[id].artworks,index=list.findIndex(art=>art.id===artwork.id);if(index<0)list.push({...data,id:artwork.id});else list[index]={...data,id:artwork.id};all[id].submission.touchedAt=nowISO();write(all);await dropReplacedImage(id,artworks,artwork,remove);return;}
  // The rules require the parent touch in the same batch, so every save renews the ten-day clock.
  const f=await firestoreClient(),batch=f.db.writeBatch(f.d);
  batch.set(f.db.doc(f.d,'virtualSubmissions',id,'artworks',artwork.id),data);
  batch.update(f.db.doc(f.d,'virtualSubmissions',id),{touchedAt:f.db.serverTimestamp()});await batch.commit();
+ await dropReplacedImage(id,artworks,artwork,remove);
+}
+// A replaced upload would otherwise count toward the per-submission cap until the end.
+async function dropReplacedImage(id,artworks,artwork,remove){
+ const previous=artworks.find(art=>art.id===artwork.id)?.image?.path;
+ if(isSubmissionPath(previous,id)&&previous!==artwork.image?.path)await remove(previous).catch(()=>{});
 }
 export async function deleteSubmissionArtwork(id,artId){
  const {submission,artworks}=await editable(id);if(!artistCanEdit(submission.status))throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
@@ -155,13 +161,18 @@ export async function rejectSubmission(id,note){
  const data=await getSubmission(id,{staff:true});if(!data||!canTransition(data.submission.status,'rejected','staff'))throw new Error('심사 요청 상태에서만 반려할 수 있습니다.');
  await staffUpdate(id,{status:'rejected',reviewNote});
 }
-export async function deleteSubmission(id,{remove=removeImage}={}){
+// Documents go first: if this fails nothing is lost, and an approval retry still finds its
+// source images. Image cleanup afterwards is best effort; orphans are invisible.
+export async function deleteSubmission(id,{remove=removeImage,purge=purgeSubmissionImages}={}){
  const data=await getSubmission(id,{staff:true});if(!data)return;
+ if(demo){const all=read();delete all[id];write(all);}
+ else{
+  const f=await firestoreClient(),batch=f.db.writeBatch(f.d);
+  for(const art of data.artworks)batch.delete(f.db.doc(f.d,'virtualSubmissions',id,'artworks',art.id));
+  batch.delete(f.db.doc(f.d,'virtualSubmissions',id));await batch.commit();
+ }
  for(const art of data.artworks)if(isSubmissionPath(art.image?.path,id))await remove(art.image.path).catch(()=>{});
- if(demo){const all=read();delete all[id];write(all);return;}
- const f=await firestoreClient(),batch=f.db.writeBatch(f.d);
- for(const art of data.artworks)batch.delete(f.db.doc(f.d,'virtualSubmissions',id,'artworks',art.id));
- batch.delete(f.db.doc(f.d,'virtualSubmissions',id));await batch.commit();
+ await purge(id).catch(error=>console.warn('업로드 이미지 일부를 정리하지 못했습니다.',id,error));
 }
 export async function purgeExpiredSubmissions(){
  const cutoff=new Date(Date.now()-EXPIRY_DAYS*86400000);

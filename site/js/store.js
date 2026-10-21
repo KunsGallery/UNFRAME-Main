@@ -41,6 +41,8 @@ export async function hydrateImages(items,includeGallery=true) { return Promise.
 export async function resetDemo() { if(demo)localStorage.removeItem(key); }
 // Staff-only server-side copy used when an artist submission is approved.
 export async function copyImages(items) { if(demo||!items.length)return; const response=await fetch(mediaURL('').replace(/\/media\/$/,'/copy'),{method:'POST',headers:{Authorization:`Bearer ${await mediaToken()}`,'Content-Type':'application/json'},body:JSON.stringify({items})});if(!response.ok){let message='승인 이미지를 복사하지 못했습니다.';try{message=(await response.json()).error||message;}catch{}throw new Error(message);} }
+// Staff-only: removes every stored object of a submission, including replaced or unsaved uploads.
+export async function purgeSubmissionImages(id) { if(demo)return; const response=await fetch(mediaURL('').replace(/\/media\/$/,'/purge/')+encodeURIComponent(id),{method:'POST',headers:{Authorization:`Bearer ${await mediaToken()}`}});if(!response.ok)throw new Error('업로드 이미지를 정리하지 못했습니다.'); }
 export async function removeImage(path) { if(!path||demo)return; const response=await fetch(mediaURL(path),{method:'DELETE',headers:{Authorization:`Bearer ${await mediaToken()}`}});if(!response.ok)throw new Error('사진 파일을 삭제하지 못했습니다.'); }
 
 // A shared live source for the homepage and exhibition list. Demo changes propagate between tabs.

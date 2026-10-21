@@ -115,3 +115,11 @@ test('copy is staff-only and refuses paths outside the submission-to-gallery pat
  assert.equal((await handle(await copyReq([{from:subPath.replace('12345678-1234','aaaaaaaa-1234'),to:to.replace('12345678-1234','aaaaaaaa-1234')}],await artistAuth()),f.env,f.fetcher)).status,404);
  assert.equal(f.stored.length,0);
 });
+test('staff purge every stored object of a submission; artists cannot',async()=>{
+ const purgeReq=async()=>new Request('https://media.example/purge/AbCdEfGhIjKlMnOpQrStUv',{method:'POST',headers:{Authorization:await artistAuth()}});
+ const artist=artistFixture({objects:3});assert.equal((await handle(await purgeReq(),artist.env,artist.fetcher)).status,403);assert.equal(artist.stored.length,0);
+ const f=artistFixture({staff:true,objects:3});const response=await handle(await purgeReq(),f.env,f.fetcher);
+ assert.equal(response.status,200);assert.deepEqual(await response.json(),{deleted:3});
+ assert.deepEqual(f.stored.map(item=>item.deleted),[0,1,2].map(i=>`virtualSubmissions/AbCdEfGhIjKlMnOpQrStUv/${i}`));
+ assert.equal((await handle(new Request('https://media.example/purge/../exhibitions',{method:'POST',headers:{Authorization:await artistAuth()}}),f.env,f.fetcher)).status,404);
+});

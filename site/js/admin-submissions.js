@@ -17,7 +17,7 @@ export function inviteCardHTML(sub,now=new Date()){
 }
 export function pendingNoticeHTML(list){
  if(!list.length)return '';
- return `<div class="notice pending-notice"><strong>작가 업로드 심사 대기 ${list.length}건</strong><ul>${list.map(sub=>`<li>${e(sub.artistName)} · ${e(sub.exhibitionTitle)} <button class="text-link" data-review="${e(sub.id)}">심사하기</button></li>`).join('')}</ul></div>`;
+ return `<div class="notice pending-notice"><strong>작가 업로드 심사 대기 ${list.length}건</strong><ul>${list.map(sub=>`<li${daysLeft(sub.expiresAt)<=2?' class="is-urgent"':''}>${e(sub.artistName)} · ${e(sub.exhibitionTitle)} · <span class="invite-deadline">${daysLeft(sub.expiresAt)}일 남음</span> <button class="text-link" data-review="${e(sub.id)}">심사하기</button></li>`).join('')}</ul></div>`;
 }
 // Clipboard access can be refused (permissions, embedded browsers); fall back to a selectable dialog.
 async function copy(text,done){

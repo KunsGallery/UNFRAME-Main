@@ -210,3 +210,26 @@ test('submission preview renders as a private gallery with the artist settings',
  assert.equal(await submissionPreview('missingmissingmissing00'),null);
  delete globalThis.localStorage;
 });
+import {deleteSubmission} from '../js/submission-store.js';
+test('deleting a submission removes its documents before its images',async()=>{
+ const values=memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionArtwork(id,fix(work('a1')));
+ const seen=[];const docGone=()=>!JSON.parse(values.get('unframe-virtual-submissions-demo-v1'))[id];
+ await deleteSubmission(id,{remove:async path=>seen.push(['image',docGone()]),purge:async prefixId=>seen.push(['prefix',prefixId,docGone()])});
+ assert.deepEqual(seen,[['image',true],['prefix',id,true]]);
+ delete globalThis.localStorage;
+});
+test('replacing an artwork image removes the previous submission upload',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();
+ const first=fix(work('a1'));await saveSubmissionArtwork(id,first);
+ const removed=[];const second={...first,image:{...first.image,path:`virtualSubmissions/${id}/a1/aaaaaaaa-1234-1234-1234-123456789012.webp`}};
+ await saveSubmissionArtwork(id,second,{remove:async path=>removed.push(path)});
+ assert.deepEqual(removed,[first.image.path]);
+ await saveSubmissionArtwork(id,{...second,title:'제목만 변경'},{remove:async path=>removed.push(path)});
+ assert.equal(removed.length,1);
+ delete globalThis.localStorage;
+});
+test('pending notice warns how many days remain',()=>{
+ const html=pendingNoticeHTML([card({status:'submitted',expiresAt:new Date(Date.now()+1.5*86400000)})]);
+ assert.match(html,/2일 남음/);assert.match(html,/is-urgent/);
+});
