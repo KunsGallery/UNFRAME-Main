@@ -158,3 +158,24 @@ test('revision approval removes dropped artworks and keeps existing images',asyn
  assert.equal(removed.length,1);assert.match(removed[0],new RegExp(`^virtualGalleries/${galleryId}/a2/`));
  delete globalThis.localStorage;
 });
+import {inviteCardHTML,pendingNoticeHTML} from '../js/admin-submissions.js';
+const card=(extra={})=>({id:'AbCdEfGhIjKlMnOpQrStUv',exhibitionTitle:'Resonance',artistName:'김하늘',invitedEmail:'',ownerEmail:'',status:'invited',reviewNote:'',touchedAt:new Date('2026-10-21T00:00:00Z'),expiresAt:new Date('2026-10-31T00:00:00Z'),...extra});
+test('invite cards show status, remaining days and urgent styling at two days or less',()=>{
+ const now=new Date('2026-10-21T00:00:00Z');
+ const html=inviteCardHTML(card(),now);
+ assert.match(html,/초대됨/);assert.match(html,/10일 남음/);assert.doesNotMatch(html,/is-urgent/);
+ assert.match(html,/data-invite-copy-link="AbCdEfGhIjKlMnOpQrStUv"/);assert.match(html,/data-invite-copy-message/);
+ assert.doesNotMatch(html,/mailto:/);
+ assert.match(inviteCardHTML(card(),new Date('2026-10-29T00:00:00Z')),/is-urgent/);
+ assert.match(inviteCardHTML(card({invitedEmail:'a@b.com'}),now),/mailto:a@b\.com\?subject=/);
+ assert.match(inviteCardHTML(card({status:'submitted',ownerEmail:'a@b.com'}),now),/data-review="AbCdEfGhIjKlMnOpQrStUv"/);
+});
+test('invite card escapes artist text',()=>{
+ const html=inviteCardHTML(card({artistName:'<img src=x onerror=alert(1)>'}),new Date('2026-10-21T00:00:00Z'));
+ assert.doesNotMatch(html,/<img src=x/);assert.match(html,/&lt;img/);
+});
+test('pending notice summarises review requests',()=>{
+ assert.equal(pendingNoticeHTML([]),'');
+ const html=pendingNoticeHTML([card({status:'submitted'}),card({id:'ZZZZZZZZZZZZZZZZZZZZZZ',status:'submitted',artistName:'박작가'})]);
+ assert.match(html,/심사 대기 2건/);assert.match(html,/data-review="ZZZZZZZZZZZZZZZZZZZZZZ"/);
+});

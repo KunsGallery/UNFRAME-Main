@@ -3,6 +3,7 @@ import {getVirtualGallery,saveVirtualSettings,saveVirtualArtwork,deleteVirtualAr
 import {THEMES,WALLS,FRAMES,LIGHTING,CEILINGS,CANVAS_EDGES,defaultGallery,defaultArtistGallery,emptyArtwork,validateArtwork,layoutArtworks} from './virtual-model.js';
 import {escapeHTML as e,imageURL} from './model.js';
 import {$,toast,confirmDelete} from './ui.js';
+import {adminSubmissions} from './admin-submissions.js';
 let galleryId,exhibition,settings,artworks=[],exists=false,environmentDirty=false,artDirty=false,busy=false,back;
 const badge=required=>`<small class="field-badge">${required?'필수':'선택'}</small>`;
 const input=(name,label,value,{required=false,type='text',max=200,min,upper}={})=>`<label class="field"><span>${label} ${badge(required)}</span><input name="${name}" value="${e(value)}" type="${type}" ${required?'required':''} ${type==='number'?`min="${min}" max="${upper}" step="any"`:`maxlength="${max}"`}></label>`;
@@ -19,6 +20,8 @@ export async function adminVirtual(id,onBack){
   $('#main').innerHTML=`<section class="admin-wrap virtual-admin"><div class="admin-title"><div><button class="text-link" id="galleries-back">← 전시 관리</button><h1>전시 · 작가별 갤러리</h1><p>${e(parent.title)} · 작가별 공간 ${artists.length}개</p></div></div>${demo?'<div class="notice">샘플 체험 · 실제 Firebase나 R2에는 저장되지 않습니다.</div>':''}<p class="help">전시 전체 공간과 참여 작가별 공간을 함께 운영할 수 있습니다. 공개한 갤러리는 전시 상세페이지에 자동 연결됩니다. 각 작가의 작품과 환경, 공개 여부는 개별적으로 관리합니다.</p><section class="editor-section"><h2>전시 전체 갤러리</h2>${root?row(root):'<p>아직 전시 전체 공간이 없습니다. 작가별 공간만 운영해도 괜찮습니다.</p><button class="button secondary" id="create-whole-gallery">전시 전체 공간 설정</button>'}</section><section class="editor-section"><h2>참여 작가별 갤러리</h2><div>${artists.length?artists.map(row).join(''):'<p class="virtual-empty">작가별 공간이 아직 없습니다. 아래에서 참여 작가를 추가해주세요.</p>'}</div></section><form id="create-artist-gallery" class="editor-section"><h2>작가별 갤러리 추가</h2><div class="field-row">${input('artistName','참여 작가명','',{required:true,max:300})}${input('order','갤러리 노출 순서',Math.min(1000000,Math.max(-1,...artists.map(item=>item.settings.order))+1),{required:true,type:'number',min:0,upper:1000000})}</div><p class="help">비공개 공간으로 생성합니다. 작품을 등록한 뒤 공간 설정에서 공개를 선택해주세요. 등록한 작가명은 새 작품의 기본 작가명으로 들어갑니다.</p><button class="button" type="submit">작가별 갤러리 만들기</button><p class="form-status" role="alert" id="artist-gallery-status"></p></form></section>`;
   $('#galleries-back').onclick=()=>{if(canLeave())onBack();};
   const returnToHub=()=>adminVirtual(id,onBack);
+  $('.virtual-admin>.help').insertAdjacentHTML('afterend','<section class="editor-section invite-entry"><h2>작가 업로드 초대</h2><p class="help">작가에게 업로드 링크를 보내 직접 작품을 올리게 하고, 언프레임이 승인한 뒤 공개합니다.</p><button class="button" id="open-submissions">작가 초대 · 심사 관리</button></section>');
+  $('#open-submissions').onclick=()=>{if(canLeave())adminSubmissions(id,returnToHub);};
   document.querySelectorAll('[data-gallery-manage]').forEach(button=>button.onclick=()=>{if(canLeave())openGallery(button.dataset.galleryManage,returnToHub,id);});
   if($('#create-whole-gallery'))$('#create-whole-gallery').onclick=()=>{if(canLeave())openGallery(id,returnToHub,id);};
   const form=$('#create-artist-gallery');form.oninput=()=>{environmentDirty=true;};
