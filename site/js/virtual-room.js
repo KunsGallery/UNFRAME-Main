@@ -1,7 +1,12 @@
 import {environmentOptions,surfaceTexture,materialTexture,buildOutdoor,canvasSideMaterials} from './virtual-environment.js';
 import {layoutArtworks,artworkMount} from './virtual-model.js';
+import {createTour} from './virtual-tour.js';
+import {mountHud} from './virtual-hud.js';
+import {wallViewpoint,ENTRY_VIEW} from './virtual-links.js';
+import {bindTouchLook} from './virtual-input.js';
+import {QUALITY,deviceQuality,downgrade} from './virtual-quality.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
-let artworksData=[],gallerySettings;
+let artworksData=[],gallerySettings,quality='medium';
     const TextureGenerator = {
       createSeamlessHerringbone: function(isWood = false) {
         const S = 512;
@@ -444,8 +449,8 @@ let artworksData=[],gallerySettings;
       player: {
         height: 1.75,
         speed: 5.5,
-        position: new THREE.Vector3(0, 1.75, 2.5),
-        yaw: 0,
+        position: new THREE.Vector3(ENTRY_VIEW.position[0], 1.75, ENTRY_VIEW.position[1]),
+        yaw: ENTRY_VIEW.yaw,
         pitch: 0,
         bounds: {
           minX: -7.0,
@@ -530,8 +535,8 @@ let artworksData=[],gallerySettings;
           powerPreference: "high-performance"
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-        this.renderer.shadowMap.enabled = true;
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY[quality].pixelRatio));
+        this.renderer.shadowMap.enabled = QUALITY[quality].shadows;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 0.94;
@@ -554,7 +559,7 @@ let artworksData=[],gallerySettings;
           200
         );
         this.camera.position.copy(this.player.position);
-        this.camera.rotation.order = 'YXZ';
+        this.camera.rotation.set(0, this.player.yaw, 0, 'YXZ');
       },
 
       setupLights: function() {
@@ -566,8 +571,8 @@ let artworksData=[],gallerySettings;
         sunLight.position.set(24, 18, -6);
         sunLight.target.position.set(0, 0, 0);
         sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 1024;
-        sunLight.shadow.mapSize.height = 1024;
+        sunLight.shadow.mapSize.width = QUALITY[quality].shadowSize;
+        sunLight.shadow.mapSize.height = QUALITY[quality].shadowSize;
         sunLight.shadow.camera.near = 1;
         sunLight.shadow.camera.far = 60;
         sunLight.shadow.camera.left = -16;
@@ -945,14 +950,14 @@ let artworksData=[],gallerySettings;
 
           // 4. Detailed 3D Plaque Caption
           const plaqueTexture = TextureGenerator.createPlaqueTexture(art);
-          const plaqueGeo = new THREE.PlaneGeometry(0.34, 0.24);
+          const plaqueGeo = new THREE.PlaneGeometry(0.44, 0.22);
           const plaqueMat = new THREE.MeshStandardMaterial({
             map: plaqueTexture,
             roughness: 0.35,
             metalness: 0.05
           });
           const plaque = new THREE.Mesh(plaqueGeo, plaqueMat);
-          plaque.position.set(w / 2 + 0.36, -h / 2 + 0.15, 0.006);
+          plaque.position.set(w / 2 + 0.30, -h / 2 + 0.11, 0.006);
           plaque.castShadow = true;
           plaque.userData = { isArtwork: true, data: art, index: index };
           group.add(plaque);
@@ -1310,15 +1315,15 @@ let artworksData=[],gallerySettings;
 
       resetCamera: function() {
         this.closeModal();
-        const defaultPos = new THREE.Vector3(0, 1.75, 2.5);
+        const defaultPos = new THREE.Vector3(ENTRY_VIEW.position[0], 1.75, ENTRY_VIEW.position[1]);
         new TWEEN.Tween(this.camera.position)
           .to(defaultPos, window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:1000)
           .easing(TWEEN.Easing.Cubic.Out)
           .onComplete(() => {
             this.player.position.copy(defaultPos);
-            this.player.yaw = 0;
+            this.player.yaw = ENTRY_VIEW.yaw;
             this.player.pitch = 0;
-            this.camera.rotation.set(0, 0, 0, 'YXZ');
+            this.camera.rotation.set(0, ENTRY_VIEW.yaw, 0, 'YXZ');
           })
           .start();
       },
@@ -1400,18 +1405,36 @@ let artworksData=[],gallerySettings;
 GalleryApp.rebalanceArtworksOnWalls=function(){artworksData=layoutArtworks(artworksData);};
 GalleryApp.requestPointerLock=function(){};
 GalleryApp.buildSunbeams=function(){}; // Daylight and real window shadows replace a luminous overlay plane.
-GalleryApp.buildOutdoorGarden=function(){this.outdoorEnvironment=buildOutdoor(THREE,this.scene,this.renderer,()=>TextureGenerator.createPhotorealisticForestTexture());};
+GalleryApp.buildOutdoorGarden=function(){this.outdoorEnvironment=buildOutdoor(THREE,this.scene,this.renderer,()=>TextureGenerator.createPhotorealisticForestTexture(),{leafCount:QUALITY[quality].leaves});};
+// Caption sits 8cm beside the work at a 2:1 ratio with large type, readable from viewing distance.
 TextureGenerator.createPlaqueTexture=function(art){
- const canvas=document.createElement('canvas');canvas.width=768;canvas.height=512;
- const context=canvas.getContext('2d');context.fillStyle='#f6f4ee';context.fillRect(0,0,768,512);context.fillStyle='#19211e';
- context.font='600 40px Noto Sans KR';context.fillText(art.title,35,65,690);
- context.font='26px Noto Sans KR';
- const lines=[art.artist,art.year,art.medium,art.dimensions,...(gallerySettings.showPrices&&art.price?[art.price]:[])].filter(Boolean);
- lines.forEach((line,index)=>context.fillText(line,35,125+index*57,690));
+ const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=512;
+ const context=canvas.getContext('2d');context.fillStyle='#f6f4ee';context.fillRect(0,0,1024,512);context.fillStyle='#19211e';
+ context.font='600 64px Noto Sans KR';context.fillText(art.title,48,96,928);
+ context.font='42px Noto Sans KR';
+ const lines=[art.artist,[art.year,art.medium].filter(Boolean).join(' · '),art.dimensions,...(gallerySettings.showPrices&&art.price?[art.price]:[])].filter(Boolean);
+ lines.slice(0,4).forEach((line,index)=>context.fillText(line,48,190+index*80,928));
  const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;return texture;
 };
+// Guided tour: stand in front of each work without a dialog; details open on request.
+let tour=createTour([]),tourDetail=false;
+const tourBar=document.getElementById('tour-bar');
+function showTourStop(stop){
+ if(!stop)return endTour();
+ const art=artworksData.find(work=>work.id===stop.id);
+ document.getElementById('tour-progress').textContent=`${stop.index} / ${stop.total}`;
+ document.getElementById('tour-title').textContent=[art.title,art.artist].filter(Boolean).join(' · ');
+ document.getElementById('tour-prev').disabled=stop.index===1;
+ document.getElementById('tour-forward').textContent=stop.index===stop.total?'투어 마치기':'다음';
+ tourBar.hidden=false;GalleryApp.inspectArtwork(art);
+}
+function endTour(){tour.stop();GalleryApp.isTourActive=false;tourBar.hidden=true;GalleryApp.closeModal();}
+GalleryApp.startTour=function(){if(!artworksData.length)return;this.closeModal();tour=createTour(artworksData.map(art=>art.id));this.isTourActive=true;document.getElementById('start-overlay').classList.add('hidden');showTourStop(tour.start());};
+GalleryApp.nextTourStop=function(){if(this.isTourActive)showTourStop(tour.next());};
 const originalOpen=GalleryApp.openModal;
 GalleryApp.openModal=function(art){
+ if(this.isTourActive&&!tourDetail)return;
+ tourDetail=false;
  document.dispatchEvent(new CustomEvent('unframe-artwork-open',{detail:{id:art.id}}));
  originalOpen.call(this,art);const dialog=document.getElementById('art-modal');
  document.getElementById('modal-img').alt=art.image.alt||art.title;
@@ -1424,35 +1447,50 @@ GalleryApp.openModal=function(art){
  if(!dialog.open)dialog.showModal();
 };
 GalleryApp.closeModal=function(){
- const dialog=document.getElementById('art-modal');dialog.classList.remove('active');if(dialog.open)dialog.close();
- this.isInspectMode=false;this.camera.rotation.set(this.player.pitch,this.player.yaw,0,'YXZ');
+ const dialog=document.getElementById('art-modal');dialog.classList.remove('active');
+ if(dialog.open){dialog.close();document.dispatchEvent(new CustomEvent('unframe-artwork-close'));}
+ this.isInspectMode=this.isTourActive;this.camera.rotation.set(this.player.pitch,this.player.yaw,0,'YXZ');
 };
+GalleryApp.goToWall=function(view){
+ if(this.isTourActive)endTour();this.closeModal();
+ const target=new THREE.Vector3(view.position[0],this.player.height,view.position[1]);
+ new TWEEN.Tween(this.camera.position).to(target,matchMedia('(prefers-reduced-motion: reduce)').matches?0:900).easing(TWEEN.Easing.Cubic.Out)
+  .onComplete(()=>{this.player.position.copy(target);}).start();
+ this.player.yaw=view.yaw;this.player.pitch=0;this.camera.rotation.set(0,view.yaw,0,'YXZ');
+};
+// If the first three seconds after entry average under 40fps, step down one quality level.
+function watchFrameRate(){
+ let frames=0;const start=performance.now();
+ const tick=()=>{if(GalleryApp.disposed)return;frames++;if(performance.now()-start<3000)return requestAnimationFrame(tick);
+  if(document.hidden||frames/3>=40||quality==='low')return;
+  quality=downgrade(quality);const level=QUALITY[quality];
+  GalleryApp.renderer.setPixelRatio(Math.min(window.devicePixelRatio,level.pixelRatio));
+  if(!level.shadows&&GalleryApp.renderer.shadowMap.enabled){GalleryApp.renderer.shadowMap.enabled=false;GalleryApp.scene.traverse(object=>{for(const material of [object.material].flat().filter(Boolean))material.needsUpdate=true;});}
+ };
+ requestAnimationFrame(tick);
+}
 export function mountRoom(settings,works){
  layoutArtworks(works); // Validate true-size placement before allocating the scene.
- gallerySettings=settings;
+ gallerySettings=settings;quality=deviceQuality();
  artworksData=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:`${work.heightCm} × ${work.widthCm} cm`}));
  GalleryApp.init();
- const canvas=GalleryApp.container;let touching=null,pressPoint=null,moved=false;
- canvas.style.touchAction='none';
- canvas.addEventListener('pointerdown',event=>{moved=false;pressPoint={x:event.clientX,y:event.clientY};if(event.pointerType==='touch'){touching={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);}});
- canvas.addEventListener('pointermove',event=>{
-  if(pressPoint&&event.buttons&&Math.abs(event.clientX-pressPoint.x)+Math.abs(event.clientY-pressPoint.y)>4)moved=true;
-  if(!touching||GalleryApp.isInspectMode)return;
-  const dx=event.clientX-touching.x,dy=event.clientY-touching.y;if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
-  GalleryApp.player.yaw-=dx*.0035;GalleryApp.player.pitch=Math.max(-Math.PI/2.5,Math.min(Math.PI/2.5,GalleryApp.player.pitch-dy*.0035));
-  GalleryApp.camera.rotation.set(GalleryApp.player.pitch,GalleryApp.player.yaw,0,'YXZ');touching={x:event.clientX,y:event.clientY};
- });
- canvas.addEventListener('pointerup',()=>{touching=null;});canvas.addEventListener('pointercancel',()=>{touching=null;});
- canvas.addEventListener('click',event=>{if(moved){event.preventDefault();event.stopImmediatePropagation();}},true);
+ bindTouchLook(GalleryApp.container,GalleryApp);
  const release=()=>{for(const key of Object.keys(GalleryApp.keys))GalleryApp.keys[key]=false;};
  window.addEventListener('blur',release);document.addEventListener('visibilitychange',release);
  for(const button of document.querySelectorAll('.nav-btn'))button.addEventListener('pointerleave',release);
  document.getElementById('art-modal').addEventListener('cancel',event=>{event.preventDefault();GalleryApp.closeModal();});
  document.getElementById('tour-next').onclick=()=>{GalleryApp.closeModal();GalleryApp.nextTourStop();};
- document.getElementById('tour-stop').onclick=()=>{GalleryApp.isTourActive=false;GalleryApp.closeModal();};
- document.getElementById('btn-close').addEventListener('click',()=>{GalleryApp.isTourActive=false;});
+ document.getElementById('tour-stop').onclick=endTour;
+ document.getElementById('tour-end').onclick=endTour;
+ document.getElementById('tour-forward').onclick=()=>GalleryApp.nextTourStop();
+ document.getElementById('tour-prev').onclick=()=>{if(GalleryApp.isTourActive)showTourStop(tour.prev());};
+ document.getElementById('tour-detail').onclick=()=>{const stop=tour.current();if(!stop)return;tourDetail=true;GalleryApp.openModal(artworksData.find(art=>art.id===stop.id));};
+ document.getElementById('btn-close').addEventListener('click',()=>{if(GalleryApp.isTourActive)endTour();});
+ mountHud();
+ document.getElementById('enter-gallery-btn').addEventListener('click',watchFrameRate,{once:true});
  const stop=()=>{GalleryApp.disposed=true;cancelAnimationFrame(GalleryApp.animationFrame);TWEEN.removeAll();GalleryApp.outdoorEnvironment?.dispose();GalleryApp.scene.traverse(object=>{object.geometry?.dispose();for(const material of [object.material].flat().filter(Boolean)){for(const texture of new Set([material.map,material.bumpMap,material.emissiveMap].filter(Boolean)))texture.dispose();material.dispose();}});GalleryApp.renderer.dispose();};
  // Back/forward cache retains the live room; dispose only when leaving for good.
  window.addEventListener('pagehide',event=>{if(!event.persisted)stop();});
- return {inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
+ for(const button of document.querySelectorAll('[data-wall]'))button.addEventListener('click',()=>{const view=wallViewpoint(button.dataset.wall);if(view)GalleryApp.goToWall(view);});
+ return {applyLook:({theme,wallColor})=>{GalleryApp.setTheme(theme);GalleryApp.materials.walls.color.set(wallColor);},close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
 }

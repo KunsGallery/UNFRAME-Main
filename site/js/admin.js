@@ -1,6 +1,8 @@
 import {productsDashboard,resetProductsSession} from './admin-products.js';
 import {loadViewingRoom} from './exhibition-viewing-room.js';
 import {adminVirtual} from './admin-virtual.js';
+import {listPending,purgeExpiredSubmissions} from './submission-store.js';
+import {pendingNoticeHTML,bindReviewButtons} from './admin-submissions.js';
 import {exhibitionView,bindExhibitionImages} from './exhibition-view.js';
 import {VENUES,venueChoice,venueName} from './exhibition-editor-model.js';
 import {highlightsDashboard} from './admin-highlights.js';
@@ -18,12 +20,22 @@ function authView(message='') {
  else $('#google-login').onclick=async()=>{const button=$('#google-login');button.disabled=true;try{await login();}catch(error){authView(authError(error));}};
 }
 function authError(error){if(error.code==='auth/unauthorized-domain')return '이 사이트 주소는 Google 로그인이 아직 승인되지 않았습니다. 운영자에게 사이트 주소 등록을 요청해주세요.';if(error.code==='auth/operation-not-allowed')return 'Google 로그인이 아직 활성화되지 않았습니다. 운영자에게 로그인 설정을 요청해주세요.';if(error.code==='auth/invalid-api-key')return '사이트의 Firebase 연결 설정을 확인해주세요.';if(error.code==='auth/popup-closed-by-user')return '로그인 창을 닫았습니다. 다시 로그인해주세요.';if(error.code==='auth/popup-blocked')return '브라우저의 팝업 차단을 해제하고 다시 로그인해주세요.';return '로그인에 실패했습니다. Firebase 설정과 승인 도메인을 확인해주세요.';}
+// Expired artist uploads are cleaned once per admin session; the queue shows pending reviews.
+let purged=false;
+async function showSubmissionQueue(){
+ try{
+  if(!purged){purged=true;const count=await purgeExpiredSubmissions();if(count)toast(`기한이 지난 작가 업로드 ${count}건을 정리했습니다.`);}
+  const html=pendingNoticeHTML(await listPending());const toolbar=$('.admin-toolbar');
+  if(html&&toolbar&&!$('.pending-notice')){toolbar.insertAdjacentHTML('beforebegin',html);bindReviewButtons(dashboard);}
+ }catch(error){console.warn('작가 업로드 상태를 확인하지 못했습니다.',error);}
+}
 async function dashboard() {
  const expectedUser=user;
  try{records=await hydrateImages(await listExhibitions(true),false);}catch(error){authView('전시를 불러오지 못했습니다. 계정 권한과 Firebase 설정을 확인해주세요.');return;}
  if(!demo&&user!==expectedUser)return;
  current=null;dirty=false;
  $('#main').innerHTML=`<section class="admin-wrap"><div class="admin-title"><div><h1>전시 관리</h1><p>${demo?'샘플 관리자 체험 중':e(user?.email)} · 전시 ${records.length}개</p></div><div class="actions"><button id="manage-highlights" class="button secondary">프로젝트 소식 · 추가 슬라이드</button><button id="new" class="button">새 전시 등록</button><button id="signout" class="button secondary">${demo?'체험 종료':'로그아웃'}</button></div></div><nav class="admin-product-tabs" aria-label="관리 영역"><button aria-current="page">전시 관리</button><button id="manage-products">상품 관리</button></nav><div class="notice"><strong>전시는 한 번만 등록하면 됩니다.</strong><br>공개한 현재 전시는 대표 이미지·제목·기간을 사용해 메인 히어로에 자동 표시됩니다. 히어로용 재등록은 필요 없습니다. 전시 종료일이 지나면 메인에서 자동으로 내려가고 아카이브에 남습니다. 진행 중인 전시가 보이지 않으면 시작일·종료일을 확인해주세요. 프로젝트 소식 · 추가 슬라이드는 전시 외 소식과 버추얼 갤러리를 등록하는 메뉴입니다.</div>${demo?'<div class="notice">샘플 체험 · 이 브라우저에서만 저장됩니다. 실제 운영 모드에서는 승인된 Google 계정만 전시를 관리할 수 있습니다. <button id="reset" class="text-link">샘플 초기화</button></div>':''}<div class="admin-toolbar"><label><span class="sr-only">전시 검색</span><input id="admin-search" type="search" placeholder="전시 제목·작가 검색" value="${e(query)}"></label><label><span class="sr-only">게시 상태</span><select id="admin-filter"><option value="all">전체 상태</option><option value="published">게시됨</option><option value="draft">임시 저장</option></select></label></div><div class="table-scroll"><table class="admin-table"><thead><tr><th>전시</th><th>기간</th><th class="location-col">전시 상태</th><th>게시 상태</th><th>관리</th></tr></thead><tbody id="admin-rows"></tbody></table></div><div id="admin-empty" class="empty" hidden><h3>등록된 전시가 없습니다.</h3><p>새 전시를 등록하거나 검색 조건을 바꿔보세요.</p></div></section>`;
+ showSubmissionQueue();
  $('#manage-products').onclick=()=>productsDashboard(dashboard);$('#manage-highlights').onclick=()=>highlightsDashboard(dashboard);$('#new').onclick=()=>editor(empty());$('#signout').onclick=async()=>{await logout();demoEntered=false;user=null;authView();};
  $('#admin-search').oninput=event=>{query=event.target.value;renderRows();};$('#admin-filter').value=filter;$('#admin-filter').onchange=event=>{filter=event.target.value;renderRows();};
  if($('#reset'))$('#reset').onclick=async()=>{if(await confirmDelete('샘플을 초기화할까요?','이 브라우저에서 작성한 샘플 전시와 이미지는 지워집니다.')){await resetDemo();await dashboard();toast('샘플 데이터를 초기화했습니다.');}};

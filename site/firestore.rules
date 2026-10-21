@@ -184,13 +184,15 @@ service cloud.firestore {
   function validVirtualGallery(data,exid) {
    return virtualId(exid)
     && data.keys().hasAll(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt'])
-    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order','lighting','ceiling'])
+    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order','lighting','ceiling','artistEmail','artistNote'])
     && validVirtualAssociation(data,exid)
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.subtitle is string && data.subtitle.size()<=1000
     && data.published is bool && data.theme in ['white','black','herringbone-wood','wood','urethane']
     && (!('lighting' in data) || data.lighting in ['general','focused'])
     && (!('ceiling' in data) || data.ceiling in ['plain','luminous'])
+    && (!('artistEmail' in data) || (data.artistEmail is string && data.artistEmail.size()>0 && data.artistEmail.size()<=320))
+    && (!('artistNote' in data) || (data.artistNote is string && data.artistNote.size()<=600))
     && data.wallColor is string && data.wallColor.matches('^#[0-9a-fA-F]{6}$')
     && data.brightness is number && data.brightness>=0.5 && data.brightness<=1.8
     && data.speed is number && data.speed>=1 && data.speed<=5
@@ -206,8 +208,11 @@ service cloud.firestore {
     && image.alt is string && image.alt.size()<=1000;
   }
   function validArtwork(data,exid,artid) {
-   return virtualId(exid) && virtualId(artid)
-    && data.keys().hasAll(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt'])
+   return virtualId(exid) && virtualId(artid) && validArtworkFields(data)
+    && validArtworkImage(data.image,exid,artid);
+  }
+  function validArtworkFields(data) {
+   return data.keys().hasAll(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt'])
     && data.keys().hasOnly(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt','canvasThickness','canvasEdge'])
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.titleEn is string && data.titleEn.size()<=200
@@ -222,12 +227,11 @@ service cloud.firestore {
     && data.order is int && data.order>=0 && data.order<=1000000
     && (!('canvasThickness' in data) || (data.canvasThickness is number && data.canvasThickness>=0.5 && data.canvasThickness<=10))
     && (!('canvasEdge' in data) || data.canvasEdge in ['natural','black','image'])
-    && validArtworkImage(data.image,exid,artid)
     && data.updatedAt is string && data.updatedAt.size()<=50
     && data.updatedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?Z$');
   }
   match /virtualGalleries/{exid} {
-   allow read: if publicVirtualSettings(resource.data,exid) || staff();
+   allow read: if publicVirtualSettings(resource.data,exid) || staff() || boundArtist(resource.data);
    allow create: if staff()
     && virtualParentExists(request.resource.data,exid)
     && validVirtualGallery(request.resource.data,exid);
@@ -238,12 +242,103 @@ service cloud.firestore {
     && validVirtualGallery(request.resource.data,exid);
    allow delete: if staff();
    match /artworks/{artid} {
-    allow read: if publicVirtualGallery(exid) || staff();
+    allow read: if publicVirtualGallery(exid) || staff()
+     || boundArtist(get(/databases/$(database)/documents/virtualGalleries/$(exid)).data);
     allow create, update: if staff()
      && exists(/databases/$(database)/documents/virtualGalleries/$(exid))
      && virtualParentExists(get(/databases/$(database)/documents/virtualGalleries/$(exid)).data,exid)
      && validArtwork(request.resource.data,exid,artid);
     allow delete: if staff();
+   }
+  }
+  // virtualSubmissions/{id}: invited artist uploads. Never public; bound to the first
+  // Google account that claims the link; unusable ten days after the last server touch.
+  function googleUser() {
+   return request.auth != null && request.auth.token.email_verified == true
+    && request.auth.token.firebase.sign_in_provider == 'google.com';
+  }
+  function boundArtist(data) {
+   return googleUser() && data.get('artistEmail','') == request.auth.token.email;
+  }
+  function submissionLive(data) { return data.touchedAt + duration.value(10,'d') > request.time; }
+  function submissionOwner(data) { return googleUser() && data.ownerEmail == request.auth.token.email; }
+  function submissionPath(sid) { return /databases/$(database)/documents/virtualSubmissions/$(sid); }
+  function validSubmissionSettings(s) {
+   return s is map && s.keys().hasAll(['theme','wallColor','lighting','ceiling']) && s.keys().hasOnly(['theme','wallColor','lighting','ceiling','artistNote'])
+    && (!('artistNote' in s) || (s.artistNote is string && s.artistNote.size()<=600))
+    && s.theme in ['white','black','herringbone-wood','wood','urethane']
+    && s.wallColor is string && s.wallColor.matches('^#[0-9a-fA-F]{6}$')
+    && s.lighting in ['general','focused'] && s.ceiling in ['plain','luminous'];
+  }
+  function validSubmission(data,sid) {
+   return sid.matches('^[A-Za-z0-9]{22}$')
+    && data.keys().hasAll(['exhibitionId','exhibitionTitle','artistName','invitedEmail','ownerEmail','targetGalleryId','status','reviewNote','settings','approvedGalleryId','createdAt','touchedAt'])
+    && data.keys().hasOnly(['exhibitionId','exhibitionTitle','artistName','invitedEmail','ownerEmail','targetGalleryId','status','reviewNote','settings','approvedGalleryId','createdAt','touchedAt'])
+    && data.exhibitionId is string && virtualId(data.exhibitionId)
+    && data.exhibitionTitle is string && data.exhibitionTitle.size()<=200
+    && data.artistName is string && data.artistName.size()>0 && data.artistName.size()<=300
+    && data.invitedEmail is string && data.invitedEmail.size()<=320 && data.invitedEmail == data.invitedEmail.lower()
+    && data.ownerEmail is string && data.ownerEmail.size()<=320
+    && data.targetGalleryId is string && (data.targetGalleryId == '' || virtualId(data.targetGalleryId))
+    && data.approvedGalleryId is string && (data.approvedGalleryId == '' || virtualId(data.approvedGalleryId))
+    && data.status in ['invited','draft','submitted','rejected']
+    && data.reviewNote is string && data.reviewNote.size()<=1000
+    && validSubmissionSettings(data.settings)
+    && data.createdAt is timestamp && data.touchedAt == request.time;
+  }
+  function changedOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+  function artistTransition(before,after) {
+   return (before.status in ['draft','rejected'] && after.status in [before.status,'submitted'])
+    || (before.status == 'submitted' && after.status == 'draft' && after.settings == before.settings);
+  }
+  function validSubmissionImage(image,sid,artid,target) {
+   return image is map && image.keys().hasAll(['url','path','alt']) && image.keys().hasOnly(['url','path','alt'])
+    && image.url == '' && image.path is string && image.path.size()<=512
+    && (image.path.matches('^virtualSubmissions/'+sid+'/'+artid+'/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[.](png|jpeg|webp)$')
+     || (target != '' && image.path.matches('^virtualGalleries/'+target+'/'+artid+'/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[.](png|jpeg|webp)$')))
+    && image.alt is string && image.alt.size()<=1000;
+  }
+  // Artwork writes must touch the parent in the same batch; the parent's own rule then
+  // proves ownership, liveness and an editable status for that touch.
+  function artistArtworkWrite(sid) {
+   return googleUser() && existsAfter(submissionPath(sid))
+    && getAfter(submissionPath(sid)).data.touchedAt == request.time
+    && getAfter(submissionPath(sid)).data.ownerEmail == request.auth.token.email
+    && getAfter(submissionPath(sid)).data.status in ['draft','rejected'];
+  }
+  match /virtualSubmissions/{sid} {
+   allow get: if staff()
+    || (resource.data.ownerEmail == '' && submissionLive(resource.data))
+    || (submissionOwner(resource.data) && submissionLive(resource.data));
+   allow list: if staff();
+   allow create: if validSubmission(request.resource.data,sid) && (
+    (staff() && request.resource.data.status == 'invited' && request.resource.data.ownerEmail == ''
+     && request.resource.data.reviewNote == '' && request.resource.data.approvedGalleryId == ''
+     && exists(/databases/$(database)/documents/exhibitions/$(request.resource.data.exhibitionId)))
+    || (googleUser() && request.resource.data.status == 'draft'
+     && request.resource.data.ownerEmail == request.auth.token.email
+     && request.resource.data.invitedEmail == '' && request.resource.data.reviewNote == ''
+     && request.resource.data.approvedGalleryId == '' && request.resource.data.targetGalleryId != ''
+     && exists(/databases/$(database)/documents/virtualGalleries/$(request.resource.data.targetGalleryId))
+     && boundArtist(get(/databases/$(database)/documents/virtualGalleries/$(request.resource.data.targetGalleryId)).data)
+     && request.resource.data.exhibitionId == virtualParent(get(/databases/$(database)/documents/virtualGalleries/$(request.resource.data.targetGalleryId)).data,request.resource.data.targetGalleryId)));
+   allow update: if validSubmission(request.resource.data,sid) && (
+    (staff() && changedOnly(['status','reviewNote','approvedGalleryId','touchedAt'])
+     && (request.resource.data.status == resource.data.status
+      || (resource.data.status == 'submitted' && request.resource.data.status == 'rejected')))
+    || (googleUser() && submissionLive(resource.data) && resource.data.ownerEmail == ''
+     && resource.data.status == 'invited' && changedOnly(['ownerEmail','status','touchedAt'])
+     && request.resource.data.ownerEmail == request.auth.token.email && request.resource.data.status == 'draft'
+     && (resource.data.invitedEmail == '' || resource.data.invitedEmail == request.auth.token.email.lower()))
+    || (submissionOwner(resource.data) && submissionLive(resource.data)
+     && changedOnly(['settings','status','touchedAt']) && artistTransition(resource.data,request.resource.data)));
+   allow delete: if staff();
+   match /artworks/{artid} {
+    allow read: if staff() || (submissionOwner(get(submissionPath(sid)).data) && submissionLive(get(submissionPath(sid)).data));
+    allow create, update: if virtualId(artid) && artistArtworkWrite(sid)
+     && validArtworkFields(request.resource.data)
+     && validSubmissionImage(request.resource.data.image,sid,artid,getAfter(submissionPath(sid)).data.targetGalleryId);
+    allow delete: if staff() || artistArtworkWrite(sid);
    }
   }
   match /staffEmails/{email} {

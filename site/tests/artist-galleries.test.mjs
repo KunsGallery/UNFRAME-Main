@@ -42,3 +42,14 @@ test('exhibition renders public gallery destinations and escaped artist text wit
  assert.doesNotMatch(html,/<script>작가/);
  assert.doesNotMatch(html,/href="\/artist\//);
 });
+test('exhibition page introduces each artist space as a card',()=>{
+ const item={...DEMO_EXHIBITIONS[0],virtualGalleries:[{id:'resonance',settings:{title:'전체 전시'},count:5},{id:'artist-a',settings:{artistName:'김하늘',title:'김하늘 · 공간',artistNote:'<i>빛</i>을 그립니다.'},count:2,cover:{url:'/assets/projects/up.webp',alt:'대표 작품'}},{id:'artist-b',settings:{artistName:'박작가',title:'박작가 · 공간'}}]};
+ const html=exhibitionView(item);
+ assert.match(html,/참여 작가의 온라인 공간/);
+ assert.match(html,/class="ex-online-whole"[^>]*href="\/virtual-gallery\/resonance"/);
+ assert.equal((html.match(/class="ex-artist-space"/g)||[]).length,2);
+ assert.match(html,/<img[^>]*src="\/assets\/projects\/up\.webp"[^>]*alt="대표 작품"/);
+ assert.match(html,/&lt;i&gt;빛/);assert.doesNotMatch(html,/<i>빛/);
+ assert.match(html,/작품 2점/);assert.match(html,/공간 입장/);
+ assert.match(html,/id="ex-online"/);
+});

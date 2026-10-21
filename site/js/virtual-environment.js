@@ -12,7 +12,7 @@ export function materialTexture(THREE,kind){
  ctx.putImageData(pixels,0,0);if(kind==='paving'){ctx.strokeStyle='#92978d';ctx.lineWidth=1.5;ctx.strokeRect(0,0,256,256);}
  const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;return texture;
 }
-export function buildOutdoor(THREE,scene,renderer,fallbackTexture){
+export function buildOutdoor(THREE,scene,renderer,fallbackTexture,{leafCount}={}){
  const group=new THREE.Group();group.name='unframe-woodland-terrace';scene.add(group);
  const box=(material,w,h,d,x,y,z)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,z);group.add(mesh);return mesh;};
  const paving=materialTexture(THREE,'paving');paving.repeat.set(3,10);
@@ -26,7 +26,7 @@ export function buildOutdoor(THREE,scene,renderer,fallbackTexture){
  const timber=new THREE.MeshStandardMaterial({map:wood,bumpMap:wood,bumpScale:.004,roughness:.83});
  for(const side of [-1,1])for(let y=.08;y<4.2;y+=.18){const plank=box(timber,5.4,.16,.07,10.7,y,side*7.3);plank.receiveShadow=true;}
  let seed=37;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
- const mobile=matchMedia('(max-width:700px)').matches,count=mobile?700:2600;
+ const mobile=matchMedia('(max-width:700px)').matches,count=leafCount??(mobile?700:2600);
  const hedge=new THREE.InstancedMesh(new THREE.SphereGeometry(1,7,5),new THREE.MeshStandardMaterial({color:new THREE.Color(0x506343).convertSRGBToLinear(),roughness:1}),60);
  const leaves=new THREE.InstancedMesh(new THREE.SphereGeometry(.045,5,3),new THREE.MeshStandardMaterial({color:0xffffff,roughness:1}),count);
  const transform=new THREE.Object3D();

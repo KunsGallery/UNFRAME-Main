@@ -3,8 +3,14 @@ export const WALLS={front:'전면 벽',right:'우측 벽',left:'좌측 벽'};
 export const FRAMES={canvas:'캔버스 (테두리 없음)',black:'블랙 액자',white:'화이트 액자',wood:'우드 액자',none:'프레임 없음 (종이)'};
 export const LIGHTING={general:'전체 조명',focused:'작품 중심 조명'};
 export const CEILINGS={plain:'일반 천장',luminous:'광천장'};
+// Gallery wall paints offered in the editors. Saved galleries with another colour keep it.
+export const WALL_COLORS={'#f6f4ee':'웜 화이트','#fafaf8':'퓨어 화이트','#e4e3df':'라이트 그레이','#cfc9bf':'웜 그레이','#3a3c3b':'차콜','#2f3d35':'딥 그린','#26324a':'딥 네이비'};
+export const wallColorOptions=current=>Object.hasOwn(WALL_COLORS,current)||!/^#[0-9a-fA-F]{6}$/.test(current||'')?WALL_COLORS:{...WALL_COLORS,[current]:`기존 색상 (${current})`};
 export const CANVAS_EDGES={natural:'자연색 캔버스',black:'검정 측면',image:'이미지 감싸기'};
 export const defaultGallery=exhibition=>({title:exhibition.title,subtitle:exhibition.summary||'',published:false,lighting:'general',ceiling:'luminous',theme:'white',wallColor:'#f6f4ee',brightness:1,speed:2.5,outdoor:true,showPrices:false});
+// Deleting a gallery is confirmed by typing the name staff see in the gallery list.
+export const galleryDeleteName=settings=>settings.artistName||settings.title;
+export const deleteNameMatches=(input,expected)=>!!expected&&String(input||'').trim()===expected.trim();
 export const galleryExhibitionId=(id,settings)=>settings.exhibitionId||id;
 export const defaultArtistGallery=(exhibition,artistName,order=0)=>({...defaultGallery(exhibition),title:`${artistName} · ${exhibition.title}`.slice(0,200),subtitle:'',exhibitionId:exhibition.id,artistName,order});
 export const sortVirtualGalleries=items=>[...items].sort((a,b)=>Number(!!a.settings.artistName)-Number(!!b.settings.artistName)||(a.settings.order||0)-(b.settings.order||0)||a.settings.title.localeCompare(b.settings.title));
@@ -18,6 +24,7 @@ export function validateGallery(data,artworks=[]){
  if(!bounded(data.title,200,1)||!bounded(data.subtitle,1000))throw new Error('갤러리 제목은 200자, 소개는 1,000자 이내로 입력해주세요.');
  if(!Object.hasOwn(THEMES,data.theme)||!/^#[0-9a-fA-F]{6}$/.test(data.wallColor)||!between(data.brightness,.5,1.8)||!between(data.speed,1,5))throw new Error('공간 설정 값을 확인해주세요.');
  if(data.lighting!==undefined&&!Object.hasOwn(LIGHTING,data.lighting)||data.ceiling!==undefined&&!Object.hasOwn(CEILINGS,data.ceiling))throw new Error('조명과 천장 설정을 확인해주세요.');
+ if(data.artistNote!==undefined&&!bounded(data.artistNote,600))throw new Error('작가 소개는 600자 이내로 입력해주세요.');
  if(['published','outdoor','showPrices'].some(key=>typeof data[key]!=='boolean'))throw new Error('게시 및 공간 설정을 확인해주세요.');
  if(data.published&&!artworks.length)throw new Error('공개하려면 작품을 한 점 이상 등록해주세요.');
  if(data.published)layoutArtworks(artworks);
