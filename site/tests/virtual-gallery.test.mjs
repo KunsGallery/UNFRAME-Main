@@ -139,3 +139,11 @@ test('live look messages carry only floor and wall colour',()=>{
  assert.equal(lookFromMessage({type:'unframe-look',theme:'black',wallColor:'javascript:alert(1)'}),null);
  assert.equal(lookFromMessage(null),null);
 });
+import {readFileSync} from 'node:fs';
+test('embedded preview hides the entry window before any module runs',()=>{
+ const html=readFileSync(new URL('../virtual-gallery.html',import.meta.url),'utf8');
+ const head=html.slice(0,html.indexOf('</head>'));
+ assert.match(head,/<script>[^<]*embed=1[^<]*classList\.add\('embed-preview'\)[^<]*<\/script>/);
+ const css=readFileSync(new URL('../assets/virtual-gallery.css',import.meta.url),'utf8');
+ assert.match(css,/\.embed-preview #start-overlay/);
+});

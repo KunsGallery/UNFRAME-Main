@@ -100,4 +100,4 @@ async function show(id){
  }
 }
 const match=location.pathname.match(/^\/virtual-gallery\/((?:submission\/)?[^/]+)\/?$/);
-try{if(match)await show(decodeURIComponent(match[1]));else await index();}catch(error){if($('#start-title')){$('#start-title').textContent='갤러리를 열 수 없습니다.';$('#start-subtitle').textContent=error.message;$('#start-help').hidden=true;$('#enter-gallery-btn').hidden=true;$('.top-right-panel').hidden=true;$('.nav-controls-container').hidden=true;}else if($('#gallery-index'))$('#gallery-index').textContent='갤러리를 불러오지 못했습니다. 잠시 후 다시 방문해주세요.';}
+try{if(match)await show(decodeURIComponent(match[1]));else await index();}catch(error){if($('#start-title')){document.documentElement.classList.remove('embed-preview');$('#start-title').textContent='갤러리를 열 수 없습니다.';$('#start-subtitle').textContent=error.message;$('#start-help').hidden=true;$('#enter-gallery-btn').hidden=true;$('.top-right-panel').hidden=true;$('.nav-controls-container').hidden=true;}else if($('#gallery-index'))$('#gallery-index').textContent='갤러리를 불러오지 못했습니다. 잠시 후 다시 방문해주세요.';}
