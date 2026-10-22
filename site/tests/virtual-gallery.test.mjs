@@ -76,12 +76,11 @@ test('artwork deep links resolve only known ids',()=>{
  assert.equal(artFromHash('#art-'+encodeURIComponent('작품 1'),['작품 1']),'작품 1');
 });
 test('wall shortcuts stand inside the room facing their wall',()=>{
- const bounds={minX:-7,maxX:6.8,minZ:-6,maxZ:6};
- for(const wall of ['front','left','right']){
-  const view=wallViewpoint(wall);
+ for(const room of Object.values(ROOMS))for(const wall of ['front','left','right']){
+  const bounds=playerBounds(room),view=wallViewpoint(wall,room);
   assert.ok(view.position[0]>=bounds.minX&&view.position[0]<=bounds.maxX&&view.position[1]>=bounds.minZ&&view.position[1]<=bounds.maxZ,wall);
  }
- assert.equal(wallViewpoint('front').yaw,Math.PI/2);assert.equal(wallViewpoint('right').yaw,0);assert.equal(wallViewpoint('left').yaw,Math.PI);
+ assert.equal(wallViewpoint('front',ROOMS.large).yaw,Math.PI/2);assert.equal(wallViewpoint('right',ROOMS.small).yaw,0);assert.equal(wallViewpoint('left').yaw,Math.PI);
  assert.deepEqual(Object.keys(WALL_VIEWS),['front','left','right']);
  assert.equal(wallViewpoint('ceiling'),null);
 });
@@ -111,10 +110,16 @@ test('artist intro is optional and limited to 600 characters',()=>{
  assert.throws(()=>validateGallery({...gallery,artistNote:'가'.repeat(601)}),/600/);
  assert.throws(()=>validateGallery({...gallery,artistNote:5}),/600/);
 });
-import {ENTRY_VIEW} from '../js/virtual-links.js';
-test('visitors enter facing the front wall',()=>{
- assert.equal(ENTRY_VIEW.yaw,WALL_VIEWS.front.yaw);
- assert.deepEqual(ENTRY_VIEW.position,[1,0]);
+import {entryView,playerBounds} from '../js/virtual-links.js';
+test('visitors enter about four metres from the front wall of any room size',()=>{
+ for(const room of Object.values(ROOMS)){
+  const view=entryView(room),bounds=playerBounds(room);
+  assert.equal(view.yaw,Math.PI/2);
+  assert.ok(Math.abs((view.position[0]-(-room.w/2))-4.2)<1e-9,room.id);
+  assert.ok(view.position[0]>=bounds.minX&&view.position[0]<=bounds.maxX,room.id);
+  assert.ok(bounds.maxX<room.w/2&&bounds.minZ>-room.d/2,room.id);
+ }
+ assert.deepEqual(playerBounds(ROOMS.large),{minX:-7,maxX:6.8,minZ:-6,maxZ:6});
 });
 import {introHTML} from '../js/virtual-intro.js';
 test('entry info shows shared exhibition details and the artist intro, escaped',()=>{
@@ -146,4 +151,36 @@ test('embedded preview hides the entry window before any module runs',()=>{
  assert.match(head,/<script>[^<]*embed=1[^<]*classList\.add\('embed-preview'\)[^<]*<\/script>/);
  const css=readFileSync(new URL('../assets/virtual-gallery.css',import.meta.url),'utf8');
  assert.match(css,/\.embed-preview #start-overlay/);
+});
+import {ROOMS,roomOf,SHAPES,SALE_STATUS} from '../js/virtual-model.js';
+test('room sizes: large keeps today\'s geometry, smaller rooms shrink walls and placement',()=>{
+ assert.deepEqual(Object.keys(ROOMS),['small','medium','large']);
+ assert.equal(roomOf({}).id,'large');assert.equal(roomOf({roomSize:'small'}).id,'small');
+ const large=ROOMS.large,small=ROOMS.small;
+ assert.deepEqual([large.w,large.d,large.wall],[16,14,10]);
+ assert.deepEqual([small.w,small.d,small.wall],[10,8,6]);
+ const art={...emptyArtwork(),id:'a',title:'작품',artist:'작가',widthCm:100,heightCm:100,order:0,image:{url:'x',path:'',alt:''}};
+ assert.equal(layoutArtworks([art])[0].position[0],-7.95);
+ assert.equal(layoutArtworks([art],'small')[0].position[0],-4.95);
+ assert.equal(layoutArtworks([{...art,wall:'right'}],'medium')[0].position[2],-5.45);
+ assert.throws(()=>layoutArtworks([{...art,widthCm:700}],'small'),/600cm/);
+ assert.doesNotThrow(()=>layoutArtworks([{...art,widthCm:700}],'large'));
+ assert.throws(()=>validateGallery({...defaultGallery({title:'t',summary:''}),published:true,roomSize:'small'},[{...art,widthCm:700}]),/600cm/);
+ assert.throws(()=>validateGallery({...defaultGallery({title:'t',summary:''}),roomSize:'huge'}),/설정/);
+ assert.equal(defaultGallery({title:'t',summary:''}).roomSize,'medium');
+});
+test('artwork shapes and sale status validate their combinations',()=>{
+ assert.deepEqual(Object.keys(SHAPES),['rect','circle','free']);
+ assert.deepEqual(Object.keys(SALE_STATUS),['available','reserved','sold','nfs']);
+ assert.match(SALE_STATUS.nfs,/Not for Sale/);
+ const art={...emptyArtwork(),title:'작품',artist:'작가',image:{path:'virtualGalleries/ex/art/image.webp',url:'',alt:''}};
+ assert.equal(emptyArtwork().shape,'rect');assert.equal(emptyArtwork().saleStatus,'available');
+ assert.doesNotThrow(()=>validateArtwork({...art,shape:'circle',widthCm:60,heightCm:60,frame:'canvas'}));
+ assert.throws(()=>validateArtwork({...art,shape:'circle',widthCm:60,heightCm:80}),/지름/);
+ assert.throws(()=>validateArtwork({...art,shape:'circle',widthCm:60,heightCm:60,frame:'black'}),/원형/);
+ assert.doesNotThrow(()=>validateArtwork({...art,shape:'free',frame:'none'}));
+ assert.throws(()=>validateArtwork({...art,shape:'free',frame:'canvas'}),/자유형/);
+ assert.throws(()=>validateArtwork({...art,shape:'star'}),/형태/);
+ assert.throws(()=>validateArtwork({...art,saleStatus:'gone'}),/판매/);
+ const legacy={...art};delete legacy.shape;delete legacy.saleStatus;assert.doesNotThrow(()=>validateArtwork(legacy));
 });
