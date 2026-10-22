@@ -396,7 +396,7 @@ const invite=(extra={})=>({exhibitionId:artistParent,exhibitionTitle:'단체전'
 const subId=suffix=>`RulesSub${suffix}`.padEnd(22,'x');
 const subArtwork=(sid,aid=artid,extra={})=>({...artwork,image:{...artwork.image,path:`virtualSubmissions/${sid}/${aid}/11111111-2222-4333-8444-555555555555.jpeg`},...extra});
 const subWork=(sid,data,aid=artid,auth=artistToken)=>commit([put(`virtualSubmissions/${sid}/artworks/${aid}`,data,{stamp:[]}),put(`virtualSubmissions/${sid}`,{},{mask:[]})],auth);
-async function resetSubmission(sid){for(const aid of [artid,'second-art'])await request(`virtualSubmissions/${sid}/artworks/${aid}`,{method:'DELETE',auth:'owner'});await request(`virtualSubmissions/${sid}`,{method:'DELETE',auth:'owner'});}
+async function resetSubmission(sid){for(const aid of [artid,'second-art','third-art'])await request(`virtualSubmissions/${sid}/artworks/${aid}`,{method:'DELETE',auth:'owner'});await request(`virtualSubmissions/${sid}`,{method:'DELETE',auth:'owner'});}
 await expectStatus('re-seed artist parent for submissions',200,request(`exhibitions/${artistParent}`,{method:'PATCH',data:fixture(artistParent)}));
 const open=subId('Open'),locked=subId('Locked'),old=subId('Old');
 for(const sid of [open,locked,old])await resetSubmission(sid);
@@ -406,6 +406,13 @@ await expectStatus('invite requires an existing exhibition',403,commit([put(`vir
 await expectStatus('short invite id denied',403,commit([put('virtualSubmissions/short',invite(),{stamp:['touchedAt','createdAt']})]));
 await expectStatus('staff creates invite',200,commit([put(`virtualSubmissions/${open}`,invite(),{stamp:['touchedAt','createdAt']})]));
 await expectStatus('staff creates email-locked invite',200,commit([put(`virtualSubmissions/${locked}`,invite({invitedEmail:'artist2@example.com'}),{stamp:['touchedAt','createdAt']})]));
+// Staff may pre-upload artworks and space settings before the artist opens the link.
+const staffWork=(sid,data,aid=artid)=>subWork(sid,data,aid,staff);
+await expectStatus('staff pre-uploads artwork to an invite',200,staffWork(open,subArtwork(open)));
+await expectStatus('staff pre-upload requires the parent touch',403,commit([put(`virtualSubmissions/${open}/artworks/second-art`,subArtwork(open,'second-art'),{stamp:[]})]));
+await expectStatus('staff pre-upload keeps image scoping',403,staffWork(open,subArtwork(open,artid,{image:{...artwork.image,path:`virtualSubmissions/${locked}/${artid}/11111111-2222-4333-8444-555555555555.jpeg`}})));
+await expectStatus('staff sets space settings before the invite opens',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,theme:'wood'}},{mask:['settings']})]));
+await expectStatus('artist cannot write an unclaimed invite artwork',403,subWork(open,subArtwork(open,'second-art'),'second-art'));
 await expectStatus('anonymous reads unclaimed invite',200,request(`virtualSubmissions/${open}`,{auth:null}));
 const anonList=await fetch(`${base}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'virtualSubmissions'}]}})});
 assert.equal(anonList.status,403);checks++;
@@ -434,6 +441,8 @@ await expectStatus('other account cannot write artwork',403,subWork(open,subArtw
 await expectStatus('owner reads artworks',200,request(`virtualSubmissions/${open}/artworks/${artid}`,{auth:artistToken}));
 await expectStatus('other account cannot read artworks',403,request(`virtualSubmissions/${open}/artworks/${artid}`,{auth:otherToken}));
 await expectStatus('owner submits for review',200,commit([put(`virtualSubmissions/${open}`,{status:'submitted'},{mask:['status']})],artistToken));
+await expectStatus('staff cannot edit artwork under review',403,staffWork(open,subArtwork(open,'third-art'),'third-art'));
+await expectStatus('staff cannot change settings under review',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,theme:'black'}},{mask:['settings']})]));
 await expectStatus('submitted locks artwork edits',403,subWork(open,subArtwork(open,'second-art'),'second-art'));
 await expectStatus('submitted locks settings',403,commit([put(`virtualSubmissions/${open}`,{settings:subSettings},{mask:['settings']})],artistToken));
 await expectStatus('artist cannot reject',403,commit([put(`virtualSubmissions/${open}`,{status:'rejected'},{mask:['status']})],artistToken));

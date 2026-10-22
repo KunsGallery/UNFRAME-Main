@@ -306,6 +306,12 @@ service cloud.firestore {
     && getAfter(submissionPath(sid)).data.ownerEmail == request.auth.token.email
     && getAfter(submissionPath(sid)).data.status in ['draft','rejected'];
   }
+  // Staff may pre-fill an upload (before or after the artist claims it) until review is requested.
+  function staffArtworkWrite(sid) {
+   return staff() && existsAfter(submissionPath(sid))
+    && getAfter(submissionPath(sid)).data.touchedAt == request.time
+    && getAfter(submissionPath(sid)).data.status in ['invited','draft','rejected'];
+  }
   match /virtualSubmissions/{sid} {
    allow get: if staff()
     || (resource.data.ownerEmail == '' && submissionLive(resource.data))
@@ -323,7 +329,8 @@ service cloud.firestore {
      && boundArtist(get(/databases/$(database)/documents/virtualGalleries/$(request.resource.data.targetGalleryId)).data)
      && request.resource.data.exhibitionId == virtualParent(get(/databases/$(database)/documents/virtualGalleries/$(request.resource.data.targetGalleryId)).data,request.resource.data.targetGalleryId)));
    allow update: if validSubmission(request.resource.data,sid) && (
-    (staff() && changedOnly(['status','reviewNote','approvedGalleryId','touchedAt'])
+    (staff() && changedOnly(['status','reviewNote','approvedGalleryId','settings','touchedAt'])
+     && (request.resource.data.settings == resource.data.settings || resource.data.status != 'submitted')
      && (request.resource.data.status == resource.data.status
       || (resource.data.status == 'submitted' && request.resource.data.status == 'rejected')))
     || (googleUser() && submissionLive(resource.data) && resource.data.ownerEmail == ''
@@ -335,7 +342,7 @@ service cloud.firestore {
    allow delete: if staff();
    match /artworks/{artid} {
     allow read: if staff() || (submissionOwner(get(submissionPath(sid)).data) && submissionLive(get(submissionPath(sid)).data));
-    allow create, update: if virtualId(artid) && artistArtworkWrite(sid)
+    allow create, update: if virtualId(artid) && (artistArtworkWrite(sid) || staffArtworkWrite(sid))
      && validArtworkFields(request.resource.data)
      && validSubmissionImage(request.resource.data.image,sid,artid,getAfter(submissionPath(sid)).data.targetGalleryId);
     allow delete: if staff() || artistArtworkWrite(sid);
