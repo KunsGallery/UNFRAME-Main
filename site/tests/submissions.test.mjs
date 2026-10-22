@@ -269,3 +269,27 @@ test('gallery deletion asks for the artist or gallery name',()=>{
  assert.equal(deleteNameMatches('김하','김하늘'),false);
  assert.equal(deleteNameMatches('','김하늘'),false);
 });
+test('staff pre-upload artworks the artist sees after claiming the link',async()=>{
+ memoryStorage();
+ const invite=await createInvite(exhibition,{artistName:'김하늘',invitedEmail:''});
+ const art={...work('a1'),image:{url:'',path:`virtualSubmissions/${invite.id}/a1/12345678-1234-1234-1234-123456789012.webp`,alt:'정면'}};
+ await saveSubmissionArtwork(invite.id,art,{asStaff:true});
+ await saveSubmissionSettings(invite.id,{theme:'wood',wallColor:'#f6f4ee',lighting:'general',ceiling:'plain'},{asStaff:true});
+ const staffView=await getSubmission(invite.id,{staff:true});
+ assert.equal(staffView.submission.status,'invited');assert.deepEqual(staffView.artworks.map(item=>item.id),['a1']);
+ await artistLogin();await claimInvite(invite.id);
+ const mine=await getSubmission(invite.id);
+ assert.deepEqual(mine.artworks.map(item=>item.title),['작품 a1']);assert.equal(mine.submission.settings.theme,'wood');
+ await saveSubmissionArtwork(invite.id,{...mine.artworks[0],title:'작가가 고친 제목'});
+ await deleteSubmissionArtwork(invite.id,'a1',{asStaff:true});
+ assert.equal((await getSubmission(invite.id)).artworks.length,0);
+ await saveSubmissionArtwork(invite.id,art,{asStaff:true});await setSubmissionStatus(invite.id,'submitted');
+ await assert.rejects(saveSubmissionArtwork(invite.id,{...art,title:'심사 중 수정'},{asStaff:true}),/심사/);
+ await assert.rejects(saveSubmissionSettings(invite.id,{theme:'black',wallColor:'#f6f4ee',lighting:'general',ceiling:'plain'},{asStaff:true}),/심사/);
+ delete globalThis.localStorage;
+});
+test('invite cards offer staff pre-upload until review is requested',()=>{
+ const now=new Date('2026-10-21T00:00:00Z');
+ assert.match(inviteCardHTML(card(),now),/href="\/artist-studio\/AbCdEfGhIjKlMnOpQrStUv\?as=staff"[^>]*>작품 미리 올리기/);
+ assert.doesNotMatch(inviteCardHTML(card({status:'submitted',ownerEmail:'a@b.com'}),now),/작품 미리 올리기/);
+});
