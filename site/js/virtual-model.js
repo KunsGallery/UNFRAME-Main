@@ -6,15 +6,20 @@ export const CEILINGS={plain:'일반 천장',luminous:'광천장'};
 // Gallery wall paints offered in the editors. Saved galleries with another colour keep it.
 export const WALL_COLORS={'#f6f4ee':'웜 화이트','#fafaf8':'퓨어 화이트','#e4e3df':'라이트 그레이','#cfc9bf':'웜 그레이','#3a3c3b':'차콜','#2f3d35':'딥 그린','#26324a':'딥 네이비'};
 export const wallColorOptions=current=>Object.hasOwn(WALL_COLORS,current)||!/^#[0-9a-fA-F]{6}$/.test(current||'')?WALL_COLORS:{...WALL_COLORS,[current]:`기존 색상 (${current})`};
+// Room presets in metres. 'large' is the original room; galleries without roomSize keep it.
+export const ROOMS={small:{id:'small',label:'소 · 10 × 8m',w:10,d:8,wall:6},medium:{id:'medium',label:'중 · 13 × 11m',w:13,d:11,wall:8},large:{id:'large',label:'대 · 16 × 14m',w:16,d:14,wall:10}};
+export const roomOf=settings=>ROOMS[settings?.roomSize]||ROOMS.large;
+export const SHAPES={rect:'사각형',circle:'원형',free:'자유형 (투명 배경 PNG)'};
+export const SALE_STATUS={available:'판매 가능',reserved:'예약 중',sold:'판매 완료',nfs:'비매품 (Not for Sale)'};
 export const CANVAS_EDGES={natural:'자연색 캔버스',black:'검정 측면',image:'이미지 감싸기'};
-export const defaultGallery=exhibition=>({title:exhibition.title,subtitle:exhibition.summary||'',published:false,lighting:'general',ceiling:'luminous',theme:'white',wallColor:'#f6f4ee',brightness:1,speed:2.5,outdoor:true,showPrices:false});
+export const defaultGallery=exhibition=>({title:exhibition.title,subtitle:exhibition.summary||'',published:false,roomSize:'medium',lighting:'general',ceiling:'luminous',theme:'white',wallColor:'#f6f4ee',brightness:1,speed:2.5,outdoor:true,showPrices:false});
 // Deleting a gallery is confirmed by typing the name staff see in the gallery list.
 export const galleryDeleteName=settings=>settings.artistName||settings.title;
 export const deleteNameMatches=(input,expected)=>!!expected&&String(input||'').trim()===expected.trim();
 export const galleryExhibitionId=(id,settings)=>settings.exhibitionId||id;
 export const defaultArtistGallery=(exhibition,artistName,order=0)=>({...defaultGallery(exhibition),title:`${artistName} · ${exhibition.title}`.slice(0,200),subtitle:'',exhibitionId:exhibition.id,artistName,order});
 export const sortVirtualGalleries=items=>[...items].sort((a,b)=>Number(!!a.settings.artistName)-Number(!!b.settings.artistName)||(a.settings.order||0)-(b.settings.order||0)||a.settings.title.localeCompare(b.settings.title));
-export const emptyArtwork=()=>({id:crypto.randomUUID(),title:'',titleEn:'',artist:'',year:'',medium:'',widthCm:80,heightCm:100,price:'',description:'',wall:'front',frame:'canvas',canvasThickness:3.5,canvasEdge:'natural',order:0,image:{url:'',path:'',alt:''}});
+export const emptyArtwork=()=>({id:crypto.randomUUID(),title:'',titleEn:'',artist:'',year:'',medium:'',widthCm:80,heightCm:100,price:'',description:'',wall:'front',frame:'canvas',canvasThickness:3.5,canvasEdge:'natural',shape:'rect',saleStatus:'available',order:0,image:{url:'',path:'',alt:''}});
 const bounded=(value,max,min=0)=>typeof value==='string'&&value.length>=min&&value.length<=max;
 const between=(value,min,max)=>Number.isFinite(value)&&value>=min&&value<=max;
 export function validateGallery(data,artworks=[]){
@@ -24,10 +29,11 @@ export function validateGallery(data,artworks=[]){
  if(!bounded(data.title,200,1)||!bounded(data.subtitle,1000))throw new Error('갤러리 제목은 200자, 소개는 1,000자 이내로 입력해주세요.');
  if(!Object.hasOwn(THEMES,data.theme)||!/^#[0-9a-fA-F]{6}$/.test(data.wallColor)||!between(data.brightness,.5,1.8)||!between(data.speed,1,5))throw new Error('공간 설정 값을 확인해주세요.');
  if(data.lighting!==undefined&&!Object.hasOwn(LIGHTING,data.lighting)||data.ceiling!==undefined&&!Object.hasOwn(CEILINGS,data.ceiling))throw new Error('조명과 천장 설정을 확인해주세요.');
+ if(data.roomSize!==undefined&&!Object.hasOwn(ROOMS,data.roomSize))throw new Error('공간 크기 설정을 확인해주세요.');
  if(data.artistNote!==undefined&&!bounded(data.artistNote,600))throw new Error('작가 소개는 600자 이내로 입력해주세요.');
  if(['published','outdoor','showPrices'].some(key=>typeof data[key]!=='boolean'))throw new Error('게시 및 공간 설정을 확인해주세요.');
  if(data.published&&!artworks.length)throw new Error('공개하려면 작품을 한 점 이상 등록해주세요.');
- if(data.published)layoutArtworks(artworks);
+ if(data.published)layoutArtworks(artworks,data.roomSize);
  return data;
 }
 export function validateArtwork(data){
@@ -36,6 +42,11 @@ export function validateArtwork(data){
  if(!between(data.widthCm,10,500)||!between(data.heightCm,10,500))throw new Error('작품의 가로·세로 크기는 10~500cm로 입력해주세요.');
  if(!Object.hasOwn(WALLS,data.wall)||!Object.hasOwn(FRAMES,data.frame)||!Number.isInteger(data.order)||!between(data.order,0,1000000))throw new Error('작품 배치와 노출 순서를 확인해주세요.');
  if(data.canvasThickness!==undefined&&!between(data.canvasThickness,.5,10)||data.canvasEdge!==undefined&&!Object.hasOwn(CANVAS_EDGES,data.canvasEdge))throw new Error('캔버스 두께는 0.5~10cm, 측면 표현은 선택 항목으로 입력해주세요.');
+ if(data.shape!==undefined&&!Object.hasOwn(SHAPES,data.shape))throw new Error('작품 형태를 선택해주세요.');
+ if(data.saleStatus!==undefined&&!Object.hasOwn(SALE_STATUS,data.saleStatus))throw new Error('판매 상태를 선택해주세요.');
+ if(data.shape==='circle'&&data.widthCm!==data.heightCm)throw new Error('원형 작품은 지름 하나로 입력해주세요.');
+ if(data.shape==='circle'&&!['canvas','none'].includes(data.frame))throw new Error('원형 작품은 캔버스 또는 프레임 없음(종이)으로 선택해주세요.');
+ if(data.shape==='free'&&data.frame!=='none')throw new Error('자유형 작품은 프레임 없이 투명 배경 이미지로 걸립니다. 형태를 프레임 없음으로 선택해주세요.');
  if(!data.image?.url&&!data.image?.path)throw new Error('작품 이미지를 업로드해주세요.');
  if(!bounded(data.image?.alt,1000))throw new Error('이미지 설명은 1,000자 이내로 입력해주세요.');
  return data;
@@ -46,14 +57,15 @@ export function artworkMount(frame,thickness=3.5){
 }
 // Centimetres become metres without scaling. Reflow actual footprints and reject
 // arrangements exceeding the usable wall area (10m wide, 3.6m high).
-export function layoutArtworks(artworks){
- const arranged=[];const wallWidth=10,wallHeight=3.6,gap=.65,rowGap=.35;
+export function layoutArtworks(artworks,roomSize){
+ const room=ROOMS[roomSize]||ROOMS.large,arranged=[];const wallWidth=room.wall,wallHeight=3.6,gap=.65,rowGap=.35;
+ const frontX=-room.w/2+.05,sideZ=room.d/2-.05;
  for(const wall of Object.keys(WALLS)){
   const list=artworks.filter(art=>art.wall===wall).sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
   const rows=[];let row={items:[],width:0,height:0};
   for(const art of list){
    const mount=artworkMount(art.frame),width=art.widthCm/100,height=art.heightCm/100,outerWidth=width+mount.border,outerHeight=height+mount.border;
-   if(outerWidth>wallWidth||outerHeight>wallHeight)throw new Error(`「${art.title}」의 실제 크기가 현재 공간의 벽 영역(가로 1,000cm · 세로 360cm)을 넘습니다. 작품 크기는 자동 축소하지 않습니다.`);
+   if(outerWidth>wallWidth||outerHeight>wallHeight)throw new Error(`「${art.title}」의 실제 크기가 현재 공간의 벽 영역(가로 ${(wallWidth*100).toLocaleString('ko-KR')}cm · 세로 360cm)을 넘습니다. 작품 크기는 자동 축소하지 않습니다.`);
    if(row.items.length&&row.width+gap+outerWidth>wallWidth){rows.push(row);row={items:[],width:0,height:0};}
    row.width+=(row.items.length?gap:0)+outerWidth;row.height=Math.max(row.height,outerHeight);row.items.push({art,width,height,outerWidth});
   }
@@ -65,10 +77,17 @@ export function layoutArtworks(artworks){
    let cursor=-packed.width/2;const y=top-packed.height/2;
    for(const {art,width,height,outerWidth} of packed.items){
     const t=cursor+outerWidth/2;
-    arranged.push({...art,size:[width,height],position:wall==='front'?[-7.95,y,t]:[t,y,wall==='right'?-6.95:6.95],rotation:[0,wall==='front'?Math.PI/2:wall==='left'?Math.PI:0,0]});cursor+=outerWidth+gap;
+    arranged.push({...art,size:[width,height],position:wall==='front'?[frontX,y,t]:[t,y,wall==='right'?-sideZ:sideZ],rotation:[0,wall==='front'?Math.PI/2:wall==='left'?Math.PI:0,0]});cursor+=outerWidth+gap;
    }
    top-=packed.height+rowGap;
   }
  }
  return arranged;
+}
+// Gallery convention: a red dot marks a sold work, a blue dot a reserved one.
+export function saleBadge(status){
+ if(status==='sold')return {label:'판매 완료',color:'#c8202a',dot:true};
+ if(status==='reserved')return {label:'예약 중',color:'#004aad',dot:true};
+ if(status==='nfs')return {label:'Not for Sale',color:'#5a625f',dot:false};
+ return null;
 }

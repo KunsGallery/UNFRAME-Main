@@ -1,8 +1,8 @@
 import {environmentOptions,surfaceTexture,materialTexture,buildOutdoor,canvasSideMaterials} from './virtual-environment.js';
-import {layoutArtworks,artworkMount} from './virtual-model.js';
+import {layoutArtworks,artworkMount,roomOf,saleBadge} from './virtual-model.js';
 import {createTour} from './virtual-tour.js';
 import {mountHud} from './virtual-hud.js';
-import {wallViewpoint,ENTRY_VIEW} from './virtual-links.js';
+import {wallViewpoint,entryView,playerBounds} from './virtual-links.js';
 import {bindTouchLook} from './virtual-input.js';
 import {QUALITY,deviceQuality,downgrade} from './virtual-quality.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
@@ -417,7 +417,7 @@ let artworksData=[],gallerySettings,quality='medium';
       },
 
       createArtworkTexture: function(art) {
-        const texture=new THREE.TextureLoader().load(art.dataUrl,loaded=>{for(const edge of loaded.userData?.edgeMaps||[]){edge.image=loaded.image;edge.needsUpdate=true;}},undefined,()=>GalleryApp.showToast('일부 작품 이미지를 불러오지 못했습니다. 작품 목록에서 다시 확인해주세요.'));
+        const texture=new THREE.TextureLoader().load(art.dataUrl,loaded=>{for(const edge of loaded.userData?.edgeMaps||[]){edge.image=loaded.image;edge.needsUpdate=true;}loaded.userData?.onReady?.(loaded);},undefined,()=>GalleryApp.showToast('일부 작품 이미지를 불러오지 못했습니다. 작품 목록에서 다시 확인해주세요.'));
         texture.encoding=THREE.sRGBEncoding;
         return {texture,dataUrl:art.dataUrl};
       }
@@ -449,8 +449,8 @@ let artworksData=[],gallerySettings,quality='medium';
       player: {
         height: 1.75,
         speed: 5.5,
-        position: new THREE.Vector3(ENTRY_VIEW.position[0], 1.75, ENTRY_VIEW.position[1]),
-        yaw: ENTRY_VIEW.yaw,
+        position: new THREE.Vector3(0, 1.75, 0),
+        yaw: Math.PI / 2,
         pitch: 0,
         bounds: {
           minX: -7.0,
@@ -553,7 +553,7 @@ let artworksData=[],gallerySettings,quality='medium';
 
       setupCamera: function() {
         this.camera = new THREE.PerspectiveCamera(
-          65,
+          50, // close to human central vision so works read at their real scale
           window.innerWidth / window.innerHeight,
           0.1,
           200
@@ -588,8 +588,9 @@ let artworksData=[],gallerySettings,quality='medium';
       },
 
       buildGalleryRoom: function() {
-        const roomW = 16;
-        const roomD = 14;
+        const room = roomOf(gallerySettings);
+        const roomW = room.w;
+        const roomD = room.d;
         const roomH = 4.2;
 
         this.textures.floorBlack = TextureGenerator.createSeamlessHerringbone(false);
@@ -671,11 +672,11 @@ let artworksData=[],gallerySettings,quality='medium';
           roughness: 0.4
         });
         const beam1 = new THREE.Mesh(beamGeo, this.materials.ceilingBeams);
-        beam1.position.set(4.0, roomH - 0.225, 0);
+        beam1.position.set(roomW / 4, roomH - 0.225, 0);
         this.scene.add(beam1);
 
         const beam2 = new THREE.Mesh(beamGeo, this.materials.ceilingBeams);
-        beam2.position.set(-4.0, roomH - 0.225, 0);
+        beam2.position.set(-roomW / 4, roomH - 0.225, 0);
         this.scene.add(beam2);
 
         this.buildWindowWall(roomW, roomD, roomH);
@@ -921,6 +922,9 @@ let artworksData=[],gallerySettings,quality='medium';
           const frameWidthExtra = mount.border;
           const frameHeightExtra = mount.border;
 
+          const shape = art.shape || 'rect';
+          if (shape !== 'rect') { this.buildShapedArtwork(group, art, index, texture, w, h, frameDepth, frameMaterial); }
+          else {
           const frameGeo = new THREE.BoxGeometry(w + frameWidthExtra, h + frameHeightExtra, frameDepth);
           const frameMesh = new THREE.Mesh(frameGeo,art.frameStyle==='canvas'?canvasSideMaterials(THREE,texture,art.canvasEdge||'natural'):frameMaterial);
           frameMesh.position.z = frameDepth / 2;
@@ -947,6 +951,7 @@ let artworksData=[],gallerySettings,quality='medium';
           canvasMesh.receiveShadow = true;
           canvasMesh.userData = { isArtwork: true, data: art, index: index };
           group.add(canvasMesh);
+          }
 
           // 4. Detailed 3D Plaque Caption
           const plaqueTexture = TextureGenerator.createPlaqueTexture(art);
@@ -1315,15 +1320,16 @@ let artworksData=[],gallerySettings,quality='medium';
 
       resetCamera: function() {
         this.closeModal();
-        const defaultPos = new THREE.Vector3(ENTRY_VIEW.position[0], 1.75, ENTRY_VIEW.position[1]);
+        const entry = entryView(roomOf(gallerySettings));
+        const defaultPos = new THREE.Vector3(entry.position[0], 1.75, entry.position[1]);
         new TWEEN.Tween(this.camera.position)
           .to(defaultPos, window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:1000)
           .easing(TWEEN.Easing.Cubic.Out)
           .onComplete(() => {
             this.player.position.copy(defaultPos);
-            this.player.yaw = ENTRY_VIEW.yaw;
+            this.player.yaw = entry.yaw;
             this.player.pitch = 0;
-            this.camera.rotation.set(0, ENTRY_VIEW.yaw, 0, 'YXZ');
+            this.camera.rotation.set(0, entry.yaw, 0, 'YXZ');
           })
           .start();
       },
@@ -1402,10 +1408,10 @@ let artworksData=[],gallerySettings,quality='medium';
 
 // Public runtime adaptations: saved exhibition content, stable wall layout,
 // touch input and native accessible artwork dialogs.
-GalleryApp.rebalanceArtworksOnWalls=function(){artworksData=layoutArtworks(artworksData);};
+GalleryApp.rebalanceArtworksOnWalls=function(){artworksData=layoutArtworks(artworksData,gallerySettings.roomSize);};
 GalleryApp.requestPointerLock=function(){};
 GalleryApp.buildSunbeams=function(){}; // Daylight and real window shadows replace a luminous overlay plane.
-GalleryApp.buildOutdoorGarden=function(){this.outdoorEnvironment=buildOutdoor(THREE,this.scene,this.renderer,()=>TextureGenerator.createPhotorealisticForestTexture(),{leafCount:QUALITY[quality].leaves});};
+GalleryApp.buildOutdoorGarden=function(){this.outdoorEnvironment=buildOutdoor(THREE,this.scene,this.renderer,()=>TextureGenerator.createPhotorealisticForestTexture(),{leafCount:QUALITY[quality].leaves,offsetX:roomOf(gallerySettings).w/2-8});};
 // Caption sits 8cm beside the work at a 2:1 ratio with large type, readable from viewing distance.
 TextureGenerator.createPlaqueTexture=function(art){
  const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=512;
@@ -1414,6 +1420,8 @@ TextureGenerator.createPlaqueTexture=function(art){
  context.font='42px Noto Sans KR';
  const lines=[art.artist,[art.year,art.medium].filter(Boolean).join(' · '),art.dimensions,...(gallerySettings.showPrices&&art.price?[art.price]:[])].filter(Boolean);
  lines.slice(0,4).forEach((line,index)=>context.fillText(line,48,190+index*80,928));
+ const badge=saleBadge(art.saleStatus);
+ if(badge){context.fillStyle=badge.color;if(badge.dot){context.beginPath();context.arc(964,72,26,0,Math.PI*2);context.fill();}context.font='500 34px Noto Sans KR';context.textAlign='right';context.fillText(badge.label,badge.dot?920:976,84);context.textAlign='left';}
  const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;return texture;
 };
 // Guided tour: stand in front of each work without a dialog; details open on request.
@@ -1431,6 +1439,21 @@ function showTourStop(stop){
 function endTour(){tour.stop();GalleryApp.isTourActive=false;tourBar.hidden=true;GalleryApp.closeModal();}
 GalleryApp.startTour=function(){if(!artworksData.length)return;this.closeModal();tour=createTour(artworksData.map(art=>art.id));this.isTourActive=true;document.getElementById('start-overlay').classList.add('hidden');showTourStop(tour.start());};
 GalleryApp.nextTourStop=function(){if(this.isTourActive)showTourStop(tour.next());};
+// Round works: a disc cropped from the image centre, with a canvas edge or paper only.
+// Free-form works: the transparent PNG itself, its alpha shaping both surface and shadow.
+GalleryApp.buildShapedArtwork=function(group,art,index,texture,w,h,depth,sideMaterial){
+ const tag=mesh=>{mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData={isArtwork:true,data:art,index};group.add(mesh);return mesh;};
+ if(art.shape==='circle'){
+  texture.userData??={};texture.userData.onReady=loaded=>{const ratio=loaded.image.width/loaded.image.height;if(ratio>1){loaded.repeat.set(1/ratio,1);loaded.offset.set((1-1/ratio)/2,0);}else{loaded.repeat.set(1,ratio);loaded.offset.set(0,(1-ratio)/2);}loaded.needsUpdate=true;};
+  if(texture.image?.width)texture.userData.onReady(texture);
+  if(art.frameStyle==='canvas'){const side=tag(new THREE.Mesh(new THREE.CylinderGeometry(w/2,w/2,depth,72),new THREE.MeshStandardMaterial({color:art.canvasEdge==='black'?0x171917:0xd9cdb6,roughness:1})));side.rotation.x=Math.PI/2;side.position.z=depth/2;}
+  const face=tag(new THREE.Mesh(new THREE.CircleGeometry(w/2,72),new THREE.MeshBasicMaterial({map:texture,toneMapped:false})));face.position.z=depth+0.002;
+  return;
+ }
+ const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.5,toneMapped:false,side:THREE.DoubleSide});
+ const face=tag(new THREE.Mesh(new THREE.PlaneGeometry(w,h),material));face.position.z=0.01;
+ face.customDepthMaterial=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,map:texture,alphaTest:.5});
+};
 const originalOpen=GalleryApp.openModal;
 GalleryApp.openModal=function(art){
  if(this.isTourActive&&!tourDetail)return;
@@ -1443,6 +1466,9 @@ GalleryApp.openModal=function(art){
  document.getElementById('modal-spec-medium').closest('.art-spec-row').hidden=!art.medium;
  document.getElementById('tour-stop').hidden=!this.isTourActive;
  document.getElementById('modal-spec-price').closest('.art-spec-row').hidden=!gallerySettings.showPrices||!art.price;
+ const badge=saleBadge(art.saleStatus),saleRow=document.getElementById('modal-spec-sale');
+ saleRow.closest('.art-spec-row').hidden=!badge;
+ if(badge)saleRow.innerHTML=`${badge.dot?`<span class="sale-dot" style="background:${badge.color}" aria-hidden="true"></span>`:''}${badge.label}`;
  document.getElementById('tour-next').hidden=!this.isTourActive;
  if(!dialog.open)dialog.showModal();
 };
@@ -1470,9 +1496,13 @@ function watchFrameRate(){
  requestAnimationFrame(tick);
 }
 export function mountRoom(settings,works){
- layoutArtworks(works); // Validate true-size placement before allocating the scene.
+ layoutArtworks(works,settings.roomSize); // Validate true-size placement before allocating the scene.
  gallerySettings=settings;quality=deviceQuality();
- artworksData=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:`${work.heightCm} × ${work.widthCm} cm`}));
+ { // Arrival and walkable area follow the chosen room size.
+  const room=roomOf(settings),entry=entryView(room);
+  GalleryApp.player.bounds=playerBounds(room);GalleryApp.player.position.set(entry.position[0],1.75,entry.position[1]);GalleryApp.player.yaw=entry.yaw;
+ }
+ artworksData=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:work.shape==='circle'?`지름 ${work.widthCm} cm`:`${work.heightCm} × ${work.widthCm} cm`}));
  GalleryApp.init();
  bindTouchLook(GalleryApp.container,GalleryApp);
  const release=()=>{for(const key of Object.keys(GalleryApp.keys))GalleryApp.keys[key]=false;};
@@ -1491,6 +1521,6 @@ export function mountRoom(settings,works){
  const stop=()=>{GalleryApp.disposed=true;cancelAnimationFrame(GalleryApp.animationFrame);TWEEN.removeAll();GalleryApp.outdoorEnvironment?.dispose();GalleryApp.scene.traverse(object=>{object.geometry?.dispose();for(const material of [object.material].flat().filter(Boolean)){for(const texture of new Set([material.map,material.bumpMap,material.emissiveMap].filter(Boolean)))texture.dispose();material.dispose();}});GalleryApp.renderer.dispose();};
  // Back/forward cache retains the live room; dispose only when leaving for good.
  window.addEventListener('pagehide',event=>{if(!event.persisted)stop();});
- for(const button of document.querySelectorAll('[data-wall]'))button.addEventListener('click',()=>{const view=wallViewpoint(button.dataset.wall);if(view)GalleryApp.goToWall(view);});
+ for(const button of document.querySelectorAll('[data-wall]'))button.addEventListener('click',()=>{const view=wallViewpoint(button.dataset.wall,roomOf(gallerySettings));if(view)GalleryApp.goToWall(view);});
  return {applyLook:({theme,wallColor})=>{GalleryApp.setTheme(theme);GalleryApp.materials.walls.color.set(wallColor);},close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
 }

@@ -42,3 +42,4 @@ body:has(#tour-bar:not([hidden])) .nav-controls-container,body:has(#tour-bar:not
 .start-info p{font-size:14px;line-height:1.75;color:#3d4642;margin:8px 0 0;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
 /* Set on <html> by an inline head script so the studio preview never flashes the entry window. */
 .embed-preview #start-overlay,.embed-preview .top-header,.embed-preview .top-right-panel,.embed-preview .nav-controls-container,.embed-preview .bottom-left-panel,.embed-preview #crosshair,.embed-preview #tour-bar,.embed-preview #toast-msg{display:none!important}
+.sale-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:0}
