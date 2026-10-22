@@ -293,3 +293,18 @@ test('invite cards offer staff pre-upload until review is requested',()=>{
  assert.match(inviteCardHTML(card(),now),/href="\/artist-studio\/AbCdEfGhIjKlMnOpQrStUv\?as=staff"[^>]*>작품 미리 올리기/);
  assert.doesNotMatch(inviteCardHTML(card({status:'submitted',ownerEmail:'a@b.com'}),now),/작품 미리 올리기/);
 });
+test('uploads carry a room size and validate artwork placement against it',async()=>{
+ assert.equal(pickSubmissionSettings({}).roomSize,'medium');
+ assert.throws(()=>pickSubmissionSettings({roomSize:'huge'}),/공간/);
+ memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionSettings(id,{theme:'white',wallColor:'#f6f4ee',lighting:'general',ceiling:'plain',roomSize:'small'});
+ // Three 450 × 150cm works fit the 10m wall of the large room but not the 6m wall of the small one.
+ await saveSubmissionArtwork(id,fix(work('w1',{widthCm:450,heightCm:150})));await saveSubmissionArtwork(id,fix(work('w2',{widthCm:450,heightCm:150})));
+ await assert.rejects(saveSubmissionArtwork(id,fix(work('w3',{widthCm:450,heightCm:150}))),/들어가지 않습니다/);
+ await deleteSubmissionArtwork(id,'w1');await deleteSubmissionArtwork(id,'w2');
+ await saveSubmissionArtwork(id,fix(work('a1',{shape:'circle',widthCm:60,heightCm:60,frame:'none',saleStatus:'sold',price:'1,200,000원'})));
+ const {artworks}=await getSubmission(id);
+ assert.deepEqual([artworks[0].shape,artworks[0].saleStatus,artworks[0].price],['circle','sold','1,200,000원']);
+ assert.equal((await submissionPreview(id)).settings.roomSize,'small');
+ delete globalThis.localStorage;
+});

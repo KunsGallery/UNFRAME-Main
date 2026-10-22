@@ -1,6 +1,6 @@
 import {demo,firestoreClient,session,login,logout,getExhibition,removeImage,copyImages,purgeSubmissionImages,purgeGalleryImages} from './store.js';
 import {getVirtualGallery,listVirtualGalleries,saveVirtualSettings,saveVirtualArtwork,deleteVirtualArtwork,deleteVirtualGallery} from './virtual-store.js';
-import {validateArtwork,layoutArtworks,defaultArtistGallery,galleryExhibitionId,THEMES,LIGHTING,CEILINGS} from './virtual-model.js';
+import {validateArtwork,layoutArtworks,defaultArtistGallery,galleryExhibitionId,THEMES,LIGHTING,CEILINGS,ROOMS} from './virtual-model.js';
 import {EXPIRY_DAYS,newSubmissionId,expiryFrom,isExpired,artistCanEdit,canTransition,validateInvite,isSubmissionPath} from './submission-model.js';
 // Artist uploads stay in virtualSubmissions until staff approve them; rules and the media
 // worker enforce ownership and expiry in production, this module mirrors them in demo mode.
@@ -14,8 +14,8 @@ const shape=(id,data)=>({...data,id,touchedAt:toDate(data.touchedAt),createdAt:t
 const MAX_ARTWORKS=24,WALL_LIMIT=8;
 const EXPIRED='업로드 기한이 지나 더 이상 수정할 수 없습니다. 언프레임에 문의해주세요.';
 export function pickSubmissionSettings(settings={}){
- const data={theme:settings.theme||'white',wallColor:settings.wallColor||'#f6f4ee',lighting:settings.lighting||'general',ceiling:settings.ceiling||'luminous'};
- if(!Object.hasOwn(THEMES,data.theme)||!/^#[0-9a-fA-F]{6}$/.test(data.wallColor)||!Object.hasOwn(LIGHTING,data.lighting)||!Object.hasOwn(CEILINGS,data.ceiling))throw new Error('공간 설정 값을 확인해주세요.');
+ const data={theme:settings.theme||'white',wallColor:settings.wallColor||'#f6f4ee',lighting:settings.lighting||'general',ceiling:settings.ceiling||'luminous',roomSize:settings.roomSize||'medium'};
+ if(!Object.hasOwn(THEMES,data.theme)||!/^#[0-9a-fA-F]{6}$/.test(data.wallColor)||!Object.hasOwn(LIGHTING,data.lighting)||!Object.hasOwn(CEILINGS,data.ceiling)||!Object.hasOwn(ROOMS,data.roomSize))throw new Error('공간 설정 값을 확인해주세요.');
  if(settings.artistNote!==undefined){const note=String(settings.artistNote).trim();if(note.length>600)throw new Error('작가 소개는 600자 이내로 입력해주세요.');data.artistNote=note;}
  return data;
 }
@@ -85,7 +85,7 @@ export async function saveSubmissionArtwork(id,artwork,{remove=removeImage,asSta
  const others=artworks.filter(art=>art.id!==artwork.id);
  if(others.length>=MAX_ARTWORKS)throw new Error(`작품은 최대 ${MAX_ARTWORKS}점까지 등록할 수 있습니다.`);
  if(others.filter(art=>art.wall===artwork.wall).length>=WALL_LIMIT)throw new Error('한 벽면에는 최대 8점을 배치할 수 있습니다. 다른 벽면을 선택해주세요.');
- layoutArtworks([...others,artwork]);
+ layoutArtworks([...others,artwork],submission.settings.roomSize);
  const data=artworkData(artwork);
  if(demo){const all=read(),list=all[id].artworks,index=list.findIndex(art=>art.id===artwork.id);if(index<0)list.push({...data,id:artwork.id});else list[index]={...data,id:artwork.id};all[id].submission.touchedAt=nowISO();write(all);await dropReplacedImage(id,artworks,artwork,remove);return;}
  // The rules require the parent touch in the same batch, so every save renews the ten-day clock.
@@ -212,7 +212,7 @@ export async function approveSubmission(id,{publish,copy=copyImages,remove=remov
  if(pairs.length)await copy(pairs);
  const settings={...base,...submission.settings,artistEmail:submission.ownerEmail};
  const published=publish||!!existing?.settings.published;
- if(published)layoutArtworks(works);
+ if(published)layoutArtworks(works,settings.roomSize);
  await saveVirtualSettings(galleryId,{...settings,published:!!existing?.settings.published&&published},existing?.artworks||[]);
  for(const art of works)await saveVirtualArtwork(galleryId,art);
  for(const old of existing?.artworks||[]){

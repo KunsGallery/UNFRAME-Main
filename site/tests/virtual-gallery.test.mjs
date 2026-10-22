@@ -184,3 +184,8 @@ test('artwork shapes and sale status validate their combinations',()=>{
  assert.throws(()=>validateArtwork({...art,saleStatus:'gone'}),/판매/);
  const legacy={...art};delete legacy.shape;delete legacy.saleStatus;assert.doesNotThrow(()=>validateArtwork(legacy));
 });
+test('embedded preview carries the room size',()=>{
+ assert.equal(previewOverrides('?embed=1&roomSize=small').settings.roomSize,'small');
+ assert.equal(previewOverrides('?embed=1&roomSize=huge').settings.roomSize,undefined);
+ assert.match(previewURL('AbCdEfGhIjKlMnOpQrStUv',{roomSize:'medium'}),/roomSize=medium/);
+});
