@@ -84,3 +84,10 @@ export function layoutArtworks(artworks,roomSize){
  }
  return arranged;
 }
+// Gallery convention: a red dot marks a sold work, a blue dot a reserved one.
+export function saleBadge(status){
+ if(status==='sold')return {label:'판매 완료',color:'#c8202a',dot:true};
+ if(status==='reserved')return {label:'예약 중',color:'#004aad',dot:true};
+ if(status==='nfs')return {label:'Not for Sale',color:'#5a625f',dot:false};
+ return null;
+}

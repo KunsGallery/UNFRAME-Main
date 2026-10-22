@@ -12,8 +12,8 @@ export function materialTexture(THREE,kind){
  ctx.putImageData(pixels,0,0);if(kind==='paving'){ctx.strokeStyle='#92978d';ctx.lineWidth=1.5;ctx.strokeRect(0,0,256,256);}
  const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;return texture;
 }
-export function buildOutdoor(THREE,scene,renderer,fallbackTexture,{leafCount}={}){
- const group=new THREE.Group();group.name='unframe-woodland-terrace';scene.add(group);
+export function buildOutdoor(THREE,scene,renderer,fallbackTexture,{leafCount,offsetX=0}={}){
+ const group=new THREE.Group();group.name='unframe-woodland-terrace';group.position.x=offsetX;scene.add(group);
  const box=(material,w,h,d,x,y,z)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,z);group.add(mesh);return mesh;};
  const paving=materialTexture(THREE,'paving');paving.repeat.set(3,10);
  const stone=new THREE.MeshStandardMaterial({map:paving,bumpMap:paving,bumpScale:.008,roughness:.94});

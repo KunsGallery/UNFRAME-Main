@@ -189,3 +189,17 @@ test('embedded preview carries the room size',()=>{
  assert.equal(previewOverrides('?embed=1&roomSize=huge').settings.roomSize,undefined);
  assert.match(previewURL('AbCdEfGhIjKlMnOpQrStUv',{roomSize:'medium'}),/roomSize=medium/);
 });
+import {saleBadge} from '../js/virtual-model.js';
+test('sale badges: red dot for sold, blue for reserved, text for not for sale',()=>{
+ assert.deepEqual(saleBadge('sold'),{label:'판매 완료',color:'#c8202a',dot:true});
+ assert.deepEqual(saleBadge('reserved'),{label:'예약 중',color:'#004aad',dot:true});
+ assert.deepEqual(saleBadge('nfs'),{label:'Not for Sale',color:'#5a625f',dot:false});
+ assert.equal(saleBadge('available'),null);assert.equal(saleBadge(undefined),null);
+});
+import {normalizeShape} from '../js/artwork-form.js';
+test('shape choice normalises size and mount before saving',()=>{
+ assert.deepEqual(normalizeShape({shape:'circle',widthCm:60,heightCm:90,frame:'black'}),{shape:'circle',widthCm:60,heightCm:60,frame:'canvas'});
+ assert.deepEqual(normalizeShape({shape:'circle',widthCm:60,heightCm:90,frame:'none'}),{shape:'circle',widthCm:60,heightCm:60,frame:'none'});
+ assert.deepEqual(normalizeShape({shape:'free',widthCm:60,heightCm:90,frame:'canvas'}),{shape:'free',widthCm:60,heightCm:90,frame:'none'});
+ assert.deepEqual(normalizeShape({shape:'rect',widthCm:60,heightCm:90,frame:'wood'}),{shape:'rect',widthCm:60,heightCm:90,frame:'wood'});
+});
