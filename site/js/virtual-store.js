@@ -4,12 +4,13 @@ import {DEMO_VIRTUAL} from './virtual-demo.js';
 const key='unframe-virtual-galleries-demo-v2';
 const read=()=>JSON.parse(localStorage.getItem(key)||'null')||structuredClone(DEMO_VIRTUAL);
 function localSave(data){try{localStorage.setItem(key,JSON.stringify(data));}catch{throw new Error('샘플 저장 공간이 부족합니다. 이미지 크기를 줄여주세요.');}}
-export async function getVirtualGallery(id,{admin=false}={}){
- if(demo){const data=read()[id];if(!data)return null;const exhibition=await getExhibition(galleryExhibitionId(id,data.settings));return admin||(data.settings.published&&exhibition?.published)?structuredClone(data):null;}
+export async function getVirtualGallery(id,{admin=false,artworkLimit=0}={}){
+ if(demo){const data=read()[id];if(!data)return null;const exhibition=await getExhibition(galleryExhibitionId(id,data.settings));if(!(admin||(data.settings.published&&exhibition?.published)))return null;const result=structuredClone(data);if(artworkLimit>0)result.artworks=result.artworks.sort((a,b)=>a.order-b.order).slice(0,artworkLimit);return result;}
  const f=await firestoreClient();let doc;
  try{doc=await f.db.getDoc(f.db.doc(f.d,'virtualGalleries',id));}catch(error){if(!admin&&error.code==='permission-denied')return null;throw error;}
  if(!doc.exists())return null;
- const works=await f.db.getDocs(f.db.collection(f.d,'virtualGalleries',id,'artworks'));
+ const collection=f.db.collection(f.d,'virtualGalleries',id,'artworks');
+ const works=await f.db.getDocs(artworkLimit>0?f.db.query(collection,f.db.orderBy('order'),f.db.limit(artworkLimit)):collection);
  return {settings:doc.data(),artworks:works.docs.map(work=>({...work.data(),id:work.id})).sort((a,b)=>a.order-b.order)};
 }
 // Metadata only: each gallery retains its own artwork collection and media namespace.
