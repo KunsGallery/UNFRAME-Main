@@ -47,11 +47,13 @@ export async function getSubmission(id,{staff=false}={}){
   return {submission:shape(id,doc.data()),artworks:works.docs.map(work=>({...work.data(),id:work.id})).sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id))};
  }catch(error){if(error.code==='permission-denied')return null;throw error;}
 }
-async function editable(id){
+// Staff pre-fill an upload until review is requested; artists edit their own drafts.
+async function editable(id,asStaff=false){
+ if(asStaff){const data=await getSubmission(id,{staff:true});if(!data)throw new Error('업로드를 찾을 수 없습니다.');return {...data,canEdit:data.submission.status!=='submitted'};}
  const email=await artistEmail(),data=await getSubmission(id);
  if(!data){if(demo&&read()[id])throw new Error(EXPIRED);throw new Error('기한이 지났거나 권한이 없는 업로드입니다.');}
  if(data.submission.ownerEmail!==email)throw new Error('다른 계정에 연결된 초대입니다.');
- return {...data,email};
+ return {...data,email,canEdit:artistCanEdit(data.submission.status)};
 }
 
 // The 3D room renders a submission like a private gallery; access follows getSubmission.
@@ -70,15 +72,15 @@ export async function claimInvite(id){
  const f=await firestoreClient();await f.db.updateDoc(f.db.doc(f.d,'virtualSubmissions',id),{ownerEmail:email,status:'draft',touchedAt:f.db.serverTimestamp()});
  return getInvite(id);
 }
-export async function saveSubmissionSettings(id,settings){
- const {submission}=await editable(id);if(!artistCanEdit(submission.status))throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
+export async function saveSubmissionSettings(id,settings,{asStaff=false}={}){
+ const {canEdit}=await editable(id,asStaff);if(!canEdit)throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
  const data=pickSubmissionSettings(settings);
  if(demo){const all=read();Object.assign(all[id].submission,{settings:data,touchedAt:nowISO()});write(all);return;}
  const f=await firestoreClient();await f.db.updateDoc(f.db.doc(f.d,'virtualSubmissions',id),{settings:data,touchedAt:f.db.serverTimestamp()});
 }
-export async function saveSubmissionArtwork(id,artwork,{remove=removeImage}={}){
- const {submission,artworks}=await editable(id);
- if(!artistCanEdit(submission.status))throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
+export async function saveSubmissionArtwork(id,artwork,{remove=removeImage,asStaff=false}={}){
+ const {submission,artworks,canEdit}=await editable(id,asStaff);
+ if(!canEdit)throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
  validateArtwork(artwork);checkArtworkImage(submission,artwork);
  const others=artworks.filter(art=>art.id!==artwork.id);
  if(others.length>=MAX_ARTWORKS)throw new Error(`작품은 최대 ${MAX_ARTWORKS}점까지 등록할 수 있습니다.`);
@@ -97,8 +99,8 @@ async function dropReplacedImage(id,artworks,artwork,remove){
  const previous=artworks.find(art=>art.id===artwork.id)?.image?.path;
  if(isSubmissionPath(previous,id)&&previous!==artwork.image?.path)await remove(previous).catch(()=>{});
 }
-export async function deleteSubmissionArtwork(id,artId){
- const {submission,artworks}=await editable(id);if(!artistCanEdit(submission.status))throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
+export async function deleteSubmissionArtwork(id,artId,{asStaff=false}={}){
+ const {artworks,canEdit}=await editable(id,asStaff);if(!canEdit)throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
  const art=artworks.find(item=>item.id===artId);if(!art)return;
  if(demo){const all=read();all[id].artworks=all[id].artworks.filter(item=>item.id!==artId);all[id].submission.touchedAt=nowISO();write(all);}
  else{const f=await firestoreClient(),batch=f.db.writeBatch(f.d);batch.delete(f.db.doc(f.d,'virtualSubmissions',id,'artworks',artId));batch.update(f.db.doc(f.d,'virtualSubmissions',id),{touchedAt:f.db.serverTimestamp()});await batch.commit();}
