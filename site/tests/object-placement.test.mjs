@@ -31,7 +31,7 @@ test('placement rejects missing spots, shared spots and works too large for a sp
 });
 test('visitors are pushed out of an object\'s footprint but walk freely elsewhere',()=>{
  const obstacles=objectObstacles(placeObjects([object('a')],'medium'));
- const o=obstacles[0];assert.ok(Math.abs(o.r-(0.6/2+0.6))<1e-9);
+ const o=obstacles[0];assert.ok(Math.abs(o.r-(0.6/2+1))<1e-9);
  const pushed=resolveCollision([o.x+0.1,o.z],obstacles);
  assert.ok(Math.hypot(pushed[0]-o.x,pushed[1]-o.z)>=o.r-1e-9);
  assert.deepEqual(resolveCollision([0,0],obstacles),[0,0]);
@@ -47,4 +47,15 @@ test('objects validate their own fields and stay off the walls',()=>{
  assert.throws(()=>validateArtwork({...object('a'),kind:'statue'}),/종류/);
  const flat={...emptyArtwork(),id:'f',title:'회화',artist:'작가',order:0,image:{url:'x',path:'',alt:''}};
  assert.deepEqual(layoutArtworks([flat,object('a')],'medium').map(a=>a.id),['f']);
+});
+import {objectViewpoint} from '../js/virtual-objects.js';
+import {playerBounds} from '../js/virtual-links.js';
+test('tour stops stand in front of each spot, inside the room and outside the footprint',()=>{
+ for(const size of ['small','medium','large'])for(const spot of objectSpots(ROOMS[size])){
+  const [placed]=placeObjects([object('a',{spot:spot.id})],size),view=objectViewpoint(placed),bounds=playerBounds(ROOMS[size]);
+  assert.ok(view.position[0]>=bounds.minX&&view.position[0]<=bounds.maxX&&view.position[1]>=bounds.minZ&&view.position[1]<=bounds.maxZ,`${size} ${spot.id}`);
+  const [o]=objectObstacles([placed]);assert.ok(Math.hypot(view.position[0]-o.x,view.position[1]-o.z)>o.r,`${size} ${spot.id} outside footprint`);
+  const look=[-Math.sin(view.yaw),-Math.cos(view.yaw)],to=[o.x-view.position[0],o.z-view.position[1]],dot=(look[0]*to[0]+look[1]*to[1])/Math.hypot(...to);
+  assert.ok(dot>.999,`${size} ${spot.id} faces the object`);
+ }
 });

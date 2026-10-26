@@ -5,8 +5,10 @@ import {mountHud} from './virtual-hud.js';
 import {wallViewpoint,entryView,playerBounds} from './virtual-links.js';
 import {bindTouchLook} from './virtual-input.js';
 import {QUALITY,deviceQuality,downgrade} from './virtual-quality.js';
+import {placeObjects,objectObstacles,resolveCollision} from './object-placement.js';
+import {buildObjectGroup,objectViewpoint} from './virtual-objects.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
-let artworksData=[],gallerySettings,quality='medium';
+let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium';
     const TextureGenerator = {
       createSeamlessHerringbone: function(isWood = false) {
         const S = 512;
@@ -885,6 +887,7 @@ let artworksData=[],gallerySettings,quality='medium';
         });
 
         artworksData.forEach((art, index) => {
+          if (art.kind === 'object') return;
           const { texture, dataUrl } = TextureGenerator.createArtworkTexture(art);
           art.dataUrl = dataUrl;
 
@@ -985,7 +988,7 @@ let artworksData=[],gallerySettings,quality='medium';
           this.scene.add(spotLight);
           this.spotlights.push(spotLight);
         });
-
+        this.buildObjects();
 
       },
 
@@ -1398,6 +1401,7 @@ let artworksData=[],gallerySettings,quality='medium';
           // Wall Collision
           this.player.position.x = Math.max(this.player.bounds.minX, Math.min(this.player.bounds.maxX, this.player.position.x));
           this.player.position.z = Math.max(this.player.bounds.minZ, Math.min(this.player.bounds.maxZ, this.player.position.z));
+          if (obstacles.length) { const [x, z] = resolveCollision([this.player.position.x, this.player.position.z], obstacles); this.player.position.x = x; this.player.position.z = z; }
         }
 
         this.camera.position.x = this.player.position.x;
@@ -1408,7 +1412,29 @@ let artworksData=[],gallerySettings,quality='medium';
 
 // Public runtime adaptations: saved exhibition content, stable wall layout,
 // touch input and native accessible artwork dialogs.
-GalleryApp.rebalanceArtworksOnWalls=function(){artworksData=layoutArtworks(artworksData,gallerySettings.roomSize);};
+// Wall works are laid out by size; objects take their fixed floor spots.
+GalleryApp.rebalanceArtworksOnWalls=function(){
+ const placements=placeObjects(sourceWorks,gallerySettings.roomSize);obstacles=objectObstacles(placements);
+ artworksData=[...layoutArtworks(sourceWorks,gallerySettings.roomSize),...placements.map(placement=>({...placement.art,placement}))];
+};
+GalleryApp.buildObjects=function(){
+ const loader=THREE.GLTFLoader?new THREE.GLTFLoader():null,focused=environmentOptions(gallerySettings).lighting==='focused';
+ for(const art of artworksData.filter(item=>item.placement)){
+  const group=buildObjectGroup(THREE,art.placement,{loader,photoTexture:()=>TextureGenerator.createArtworkTexture(art).texture,onError:()=>this.showToast(`「${art.title}」의 3D 모델을 불러오지 못해 사진으로 보여드립니다.`)});
+  this.scene.add(group);this.artworkObjects.push(group);
+  const [x,z]=art.placement.position,light=new THREE.SpotLight(0xf5f5ef,focused?1.6:.8,9,Math.PI/7,.55,1.2),target=new THREE.Object3D();
+  light.position.set(x,4,z);target.position.set(x,0,z);this.scene.add(target);light.target=target;light.castShadow=QUALITY[quality].shadows;this.scene.add(light);this.spotlights.push(light);
+ }
+};
+const wallInspect=GalleryApp.inspectArtwork;
+GalleryApp.inspectArtwork=function(art){
+ if(art.kind!=='object'||!art.placement)return wallInspect.call(this,art);
+ this.isInspectMode=true;const view=objectViewpoint(art.placement),target=new THREE.Vector3(...view.lookAt),stop=new THREE.Vector3(view.position[0],this.player.height,view.position[1]);
+ // Look slightly down at the object's centre so the whole piece stays in frame after the detail closes.
+ this.player.yaw=view.yaw;this.player.pitch=Math.atan2(view.lookAt[1]-this.player.height,Math.hypot(view.position[0]-view.lookAt[0],view.position[1]-view.lookAt[2]));
+ new TWEEN.Tween(this.camera.position).to(stop,matchMedia('(prefers-reduced-motion: reduce)').matches?0:1200).easing(TWEEN.Easing.Cubic.Out)
+  .onUpdate(()=>this.camera.lookAt(target)).onComplete(()=>{this.camera.position.copy(stop);this.player.position.copy(stop);this.camera.rotation.set(this.player.pitch,this.player.yaw,0,'YXZ');this.openModal(art);}).start();
+};
 GalleryApp.requestPointerLock=function(){};
 GalleryApp.buildSunbeams=function(){}; // Daylight and real window shadows replace a luminous overlay plane.
 GalleryApp.buildOutdoorGarden=function(){this.outdoorEnvironment=buildOutdoor(THREE,this.scene,this.renderer,()=>TextureGenerator.createPhotorealisticForestTexture(),{leafCount:QUALITY[quality].leaves,offsetX:roomOf(gallerySettings).w/2-8});};
@@ -1496,13 +1522,13 @@ function watchFrameRate(){
  requestAnimationFrame(tick);
 }
 export function mountRoom(settings,works){
- layoutArtworks(works,settings.roomSize); // Validate true-size placement before allocating the scene.
+ layoutArtworks(works,settings.roomSize);placeObjects(works,settings.roomSize); // Validate placement before allocating the scene.
  gallerySettings=settings;quality=deviceQuality();
  { // Arrival and walkable area follow the chosen room size.
   const room=roomOf(settings),entry=entryView(room);
   GalleryApp.player.bounds=playerBounds(room);GalleryApp.player.position.set(entry.position[0],1.75,entry.position[1]);GalleryApp.player.yaw=entry.yaw;
  }
- artworksData=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:work.shape==='circle'?`지름 ${work.widthCm} cm`:`${work.heightCm} × ${work.widthCm} cm`}));
+ artworksData=sourceWorks=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:work.kind==='object'?`가로 ${work.widthCm} × 깊이 ${work.depthCm} × 높이 ${work.heightCm} cm${work.copies>1?` · ${work.copies}점`:''}`:work.shape==='circle'?`지름 ${work.widthCm} cm`:`${work.heightCm} × ${work.widthCm} cm`}));
  GalleryApp.init();
  bindTouchLook(GalleryApp.container,GalleryApp);
  const release=()=>{for(const key of Object.keys(GalleryApp.keys))GalleryApp.keys[key]=false;};

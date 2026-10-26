@@ -2,7 +2,7 @@ import {entryView} from './virtual-links.js';
 import {ROOMS} from './virtual-model.js';
 // Fixed exhibition spots for objects. Corner spots sit 1.2m from both walls so the walls hide
 // the back of a work; centre spots suit full 360° scans. Every spot faces the entrance.
-const CORNER_SPAN=1.8,CENTER_SPAN=3,GAP=.3,CLEARANCE=.6;
+const CORNER_SPAN=1.8,CENTER_SPAN=3,GAP=.3,CLEARANCE=1;
 export function objectSpots(room){
  const entry=entryView(room).position,front=-room.w/2+1.2,back=room.w/2-1.6,side=room.d/2-1.2,mid=-room.w/2+room.w*.72;
  const spot=(id,label,type,x,z)=>({id,label,type,position:[x,z],yaw:Math.atan2(entry[0]-x,entry[1]-z),maxSpan:type==='corner'?CORNER_SPAN:CENTER_SPAN});
