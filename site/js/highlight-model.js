@@ -1,4 +1,5 @@
 import {safeURL,todaySeoul} from './model.js';
+export const HIGHLIGHT_PROJECTS=['UP','음','U#','U.A.U'];
 export function validateHighlight(item){
  if(!['event','virtual','news'].includes(item.kind))throw new Error('소식, 이벤트 또는 버추얼 갤러리를 선택해주세요.');
  if(!item.title?.trim()||item.title.length>200)throw new Error('제목은 1~200자로 입력해주세요.');
@@ -6,9 +7,9 @@ export function validateHighlight(item){
  if(typeof item.url!=='string'||item.url.length>2000||item.url&&(!safeURL(item.url)||!(/^(https?:\/\/|\/(?!\/))/.test(item.url))))throw new Error('연결 주소는 https:// 또는 /로 시작해야 합니다.');
  const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
  if(item.startDate||item.endDate){if(!validDate(item.startDate)||!validDate(item.endDate)||item.startDate>item.endDate)throw new Error('시작일과 종료일을 정확하게 입력해주세요.');}
- if(item.nowFeatured!==undefined&&typeof item.nowFeatured!=='boolean')throw new Error('UNFRAME NOW 노출 설정을 확인해주세요.');
- if(item.kind==='virtual'&&item.nowFeatured)throw new Error('UNFRAME NOW에는 프로젝트 소식과 이벤트를 선택해주세요.');
- if(item.published&&(item.kind==='news'||item.nowFeatured)&&!['UP','음','U#','U.A.U'].includes(item.project))throw new Error('프로젝트를 UP, 음, U#, U.A.U 중에서 선택해주세요.');
+ if(item.nowFeatured!==undefined&&typeof item.nowFeatured!=='boolean')throw new Error('UNFRAME JOURNAL 노출 설정을 확인해주세요.');
+ if(item.kind==='virtual'&&item.nowFeatured)throw new Error('UNFRAME JOURNAL에는 프로젝트 소식과 이벤트를 선택해주세요.');
+ if(item.published&&(item.kind==='news'||item.nowFeatured)&&!HIGHLIGHT_PROJECTS.includes(item.project))throw new Error('프로젝트를 UP, 음, U#, U.A.U 중에서 선택해주세요.');
  if(item.published&&item.kind==='event'&&(!item.startDate||!item.endDate))throw new Error('이벤트를 게시하려면 시작일과 종료일이 필요합니다.');
  if(!Number.isInteger(item.order)||item.order<0||item.order>1000000)throw new Error('노출 순서는 0~1,000,000 사이 정수로 입력해주세요.');
  if(typeof item.published!=='boolean'||typeof item.featured!=='boolean')throw new Error('게시와 메인 노출 설정을 확인해주세요.');
@@ -20,5 +21,5 @@ export function selectedHighlights(items,today=todaySeoul()){
 }
 
 export function selectedNews(items,today=todaySeoul()){
- return items.filter(item=>item.published===true&&item.nowFeatured===true&&['event','news'].includes(item.kind)&&['UP','음','U#','U.A.U'].includes(item.project)&&(!item.endDate||item.endDate>=today)).sort((a,b)=>a.order-b.order||a.title.localeCompare(b.title)).slice(0,4);
+ return items.filter(item=>item.published===true&&item.nowFeatured===true&&['event','news'].includes(item.kind)&&HIGHLIGHT_PROJECTS.includes(item.project)&&(!item.endDate||item.endDate>=today)).sort((a,b)=>a.order-b.order||a.title.localeCompare(b.title)).slice(0,4);
 }
