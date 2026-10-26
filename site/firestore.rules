@@ -154,7 +154,7 @@ service cloud.firestore {
     && data.updatedAt is string && data.updatedAt.size()<=100
     && (!data.published || (data.url.size()>0 && data.cover.path.size()>0
      && (data.kind != 'event' || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate))
-     && ((data.kind != 'news' && data.get('nowFeatured',false) == false) || data.project in ['UP','음','U#','U.A.U'])));
+     && ((data.kind != 'news' && data.get('nowFeatured',false) == false) || data.project in ['UP','음','U#','U.A.U','UNFRAME SALON'])));
   }
   function virtualId(id) {
    return id.size()<=100 && id.matches('^[A-Za-z0-9_-]+$');

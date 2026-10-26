@@ -1,5 +1,5 @@
 import {safeURL,todaySeoul} from './model.js';
-export const HIGHLIGHT_PROJECTS=['UP','음','U#','U.A.U'];
+export const HIGHLIGHT_PROJECTS=['UP','음','U#','U.A.U','UNFRAME SALON'];
 export function validateHighlight(item){
  if(!['event','virtual','news'].includes(item.kind))throw new Error('소식, 이벤트 또는 버추얼 갤러리를 선택해주세요.');
  if(!item.title?.trim()||item.title.length>200)throw new Error('제목은 1~200자로 입력해주세요.');
@@ -9,7 +9,7 @@ export function validateHighlight(item){
  if(item.startDate||item.endDate){if(!validDate(item.startDate)||!validDate(item.endDate)||item.startDate>item.endDate)throw new Error('시작일과 종료일을 정확하게 입력해주세요.');}
  if(item.nowFeatured!==undefined&&typeof item.nowFeatured!=='boolean')throw new Error('UNFRAME JOURNAL 노출 설정을 확인해주세요.');
  if(item.kind==='virtual'&&item.nowFeatured)throw new Error('UNFRAME JOURNAL에는 프로젝트 소식과 이벤트를 선택해주세요.');
- if(item.published&&(item.kind==='news'||item.nowFeatured)&&!HIGHLIGHT_PROJECTS.includes(item.project))throw new Error('프로젝트를 UP, 음, U#, U.A.U 중에서 선택해주세요.');
+ if(item.published&&(item.kind==='news'||item.nowFeatured)&&!HIGHLIGHT_PROJECTS.includes(item.project))throw new Error('프로젝트를 UP, 음, U#, U.A.U, UNFRAME SALON 중에서 선택해주세요.');
  if(item.published&&item.kind==='event'&&(!item.startDate||!item.endDate))throw new Error('이벤트를 게시하려면 시작일과 종료일이 필요합니다.');
  if(!Number.isInteger(item.order)||item.order<0||item.order>1000000)throw new Error('노출 순서는 0~1,000,000 사이 정수로 입력해주세요.');
  if(typeof item.published!=='boolean'||typeof item.featured!=='boolean')throw new Error('게시와 메인 노출 설정을 확인해주세요.');
