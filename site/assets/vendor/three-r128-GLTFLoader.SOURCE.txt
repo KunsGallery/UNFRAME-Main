@@ -1,0 +1,2 @@
+three-r128-GLTFLoader.js: three@0.128.0 examples/js/loaders/GLTFLoader.js (MIT, see three-LICENSE.txt).
+SHA-256 5c15967ba830918a9caea6338712c994c354bccd4edc4569bde411c3ec06a3e6, identical on cdn.jsdelivr.net and unpkg.com.
