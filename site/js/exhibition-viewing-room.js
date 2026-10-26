@@ -1,5 +1,6 @@
 import {openShareCard} from './share-card.js';
 import {escapeHTML as e,imageURL} from './model.js';
+import {mixByArtist} from './artwork-mix.js';
 // Extend the existing exhibition: uncropped works lead, horizontal browsing stays local.
 export function viewingRoomMarkup(item){
  if(item.viewingRoomEnabled!==true)return '';
@@ -32,7 +33,8 @@ export async function loadViewingRoom(root,item){
   const {resolveImage}=await import('./store.js');
   const galleries=item.virtualGalleries||await listVirtualGalleries(item.id);
   const results=await Promise.allSettled(galleries.map(async space=>{const data=await getVirtualGallery(space.id);if(!data)return [];return Promise.all(data.artworks.map(async art=>({...art,galleryId:space.id,image:await resolveImage(art.image)})));}));
-  const works=results.filter(result=>result.status==='fulfilled').flatMap(result=>result.value);
+  // Artists take turns in a random order so the first artist's room never fills the start of the slider.
+  const works=mixByArtist(results.filter(result=>result.status==='fulfilled').flatMap(result=>result.value));
   if(!works.length&&results.some(result=>result.status==='rejected'))throw new Error('작품을 불러오지 못했습니다.');
   mountViewingRoom(root,works,item);
  }catch{const content=root.querySelector('.viewing-content');if(content)content.textContent='작품을 불러오지 못했습니다. 잠시 후 새로고침해주세요.';const expand=root.querySelector('[data-viewing-expand]');if(expand)expand.hidden=true;}
