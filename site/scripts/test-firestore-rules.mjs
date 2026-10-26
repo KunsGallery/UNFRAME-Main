@@ -104,6 +104,15 @@ await expectStatus('unknown sale status denied',403,saveArtwork({...artwork,sale
 await expectStatus('gallery room size saved',200,saveGallery({...settings,roomSize:'small'}));
 await expectStatus('unknown room size denied',403,saveGallery({...settings,roomSize:'huge'}));
 await expectStatus('restore gallery room size',200,saveGallery(settings));
+const objectArt={...artwork,kind:'object',depthCm:50,spot:'corner-front-left',yaw:45,plinth:'low',copies:2,model:{path:`virtualGalleries/${exid}/${artid}/11111111-2222-4333-8444-555555555555.glb`,name:'lamp.glb'}};
+await expectStatus('object artwork with GLB model',200,saveArtwork(objectArt));
+await expectStatus('object model must live under its artwork',403,saveArtwork({...objectArt,model:{...objectArt.model,path:`virtualGalleries/other/${artid}/11111111-2222-4333-8444-555555555555.glb`}}));
+await expectStatus('object model must be a GLB',403,saveArtwork({...objectArt,model:{...objectArt.model,path:`virtualGalleries/${exid}/${artid}/11111111-2222-4333-8444-555555555555.exe`}}));
+await expectStatus('unknown artwork kind denied',403,saveArtwork({...objectArt,kind:'statue'}));
+await expectStatus('object copies limited to five',403,saveArtwork({...objectArt,copies:6}));
+await expectStatus('object yaw limited',403,saveArtwork({...objectArt,yaw:400}));
+await expectStatus('unknown plinth denied',403,saveArtwork({...objectArt,plinth:'tall'}));
+await expectStatus('restore flat artwork',200,saveArtwork(artwork));
 await expectStatus('update canvas artwork',200,saveArtwork({...artwork,frame:'canvas',title:'캔버스 작품'}));
 await expectStatus('update artwork to black frame',200,saveArtwork(artwork));
 await expectStatus('update artwork',200,saveArtwork({...artwork,frame:'wood'}));
@@ -437,6 +446,8 @@ await expectStatus('owner updates settings',200,commit([put(`virtualSubmissions/
 await expectStatus('owner picks a room size',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,roomSize:'small'}},{mask:['settings']})],artistToken));
 await expectStatus('owner cannot pick an unknown room size',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,roomSize:'huge'}},{mask:['settings']})],artistToken));
 await expectStatus('owner saves a sold round artwork',200,subWork(open,subArtwork(open,artid,{frame:'none',shape:'circle',widthCm:60,heightCm:60,saleStatus:'reserved'})));
+await expectStatus('owner saves an object with a submission GLB',200,subWork(open,subArtwork(open,artid,{kind:'object',depthCm:40,spot:'center',yaw:0,plinth:'none',copies:1,model:{path:`virtualSubmissions/${open}/${artid}/11111111-2222-4333-8444-555555555555.glb`,name:'a.glb'}})));
+await expectStatus('owner cannot point an object at another submission GLB',403,subWork(open,subArtwork(open,artid,{kind:'object',depthCm:40,spot:'center',yaw:0,plinth:'none',copies:1,model:{path:`virtualSubmissions/${locked}/${artid}/11111111-2222-4333-8444-555555555555.glb`,name:'a.glb'}})));
 await expectStatus('owner writes artist intro',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,artistNote:'빛과 소리를 그립니다.'}},{mask:['settings']})],artistToken));
 await expectStatus('artist intro over 600 chars denied',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,artistNote:'가'.repeat(601)}},{mask:['settings']})],artistToken));
 await expectStatus('unknown settings key denied',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,published:true}},{mask:['settings']})],artistToken));

@@ -131,3 +131,22 @@ test('staff purge every stored object of a gallery; artists cannot; ids are vali
  assert.deepEqual(f.stored.map(item=>item.deleted),['virtualGalleries/artist-x/0','virtualGalleries/artist-x/1']);
  assert.equal((await handle(await purgeReq('..%2Fexhibitions'),f.env,f.fetcher)).status,404);
 });
+// 3D objects: uncompressed GLB beside the artwork images, same publication and ownership rules.
+const glbPath='virtualGalleries/exhibit/art/12345678-1234-1234-1234-123456789012.glb';
+const glb=Uint8Array.from([0x67,0x6c,0x54,0x46,2,0,0,0,20,0,0,0,0,0,0,0,0,0,0,0]);
+test('staff upload GLB models with a glTF signature up to 30MB',async()=>{
+ assert.deepEqual(parsePath('/media/'+glbPath),{key:glbPath,collection:'virtualGalleries',id:'exhibit',artId:'art',type:'model/gltf-binary'});
+ const put=async(body,length=body.length,type='model/gltf-binary')=>{const f=fixture();const response=await handle(new Request('https://media.example/media/'+glbPath,{method:'PUT',headers:{Authorization:'Bearer '+await token(),'Content-Type':type,'Content-Length':String(length)},body}),f.env,f.fetcher);return {status:response.status,stored:f.stored()};};
+ const ok=await put(glb);assert.equal(ok.status,200);assert.equal(ok.stored.k,glbPath);
+ assert.equal((await put(Uint8Array.from([0,1,2,3,2,0,0,0]))).status,415);
+ assert.equal((await put(glb,31*1024*1024)).status,413);
+ assert.equal((await put(glb,glb.length,'image/png')).status,415);
+});
+test('published galleries serve a GLB only when an artwork references it as its model',async()=>{
+ for(const [model,expected] of [[glbPath,200],['other',404]]){
+  const f=fixture();
+  const fetcher=async url=>url.includes('/artworks/')?Response.json({fields:{image:{mapValue:{fields:{path:{stringValue:'x'}}}},model:{mapValue:{fields:{path:{stringValue:model}}}}}}):Response.json({fields:{published:{booleanValue:true}}});
+  const response=await handle(new Request('https://media.example/media/'+glbPath),f.env,fetcher);
+  assert.equal(response.status,expected);if(expected===200)assert.equal(response.headers.get('Content-Type'),'model/gltf-binary');
+ }
+});

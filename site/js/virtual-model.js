@@ -7,6 +7,7 @@ export const CEILINGS={plain:'일반 천장',luminous:'광천장'};
 export const WALL_COLORS={'#f6f4ee':'웜 화이트','#fafaf8':'퓨어 화이트','#e4e3df':'라이트 그레이','#cfc9bf':'웜 그레이','#3a3c3b':'차콜','#2f3d35':'딥 그린','#26324a':'딥 네이비'};
 export const wallColorOptions=current=>Object.hasOwn(WALL_COLORS,current)||!/^#[0-9a-fA-F]{6}$/.test(current||'')?WALL_COLORS:{...WALL_COLORS,[current]:`기존 색상 (${current})`};
 // Room presets in metres. 'large' is the original room; galleries without roomSize keep it.
+import {placeObjects} from './object-placement.js';
 export const ROOMS={small:{id:'small',label:'소 · 10 × 8m',w:10,d:8,wall:6},medium:{id:'medium',label:'중 · 13 × 11m',w:13,d:11,wall:8},large:{id:'large',label:'대 · 16 × 14m',w:16,d:14,wall:10}};
 export const roomOf=settings=>ROOMS[settings?.roomSize]||ROOMS.large;
 export const SHAPES={rect:'사각형',circle:'원형',free:'자유형 (투명 배경 PNG)'};
@@ -34,6 +35,7 @@ export function validateGallery(data,artworks=[]){
  if(['published','outdoor','showPrices'].some(key=>typeof data[key]!=='boolean'))throw new Error('게시 및 공간 설정을 확인해주세요.');
  if(data.published&&!artworks.length)throw new Error('공개하려면 작품을 한 점 이상 등록해주세요.');
  if(data.published)layoutArtworks(artworks,data.roomSize);
+ placeObjects(artworks,data.roomSize);
  return data;
 }
 export function validateArtwork(data){
@@ -47,9 +49,20 @@ export function validateArtwork(data){
  if(data.shape==='circle'&&data.widthCm!==data.heightCm)throw new Error('원형 작품은 지름 하나로 입력해주세요.');
  if(data.shape==='circle'&&!['canvas','none'].includes(data.frame))throw new Error('원형 작품은 캔버스 또는 프레임 없음(종이)으로 선택해주세요.');
  if(data.shape==='free'&&data.frame!=='none')throw new Error('자유형 작품은 프레임 없이 투명 배경 이미지로 걸립니다. 형태를 프레임 없음으로 선택해주세요.');
+ if(data.kind!==undefined&&!['flat','object'].includes(data.kind))throw new Error('작품 종류를 선택해주세요.');
+ if(data.kind==='object')validateObject(data);
  if(!data.image?.url&&!data.image?.path)throw new Error('작품 이미지를 업로드해주세요.');
  if(!bounded(data.image?.alt,1000))throw new Error('이미지 설명은 1,000자 이내로 입력해주세요.');
  return data;
+}
+export const PLINTHS={none:'좌대 없음',low:'낮은 좌대 (10cm)',high:'높은 좌대 (60cm)'};
+function validateObject(data){
+ if(!between(data.depthCm,10,500))throw new Error('오브제의 깊이는 10~500cm로 입력해주세요.');
+ if(!bounded(data.spot,40,1))throw new Error('전시 자리를 선택해주세요.');
+ if(!Number.isInteger(data.yaw)||!between(data.yaw,0,359))throw new Error('앞면 방향은 0~359도로 입력해주세요.');
+ if(!Object.hasOwn(PLINTHS,data.plinth))throw new Error('좌대를 선택해주세요.');
+ if(!Number.isInteger(data.copies)||!between(data.copies,1,5))throw new Error('연작 수량은 1~5점으로 입력해주세요.');
+ if(!data.model?.path&&!data.model?.url)throw new Error('3D 모델(GLB) 파일을 업로드해주세요.');
 }
 export function artworkMount(frame,thickness=3.5){
  const framed=['black','white','wood'].includes(frame);
@@ -61,7 +74,7 @@ export function layoutArtworks(artworks,roomSize){
  const room=ROOMS[roomSize]||ROOMS.large,arranged=[];const wallWidth=room.wall,wallHeight=3.6,gap=.65,rowGap=.35;
  const frontX=-room.w/2+.05,sideZ=room.d/2-.05;
  for(const wall of Object.keys(WALLS)){
-  const list=artworks.filter(art=>art.wall===wall).sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
+  const list=artworks.filter(art=>art.wall===wall&&art.kind!=='object').sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
   const rows=[];let row={items:[],width:0,height:0};
   for(const art of list){
    const mount=artworkMount(art.frame),width=art.widthCm/100,height=art.heightCm/100,outerWidth=width+mount.border,outerHeight=height+mount.border;
@@ -91,3 +104,4 @@ export function saleBadge(status){
  if(status==='nfs')return {label:'Not for Sale',color:'#5a625f',dot:false};
  return null;
 }
+
