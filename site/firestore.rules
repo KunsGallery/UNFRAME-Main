@@ -210,11 +210,19 @@ service cloud.firestore {
   }
   function validArtwork(data,exid,artid) {
    return virtualId(exid) && virtualId(artid) && validArtworkFields(data)
-    && validArtworkImage(data.image,exid,artid);
+    && validArtworkImage(data.image,exid,artid)
+    && (!('model' in data) || validModel(data.model,'virtualGalleries/'+exid+'/'+artid+'/'));
+  }
+  // 3D objects: one uncompressed GLB stored beside the artwork's images.
+  function validModel(model,prefix) {
+   return model is map && model.keys().hasAll(['path','name']) && model.keys().hasOnly(['path','name'])
+    && model.name is string && model.name.size()<=200
+    && model.path is string && model.path.size()<=512
+    && model.path.matches('^'+prefix+'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[.]glb$');
   }
   function validArtworkFields(data) {
    return data.keys().hasAll(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt'])
-    && data.keys().hasOnly(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt','canvasThickness','canvasEdge','shape','saleStatus'])
+    && data.keys().hasOnly(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt','canvasThickness','canvasEdge','shape','saleStatus','kind','depthCm','spot','yaw','plinth','copies','model'])
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.titleEn is string && data.titleEn.size()<=200
     && data.artist is string && data.artist.size()>0 && data.artist.size()<=300
@@ -230,6 +238,12 @@ service cloud.firestore {
     && (!('canvasEdge' in data) || data.canvasEdge in ['natural','black','image'])
     && (!('shape' in data) || data.shape in ['rect','circle','free'])
     && (!('saleStatus' in data) || data.saleStatus in ['available','reserved','sold','nfs'])
+    && (!('kind' in data) || data.kind in ['flat','object'])
+    && (!('depthCm' in data) || (data.depthCm is number && data.depthCm>=10 && data.depthCm<=500))
+    && (!('spot' in data) || (data.spot is string && data.spot.matches('^[a-z-]{1,40}$')))
+    && (!('yaw' in data) || (data.yaw is int && data.yaw>=0 && data.yaw<=359))
+    && (!('plinth' in data) || data.plinth in ['none','low','high'])
+    && (!('copies' in data) || (data.copies is int && data.copies>=1 && data.copies<=5))
     && data.updatedAt is string && data.updatedAt.size()<=50
     && data.updatedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?Z$');
   }
@@ -348,7 +362,11 @@ service cloud.firestore {
     allow read: if staff() || (submissionOwner(get(submissionPath(sid)).data) && submissionLive(get(submissionPath(sid)).data));
     allow create, update: if virtualId(artid) && (artistArtworkWrite(sid) || staffArtworkWrite(sid))
      && validArtworkFields(request.resource.data)
-     && validSubmissionImage(request.resource.data.image,sid,artid,getAfter(submissionPath(sid)).data.targetGalleryId);
+     && validSubmissionImage(request.resource.data.image,sid,artid,getAfter(submissionPath(sid)).data.targetGalleryId)
+     && (!('model' in request.resource.data)
+      || validModel(request.resource.data.model,'virtualSubmissions/'+sid+'/'+artid+'/')
+      || (getAfter(submissionPath(sid)).data.targetGalleryId != ''
+       && validModel(request.resource.data.model,'virtualGalleries/'+getAfter(submissionPath(sid)).data.targetGalleryId+'/'+artid+'/')));
     allow delete: if staff() || artistArtworkWrite(sid);
    }
   }

@@ -1,5 +1,5 @@
 import {catalog,product,image as sourcePhoto} from './imweb.mjs';
-const MAX=10*1024*1024;
+const MAX=10*1024*1024,MODEL_MAX=30*1024*1024;
 const JWKS='https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
 const bytes=s=>Uint8Array.from(atob(s.replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0));
@@ -58,8 +58,8 @@ async function copySubmissionImages(request,env,token,fetcher){
  return pairs.length;
 }
 export function parsePath(path){
- const virtual=/^\/media\/((virtualGalleries|virtualSubmissions)\/([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})\/[a-f0-9-]{36}\.(jpeg|png|webp))$/.exec(path);
- if(virtual)return {key:virtual[1],collection:virtual[2],id:virtual[3],artId:virtual[4],type:`image/${virtual[5]}`};
+ const virtual=/^\/media\/((virtualGalleries|virtualSubmissions)\/([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})\/[a-f0-9-]{36}\.(jpeg|png|webp|glb))$/.exec(path);
+ if(virtual)return {key:virtual[1],collection:virtual[2],id:virtual[3],artId:virtual[4],type:virtual[5]==='glb'?'model/gltf-binary':`image/${virtual[5]}`};
  const match=/^\/media\/((exhibitions|homeHighlights|products)\/([a-zA-Z0-9_-]{1,128})\/[a-f0-9-]{36}\.(jpeg|png|webp))$/.exec(path);return match?{key:match[1],collection:match[2],id:match[3],type:`image/${match[4]}`}:null;
 }
 export async function handle(request,env,fetcher=fetch){
@@ -104,7 +104,7 @@ export async function handle(request,env,fetcher=fetch){
    if(path.collection==='virtualGalleries'){
     // Anonymous document reads also require a published parent exhibition in rules.
     const [gallery,artwork]=await Promise.all([document(env,`virtualGalleries/${path.id}`,null,fetcher),document(env,`virtualGalleries/${path.id}/artworks/${path.artId}`,null,fetcher)]);
-    published=gallery?.published?.booleanValue===true&&artwork?.image?.mapValue?.fields?.path?.stringValue===path.key;
+    published=gallery?.published?.booleanValue===true&&[artwork?.image?.mapValue?.fields?.path?.stringValue,artwork?.model?.mapValue?.fields?.path?.stringValue].includes(path.key);
    }else{
     const record=await document(env,`${path.collection}/${path.id}`,null,fetcher);
     const references=[record?.cover?.mapValue?.fields?.path?.stringValue,...(record?.gallery?.arrayValue?.values||[]).map(value=>typeof value.stringValue==='string'?value.stringValue.split('\u001f')[0]:value.mapValue?.fields?.path?.stringValue)];
@@ -127,14 +127,15 @@ export async function handle(request,env,fetcher=fetch){
  }catch(error){const status=error.status||500;if(status===500)console.error(JSON.stringify({event:'media_error',status}));return json({error:status===500?'이미지 처리에 실패했습니다.':error.message},status);}
 }
 async function storeImage(request,env,path){
-  if(request.headers.get('Content-Type')!==path.type)fail(415,'JPG, PNG, WebP 이미지만 업로드할 수 있습니다.');
-  const length=Number(request.headers.get('Content-Length'));if(!Number.isInteger(length)||length<=0||length>MAX)fail(413,'이미지는 10MB 이하로 올려주세요.');
+  const model=path.type==='model/gltf-binary',limit=model?MODEL_MAX:MAX,tooBig=model?'3D 모델은 30MB 이하로 올려주세요.':'이미지는 10MB 이하로 올려주세요.';
+  if(request.headers.get('Content-Type')!==path.type)fail(415,model?'GLB 파일만 업로드할 수 있습니다.':'JPG, PNG, WebP 이미지만 업로드할 수 있습니다.');
+  const length=Number(request.headers.get('Content-Length'));if(!Number.isInteger(length)||length<=0||length>limit)fail(413,tooBig);
   // Buffer only a strictly bounded image and verify its magic bytes, preventing disguised active content.
   const reader=request.body.getReader(),chunks=[];let size=0;
-  while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>MAX){await reader.cancel();fail(413,'이미지는 10MB 이하로 올려주세요.');}chunks.push(value);}
+  while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();fail(413,tooBig);}chunks.push(value);}
   const data=new Uint8Array(size);let offset=0;for(const chunk of chunks){data.set(chunk,offset);offset+=chunk.length;}
-  const valid=path.type==='image/jpeg'?data[0]===255&&data[1]===216&&data[2]===255:path.type==='image/png'?[137,80,78,71,13,10,26,10].every((n,i)=>data[i]===n):new TextDecoder().decode(data.slice(0,4))==='RIFF'&&new TextDecoder().decode(data.slice(8,12))==='WEBP';
-  if(!valid||size!==length)fail(415,'이미지 파일을 확인해주세요.');
+  const valid=model?new TextDecoder().decode(data.slice(0,4))==='glTF':path.type==='image/jpeg'?data[0]===255&&data[1]===216&&data[2]===255:path.type==='image/png'?[137,80,78,71,13,10,26,10].every((n,i)=>data[i]===n):new TextDecoder().decode(data.slice(0,4))==='RIFF'&&new TextDecoder().decode(data.slice(8,12))==='WEBP';
+  if(!valid||size!==length)fail(415,model?'GLB 파일을 확인해주세요.':'이미지 파일을 확인해주세요.');
   await env.MEDIA.put(path.key,data,{httpMetadata:{contentType:path.type}});return {path:path.key};
 }
 export default {fetch(request,env){return handle(request,env);}};
