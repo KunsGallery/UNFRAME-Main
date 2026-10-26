@@ -74,8 +74,9 @@ export async function claimInvite(id){
  return getInvite(id);
 }
 export async function saveSubmissionSettings(id,settings,{asStaff=false}={}){
- const {canEdit}=await editable(id,asStaff);if(!canEdit)throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
+ const {artworks,canEdit}=await editable(id,asStaff);if(!canEdit)throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
  const data=pickSubmissionSettings(settings);
+ layoutArtworks(artworks,data.roomSize);placeObjects(artworks,data.roomSize);
  if(demo){const all=read();Object.assign(all[id].submission,{settings:data,touchedAt:nowISO()});write(all);return;}
  const f=await firestoreClient();await f.db.updateDoc(f.db.doc(f.d,'virtualSubmissions',id),{settings:data,touchedAt:f.db.serverTimestamp()});
 }
@@ -85,7 +86,7 @@ export async function saveSubmissionArtwork(id,artwork,{remove=removeImage,asSta
  validateArtwork(artwork);checkArtworkImage(submission,artwork);
  const others=artworks.filter(art=>art.id!==artwork.id);
  if(others.length>=MAX_ARTWORKS)throw new Error(`작품은 최대 ${MAX_ARTWORKS}점까지 등록할 수 있습니다.`);
- if(others.filter(art=>art.wall===artwork.wall).length>=WALL_LIMIT)throw new Error('한 벽면에는 최대 8점을 배치할 수 있습니다. 다른 벽면을 선택해주세요.');
+ if(others.filter(art=>art.wall===artwork.wall&&art.kind!=='object').length>=WALL_LIMIT&&artwork.kind!=='object')throw new Error('한 벽면에는 최대 8점을 배치할 수 있습니다. 다른 벽면을 선택해주세요.');
  layoutArtworks([...others,artwork],submission.settings.roomSize);placeObjects([...others,artwork],submission.settings.roomSize);
  const data=artworkData(artwork);
  if(demo){const all=read(),list=all[id].artworks,index=list.findIndex(art=>art.id===artwork.id);if(index<0)list.push({...data,id:artwork.id});else list[index]={...data,id:artwork.id};all[id].submission.touchedAt=nowISO();write(all);await dropReplacedImage(id,artworks,artwork,remove);return;}

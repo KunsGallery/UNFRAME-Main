@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {objectSpots,placeObjects,objectObstacles,resolveCollision} from '../js/object-placement.js';
-import {ROOMS,emptyArtwork,layoutArtworks,validateArtwork} from '../js/virtual-model.js';
+import {ROOMS,emptyArtwork,layoutArtworks,validateArtwork,validateGallery,defaultGallery} from '../js/virtual-model.js';
 import {entryView} from '../js/virtual-links.js';
 const object=(id,extra={})=>({...emptyArtwork(),id,title:`오브제 ${id}`,artist:'권광훈',kind:'object',widthCm:60,heightCm:120,depthCm:50,spot:'corner-front-left',yaw:0,plinth:'low',copies:1,model:{path:`virtualGalleries/g/${id}/12345678-1234-1234-1234-123456789012.glb`,name:'a.glb'},image:{url:'',path:`virtualGalleries/g/${id}/12345678-1234-1234-1234-123456789012.webp`,alt:''},...extra});
 test('each room size offers its corner and centre spots inside the walls',()=>{
@@ -9,7 +9,7 @@ test('each room size offers its corner and centre spots inside the walls',()=>{
   assert.ok(Math.abs(spot.position[0])<room.w/2&&Math.abs(spot.position[1])<room.d/2,spot.id);
   if(spot.type==='corner')assert.ok(Math.abs(Math.abs(spot.position[1])-(room.d/2-1.2))<1e-9,spot.id);
   const entry=entryView(room).position,dist=Math.hypot(entry[0]-spot.position[0],entry[1]-spot.position[1]);
-  assert.ok(dist>spot.maxSpan/2+0.6+0.5,`${room.id} ${spot.id} keeps the entrance clear`);
+  assert.ok(dist>spot.maxSpan/2+1+0.5,`${room.id} ${spot.id} keeps the entrance clear`);
  }
  assert.deepEqual(objectSpots(ROOMS.small).map(s=>s.id),['corner-front-left','corner-front-right','center']);
 });
@@ -58,4 +58,16 @@ test('tour stops stand in front of each spot, inside the room and outside the fo
   const look=[-Math.sin(view.yaw),-Math.cos(view.yaw)],to=[o.x-view.position[0],o.z-view.position[1]],dot=(look[0]*to[0]+look[1]*to[1])/Math.hypot(...to);
   assert.ok(dot>.999,`${size} ${spot.id} faces the object`);
  }
+});
+
+const flatWork=(id,wall,order,widthCm=100)=>({...emptyArtwork(),id,title:`평면 ${id}`,artist:'작가',wall,order,widthCm,heightCm:100,image:{url:'x',path:'',alt:''}});
+test('corner objects may not stand in front of wall works on the adjacent walls',()=>{
+ const crowded=[0,1,2,3].map(n=>flatWork('f'+n,'front',n,140));
+ assert.throws(()=>placeObjects([...crowded,object('a',{spot:'corner-front-left'})],'small'),/벽 작품/);
+ assert.doesNotThrow(()=>placeObjects([flatWork('one','front',0,100),object('a',{spot:'corner-front-left'})],'small'));
+ assert.doesNotThrow(()=>placeObjects([...crowded,object('a',{spot:'center'})],'small'));
+});
+test('changing the room size is checked against object spots',()=>{
+ assert.throws(()=>validateGallery({...defaultGallery({title:'t',summary:''}),roomSize:'small'},[object('a',{spot:'corner-back-left'})]),/전시 자리/);
+ assert.doesNotThrow(()=>validateGallery({...defaultGallery({title:'t',summary:''}),roomSize:'medium'},[object('a',{spot:'corner-back-left'})]));
 });

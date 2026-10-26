@@ -1310,6 +1310,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
         document.getElementById('modal-spec-year').innerText = art.year;
         document.getElementById('modal-spec-medium').innerText = art.medium;
         document.getElementById('modal-spec-dimensions').innerText = art.dimensions;
+        document.getElementById('modal-spec-dimensions').previousElementSibling.textContent = art.kind==='object' ? '크기' : '크기 (세로 × 가로)';
         document.getElementById('modal-spec-price').innerText = art.price || '별도 문의';
 
         document.getElementById('modal-desc').innerText = art.description;

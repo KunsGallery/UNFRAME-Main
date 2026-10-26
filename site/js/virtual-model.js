@@ -7,6 +7,7 @@ export const CEILINGS={plain:'일반 천장',luminous:'광천장'};
 export const WALL_COLORS={'#f6f4ee':'웜 화이트','#fafaf8':'퓨어 화이트','#e4e3df':'라이트 그레이','#cfc9bf':'웜 그레이','#3a3c3b':'차콜','#2f3d35':'딥 그린','#26324a':'딥 네이비'};
 export const wallColorOptions=current=>Object.hasOwn(WALL_COLORS,current)||!/^#[0-9a-fA-F]{6}$/.test(current||'')?WALL_COLORS:{...WALL_COLORS,[current]:`기존 색상 (${current})`};
 // Room presets in metres. 'large' is the original room; galleries without roomSize keep it.
+import {placeObjects} from './object-placement.js';
 export const ROOMS={small:{id:'small',label:'소 · 10 × 8m',w:10,d:8,wall:6},medium:{id:'medium',label:'중 · 13 × 11m',w:13,d:11,wall:8},large:{id:'large',label:'대 · 16 × 14m',w:16,d:14,wall:10}};
 export const roomOf=settings=>ROOMS[settings?.roomSize]||ROOMS.large;
 export const SHAPES={rect:'사각형',circle:'원형',free:'자유형 (투명 배경 PNG)'};
@@ -34,6 +35,7 @@ export function validateGallery(data,artworks=[]){
  if(['published','outdoor','showPrices'].some(key=>typeof data[key]!=='boolean'))throw new Error('게시 및 공간 설정을 확인해주세요.');
  if(data.published&&!artworks.length)throw new Error('공개하려면 작품을 한 점 이상 등록해주세요.');
  if(data.published)layoutArtworks(artworks,data.roomSize);
+ placeObjects(artworks,data.roomSize);
  return data;
 }
 export function validateArtwork(data){

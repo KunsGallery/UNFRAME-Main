@@ -323,3 +323,13 @@ test('approving an object upload copies its GLB beside the images and validates 
  assert.ok(copied.some(pair=>pair.to===art.model.path&&pair.from===object.model.path));
  delete globalThis.localStorage;
 });
+
+test('objects do not use up front-wall slots, and a room-size change must fit the objects',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();
+ for(let n=0;n<8;n++)await saveSubmissionArtwork(id,fix(work('w'+n,{wall:'front',order:n,widthCm:50,heightCm:50})));
+ const object={...fix(work('o1',{kind:'object',wall:'front',depthCm:40,spot:'center',yaw:0,plinth:'none',copies:1,widthCm:40,heightCm:60})),model:{path:`virtualSubmissions/${id}/o1/aaaaaaaa-1234-1234-1234-123456789012.glb`,name:'a.glb'}};
+ await saveSubmissionArtwork(id,object);
+ await saveSubmissionArtwork(id,{...object,id:'o2',spot:'corner-back-left',model:{path:`virtualSubmissions/${id}/o2/aaaaaaaa-1234-1234-1234-123456789012.glb`,name:'b.glb'}});
+ await assert.rejects(saveSubmissionSettings(id,{theme:'white',wallColor:'#f6f4ee',lighting:'general',ceiling:'plain',roomSize:'small'}),/전시 자리/);
+ delete globalThis.localStorage;
+});
