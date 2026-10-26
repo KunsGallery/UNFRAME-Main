@@ -202,7 +202,9 @@ await expectStatus('news in both selections',200,saveNews({...news,featured:true
 await expectStatus('legacy news without NOW field',200,saveNews(Object.fromEntries(Object.entries(news).filter(([key])=>key!=='nowFeatured'))));
 await expectStatus('legacy virtual without NOW field',200,saveNews({...Object.fromEntries(Object.entries(news).filter(([key])=>key!=='nowFeatured')),kind:'virtual',project:''}));
 await expectStatus('event selected for NOW',200,saveNews({...news,kind:'event',project:'음',startDate:'2026-10-13',endDate:'2026-10-20'}));
-for(const projectName of ['UP','음','U#','U.A.U'])await expectStatus(`published news project ${projectName}`,200,saveNews({...news,project:projectName}));
+for(const projectName of ['UP','음','U#','U.A.U','UNFRAME SALON'])await expectStatus(`published news project ${projectName}`,200,saveNews({...news,project:projectName}));
+await expectStatus('SALON event in JOURNAL',200,saveNews({...news,kind:'event',project:'UNFRAME SALON',startDate:'2026-10-31',endDate:'2026-10-31'}));
+await expectStatus('SALON published news',200,saveNews({...news,project:'UNFRAME SALON'}));
 await expectStatus('draft news can omit project value',200,saveNews({...news,published:false,project:'',url:'',cover:{url:'',path:'',alt:''}}));
 const badNews=[
  ['invalid NOW type',{...news,nowFeatured:'true'}],
