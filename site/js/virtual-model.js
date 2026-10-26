@@ -47,9 +47,20 @@ export function validateArtwork(data){
  if(data.shape==='circle'&&data.widthCm!==data.heightCm)throw new Error('원형 작품은 지름 하나로 입력해주세요.');
  if(data.shape==='circle'&&!['canvas','none'].includes(data.frame))throw new Error('원형 작품은 캔버스 또는 프레임 없음(종이)으로 선택해주세요.');
  if(data.shape==='free'&&data.frame!=='none')throw new Error('자유형 작품은 프레임 없이 투명 배경 이미지로 걸립니다. 형태를 프레임 없음으로 선택해주세요.');
+ if(data.kind!==undefined&&!['flat','object'].includes(data.kind))throw new Error('작품 종류를 선택해주세요.');
+ if(data.kind==='object')validateObject(data);
  if(!data.image?.url&&!data.image?.path)throw new Error('작품 이미지를 업로드해주세요.');
  if(!bounded(data.image?.alt,1000))throw new Error('이미지 설명은 1,000자 이내로 입력해주세요.');
  return data;
+}
+export const PLINTHS={none:'좌대 없음',low:'낮은 좌대 (10cm)',high:'높은 좌대 (60cm)'};
+function validateObject(data){
+ if(!between(data.depthCm,10,500))throw new Error('오브제의 깊이는 10~500cm로 입력해주세요.');
+ if(!bounded(data.spot,40,1))throw new Error('전시 자리를 선택해주세요.');
+ if(!Number.isInteger(data.yaw)||!between(data.yaw,0,359))throw new Error('앞면 방향은 0~359도로 입력해주세요.');
+ if(!Object.hasOwn(PLINTHS,data.plinth))throw new Error('좌대를 선택해주세요.');
+ if(!Number.isInteger(data.copies)||!between(data.copies,1,5))throw new Error('연작 수량은 1~5점으로 입력해주세요.');
+ if(!data.model?.path&&!data.model?.url)throw new Error('3D 모델(GLB) 파일을 업로드해주세요.');
 }
 export function artworkMount(frame,thickness=3.5){
  const framed=['black','white','wood'].includes(frame);
@@ -61,7 +72,7 @@ export function layoutArtworks(artworks,roomSize){
  const room=ROOMS[roomSize]||ROOMS.large,arranged=[];const wallWidth=room.wall,wallHeight=3.6,gap=.65,rowGap=.35;
  const frontX=-room.w/2+.05,sideZ=room.d/2-.05;
  for(const wall of Object.keys(WALLS)){
-  const list=artworks.filter(art=>art.wall===wall).sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
+  const list=artworks.filter(art=>art.wall===wall&&art.kind!=='object').sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
   const rows=[];let row={items:[],width:0,height:0};
   for(const art of list){
    const mount=artworkMount(art.frame),width=art.widthCm/100,height=art.heightCm/100,outerWidth=width+mount.border,outerHeight=height+mount.border;
@@ -91,3 +102,4 @@ export function saleBadge(status){
  if(status==='nfs')return {label:'Not for Sale',color:'#5a625f',dot:false};
  return null;
 }
+
