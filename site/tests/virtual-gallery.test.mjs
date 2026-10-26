@@ -203,3 +203,15 @@ test('shape choice normalises size and mount before saving',()=>{
  assert.deepEqual(normalizeShape({shape:'free',widthCm:60,heightCm:90,frame:'canvas'}),{shape:'free',widthCm:60,heightCm:90,frame:'none'});
  assert.deepEqual(normalizeShape({shape:'rect',widthCm:60,heightCm:90,frame:'wood'}),{shape:'rect',widthCm:60,heightCm:90,frame:'wood'});
 });
+import {normalizeKind,spotOptions} from '../js/artwork-form.js';
+test('object entries keep wall fields valid and use whole-number settings',()=>{
+ const out=normalizeKind({kind:'object',wall:'left',frame:'black',shape:'circle',depthCm:'50',copies:'3',yaw:'45.6',plinth:'low',widthCm:60,heightCm:120});
+ assert.deepEqual([out.wall,out.frame,out.shape,out.depthCm,out.copies,out.yaw],['front','none','rect',50,3,46]);
+ const flat=normalizeKind({kind:'flat',wall:'left',frame:'black',depthCm:50,spot:'center',model:{path:'x'}});
+ assert.equal(flat.wall,'left');assert.equal('spot' in flat,false);assert.equal('model' in flat,false);assert.equal('depthCm' in flat,false);
+});
+test('spot choices follow the room size',()=>{
+ assert.deepEqual(Object.keys(spotOptions('small')),['corner-front-left','corner-front-right','center']);
+ assert.equal(Object.keys(spotOptions('large')).length,6);
+ assert.match(spotOptions('medium').center,/중앙/);
+});
