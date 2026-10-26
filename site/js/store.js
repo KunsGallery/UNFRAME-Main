@@ -34,6 +34,17 @@ export async function uploadImage(file,id,onProgress=()=>{},collection='exhibiti
  await new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('PUT',mediaURL(path));xhr.setRequestHeader('Authorization',`Bearer ${token}`);xhr.setRequestHeader('Content-Type',file.type);xhr.upload.onprogress=e=>{if(e.lengthComputable)onProgress(Math.round(e.loaded/e.total*100));};xhr.onload=()=>{if(xhr.status>=200&&xhr.status<300)resolve();else{let message='이미지 업로드에 실패했습니다.';try{message=JSON.parse(xhr.responseText).error||message;}catch{}reject(new Error(message));}};xhr.onerror=()=>reject(new Error('이미지 서버에 연결하지 못했습니다.'));xhr.send(file);});
  return {url:'',path,alt:file.name};
 }
+// GLB models for 3D objects: header-checked in the browser, 30MB, same storage paths as images.
+export async function uploadModel(file,id,onProgress=()=>{},collection='virtualGalleries',artId='') {
+ if(!/\.glb$/i.test(file.name))throw new Error('GLB 파일(.glb)만 올릴 수 있습니다.');
+ if(file.size>30*1024*1024)throw new Error('3D 모델은 30MB 이하로 올려주세요.');
+ const {inspectGlb}=await import('./glb-check.js');const check=inspectGlb(await file.arrayBuffer());if(!check.ok)throw new Error(check.reason);
+ if(demo){if(file.size>2*1024*1024)throw new Error('샘플 모드에서는 2MB 이하 GLB를 사용해주세요.');const url=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});return {url,path:'',name:file.name};}
+ if(!['virtualGalleries','virtualSubmissions'].includes(collection)||!/^[A-Za-z0-9_-]{1,100}$/.test(artId))throw new Error('잘못된 작품 주소입니다.');
+ const path=`${collection}/${id}/${artId}/${crypto.randomUUID()}.glb`,token=await mediaToken();
+ await new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('PUT',mediaURL(path));xhr.setRequestHeader('Authorization',`Bearer ${token}`);xhr.setRequestHeader('Content-Type','model/gltf-binary');xhr.upload.onprogress=e=>{if(e.lengthComputable)onProgress(Math.round(e.loaded/e.total*100));};xhr.onload=()=>{if(xhr.status>=200&&xhr.status<300)resolve();else{let message='3D 모델 업로드에 실패했습니다.';try{message=JSON.parse(xhr.responseText).error||message;}catch{}reject(new Error(message));}};xhr.onerror=()=>reject(new Error('이미지 서버에 연결하지 못했습니다.'));xhr.send(file);});
+ return {url:'',path,name:file.name.slice(0,200)};
+}
 function mediaURL(path){if(!CONFIG.mediaBaseUrl)throw new Error('R2 이미지 서버 설정이 필요합니다.');return CONFIG.mediaBaseUrl.replace(/\/$/,'')+'/media/'+path;}
 async function mediaToken(){const user=await session();if(!user)throw new Error('Google 로그인이 필요합니다.');return user.getIdToken();}
 export async function resolveImage(image) { if(!image?.path||demo) return image;const user=await session();const headers=user?{Authorization:`Bearer ${await user.getIdToken()}`}:{ };const response=await fetch(mediaURL(image.path),{headers});if(!response.ok)throw new Error('전시 이미지를 불러오지 못했습니다.');return {...image,url:URL.createObjectURL(await response.blob())}; }

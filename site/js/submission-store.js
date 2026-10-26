@@ -1,6 +1,7 @@
 import {demo,firestoreClient,session,login,logout,getExhibition,removeImage,copyImages,purgeSubmissionImages,purgeGalleryImages} from './store.js';
 import {getVirtualGallery,listVirtualGalleries,saveVirtualSettings,saveVirtualArtwork,deleteVirtualArtwork,deleteVirtualGallery} from './virtual-store.js';
 import {validateArtwork,layoutArtworks,defaultArtistGallery,galleryExhibitionId,THEMES,LIGHTING,CEILINGS,ROOMS} from './virtual-model.js';
+import {placeObjects} from './object-placement.js';
 import {EXPIRY_DAYS,newSubmissionId,expiryFrom,isExpired,artistCanEdit,canTransition,validateInvite,isSubmissionPath} from './submission-model.js';
 // Artist uploads stay in virtualSubmissions until staff approve them; rules and the media
 // worker enforce ownership and expiry in production, this module mirrors them in demo mode.
@@ -19,7 +20,7 @@ export function pickSubmissionSettings(settings={}){
  if(settings.artistNote!==undefined){const note=String(settings.artistNote).trim();if(note.length>600)throw new Error('작가 소개는 600자 이내로 입력해주세요.');data.artistNote=note;}
  return data;
 }
-const artworkData=artwork=>{const {id,...data}=artwork;return {...data,updatedAt:nowISO(),image:{url:demo?artwork.image.url:'',path:artwork.image.path,alt:artwork.image.alt}};};
+const artworkData=artwork=>{const {id,...data}=artwork;const out={...data,updatedAt:nowISO(),image:{url:demo?artwork.image.url:'',path:artwork.image.path,alt:artwork.image.alt}};if(artwork.model)out.model=demo?{...artwork.model}:{path:artwork.model.path,name:artwork.model.name||''};return out;};
 function checkArtworkImage(submission,art){
  const path=art.image?.path||'';
  if(demo&&!path)return;
@@ -85,7 +86,7 @@ export async function saveSubmissionArtwork(id,artwork,{remove=removeImage,asSta
  const others=artworks.filter(art=>art.id!==artwork.id);
  if(others.length>=MAX_ARTWORKS)throw new Error(`작품은 최대 ${MAX_ARTWORKS}점까지 등록할 수 있습니다.`);
  if(others.filter(art=>art.wall===artwork.wall).length>=WALL_LIMIT)throw new Error('한 벽면에는 최대 8점을 배치할 수 있습니다. 다른 벽면을 선택해주세요.');
- layoutArtworks([...others,artwork],submission.settings.roomSize);
+ layoutArtworks([...others,artwork],submission.settings.roomSize);placeObjects([...others,artwork],submission.settings.roomSize);
  const data=artworkData(artwork);
  if(demo){const all=read(),list=all[id].artworks,index=list.findIndex(art=>art.id===artwork.id);if(index<0)list.push({...data,id:artwork.id});else list[index]={...data,id:artwork.id};all[id].submission.touchedAt=nowISO();write(all);await dropReplacedImage(id,artworks,artwork,remove);return;}
  // The rules require the parent touch in the same batch, so every save renews the ten-day clock.
@@ -96,8 +97,9 @@ export async function saveSubmissionArtwork(id,artwork,{remove=removeImage,asSta
 }
 // A replaced upload would otherwise count toward the per-submission cap until the end.
 async function dropReplacedImage(id,artworks,artwork,remove){
- const previous=artworks.find(art=>art.id===artwork.id)?.image?.path;
- if(isSubmissionPath(previous,id)&&previous!==artwork.image?.path)await remove(previous).catch(()=>{});
+ const before=artworks.find(art=>art.id===artwork.id);
+ for(const [previous,next] of [[before?.image?.path,artwork.image?.path],[before?.model?.path,artwork.model?.path]])
+  if(isSubmissionPath(previous,id)&&previous!==next)await remove(previous).catch(()=>{});
 }
 export async function deleteSubmissionArtwork(id,artId,{asStaff=false}={}){
  const {artworks,canEdit}=await editable(id,asStaff);if(!canEdit)throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
@@ -174,7 +176,7 @@ export async function deleteSubmission(id,{remove=removeImage,purge=purgeSubmiss
   for(const art of data.artworks)batch.delete(f.db.doc(f.d,'virtualSubmissions',id,'artworks',art.id));
   batch.delete(f.db.doc(f.d,'virtualSubmissions',id));await batch.commit();
  }
- for(const art of data.artworks)if(isSubmissionPath(art.image?.path,id))await remove(art.image.path).catch(()=>{});
+ for(const art of data.artworks)for(const path of [art.image?.path,art.model?.path])if(isSubmissionPath(path,id))await remove(path).catch(()=>{});
  await purge(id).catch(error=>console.warn('업로드 이미지 일부를 정리하지 못했습니다.',id,error));
 }
 // Removes a gallery, any uploads still pointing at it, and every stored image under it.
@@ -205,20 +207,22 @@ export async function approveSubmission(id,{publish,copy=copyImages,remove=remov
  const order=existing?existing.settings.order:(await listVirtualGalleries(exhibition.id,{admin:true})).filter(item=>item.settings.artistName).length;
  const base=existing?.settings||defaultArtistGallery(exhibition,submission.artistName,order);
  const pairs=[],works=artworks.map(art=>{
-  if(!isSubmissionPath(art.image?.path,id))return art;
-  const to=art.image.path.replace(`virtualSubmissions/${id}/`,`virtualGalleries/${galleryId}/`);pairs.push({from:art.image.path,to});
-  return {...art,image:{...art.image,path:to}};
+  // Images and GLB models move from the submission folder into the gallery folder, keeping names.
+  const move=path=>{if(!isSubmissionPath(path,id))return path;const to=path.replace(`virtualSubmissions/${id}/`,`virtualGalleries/${galleryId}/`);pairs.push({from:path,to});return to;};
+  const moved={...art,image:{...art.image,path:move(art.image?.path)}};
+  if(art.model)moved.model={...art.model,path:move(art.model.path)};
+  return moved;
  });
  if(pairs.length)await copy(pairs);
  const settings={...base,...submission.settings,artistEmail:submission.ownerEmail};
  const published=publish||!!existing?.settings.published;
- if(published)layoutArtworks(works,settings.roomSize);
+ if(published){layoutArtworks(works,settings.roomSize);placeObjects(works,settings.roomSize);}
  await saveVirtualSettings(galleryId,{...settings,published:!!existing?.settings.published&&published},existing?.artworks||[]);
  for(const art of works)await saveVirtualArtwork(galleryId,art);
  for(const old of existing?.artworks||[]){
   const kept=works.find(art=>art.id===old.id);
   if(!kept)await deleteVirtualArtwork(galleryId,old.id);
-  if(old.image?.path&&old.image.path!==kept?.image.path)await remove(old.image.path).catch(()=>{});
+  for(const [path,next] of [[old.image?.path,kept?.image.path],[old.model?.path,kept?.model?.path]])if(path&&path!==next)await remove(path).catch(()=>{});
  }
  await saveVirtualSettings(galleryId,{...settings,published},works);
  await deleteSubmission(id,{remove});

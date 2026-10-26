@@ -308,3 +308,18 @@ test('uploads carry a room size and validate artwork placement against it',async
  assert.equal((await submissionPreview(id)).settings.roomSize,'small');
  delete globalThis.localStorage;
 });
+test('approving an object upload copies its GLB beside the images and validates its spot',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionSettings(id,{theme:'white',wallColor:'#f6f4ee',lighting:'general',ceiling:'plain',roomSize:'medium'});
+ const object=fix(work('o1',{kind:'object',depthCm:50,spot:'corner-front-left',yaw:0,plinth:'low',copies:1}));
+ object.model={path:`virtualSubmissions/${id}/o1/aaaaaaaa-1234-1234-1234-123456789012.glb`,name:'lamp.glb'};
+ await saveSubmissionArtwork(id,object);
+ const second={...fix(work('o2',{kind:'object',depthCm:50,spot:'corner-front-left',yaw:0,plinth:'low',copies:1})),model:{path:`virtualSubmissions/${id}/o2/bbbbbbbb-1234-1234-1234-123456789012.glb`,name:'b.glb'}};
+ await assert.rejects(saveSubmissionArtwork(id,second),/같은 전시 자리/);
+ await setSubmissionStatus(id,'submitted');
+ const copied=[];const galleryId=await approveSubmission(id,{publish:true,copy:async pairs=>copied.push(...pairs)});
+ const art=(await getVirtualGallery(galleryId,{admin:true})).artworks[0];
+ assert.match(art.model.path,new RegExp(`^virtualGalleries/${galleryId}/o1/aaaaaaaa`));
+ assert.ok(copied.some(pair=>pair.to===art.model.path&&pair.from===object.model.path));
+ delete globalThis.localStorage;
+});
