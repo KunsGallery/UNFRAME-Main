@@ -8,7 +8,7 @@ export const WALL_COLORS={'#f6f4ee':'웜 화이트','#fafaf8':'퓨어 화이트'
 export const wallColorOptions=current=>Object.hasOwn(WALL_COLORS,current)||!/^#[0-9a-fA-F]{6}$/.test(current||'')?WALL_COLORS:{...WALL_COLORS,[current]:`기존 색상 (${current})`};
 // Room presets in metres. 'large' is the original room; galleries without roomSize keep it.
 import {placeObjects} from './object-placement.js';
-import {validateEnglish,ARTWORK_ENGLISH} from './i18n.js';
+import {validateEnglish,ARTWORK_ENGLISH,t} from './i18n.js';
 export const ROOMS={small:{id:'small',label:'소 · 10 × 8m',w:10,d:8,wall:6},medium:{id:'medium',label:'중 · 13 × 11m',w:13,d:11,wall:8},large:{id:'large',label:'대 · 16 × 14m',w:16,d:14,wall:10}};
 export const roomOf=settings=>ROOMS[settings?.roomSize]||ROOMS.large;
 export const SHAPES={rect:'사각형',circle:'원형',free:'자유형 (투명 배경 PNG)'};
@@ -102,8 +102,8 @@ export function layoutArtworks(artworks,roomSize){
 }
 // Gallery convention: a red dot marks a sold work, a blue dot a reserved one.
 export function saleBadge(status){
- if(status==='sold')return {label:'판매 완료',color:'#c8202a',dot:true};
- if(status==='reserved')return {label:'예약 중',color:'#004aad',dot:true};
+ if(status==='sold')return {label:t('sale.sold'),color:'#c8202a',dot:true};
+ if(status==='reserved')return {label:t('sale.reserved'),color:'#004aad',dot:true};
  if(status==='nfs')return {label:'Not for Sale',color:'#5a625f',dot:false};
  return null;
 }

@@ -1,10 +1,11 @@
 import {imageURL,dateRange} from './model.js';
 import {fitImage} from './share-card-geometry.js';
 import {DESIGNS,cardLayout} from './share-card-layout.js';
+import {t,localHref} from './i18n.js';
 export {fitImage};
 export const sizes={story:[1080,1920],landscape:[1200,900]};
 export function textLines(ctx,text,width,max=3){const lines=[];let line='';for(const ch of Array.from(String(text||''))){if(ctx.measureText(line+ch).width>width&&line){lines.push(line);line='';}line+=ch;}if(line)lines.push(line);if(lines.length>max){lines.length=max;let last=lines[max-1];while(last&&ctx.measureText(last+'…').width>width)last=last.slice(0,-1);lines[max-1]=last+'…';}return lines;}
-export function exhibitionCard(item){return {title:item.title,artist:item.artists,meta:[dateRange(item),item.location].filter(Boolean).join(' · '),image:item.cover?.url,url:new URL('/exhibition/'+encodeURIComponent(item.id),location.origin).href};}
+export function exhibitionCard(item){return {title:item.title,artist:item.artists,meta:[dateRange(item),item.location].filter(Boolean).join(' · '),image:item.cover?.url,url:new URL(localHref('/exhibition/'+encodeURIComponent(item.id)),location.origin).href};}
 const SERIF='"Noto Serif KR","EB Garamond",Georgia,serif',SANS='"Noto Sans KR",system-ui,sans-serif',BLUE='#004aad',INK='#161a18';
 function lines(ctx,font,text,width,max){ctx.font=font;return textLines(ctx,text,width,max);}
 function wordmark(ctx,x,y,color,size=26){ctx.fillStyle=color;ctx.font=`600 ${size}px ${SANS}`;ctx.letterSpacing=`${size*.18}px`;ctx.fillText('UNFRAME',x,y);ctx.letterSpacing='0px';}
@@ -53,18 +54,18 @@ export function drawCard(ctx,design,w,h,img,data){
 let stylesLoaded=false;
 export async function openShareCard(data){
  if(!stylesLoaded){const link=document.createElement('link');link.rel='stylesheet';link.href='/assets/share-card.css';document.head.append(link);stylesLoaded=true;}
- const dialog=document.createElement('dialog');dialog.className='share-card-dialog';dialog.setAttribute('aria-label','공유 카드 만들기');dialog.innerHTML=`<div class="share-card-head"><h2>Share this moment.</h2><button type="button" data-close aria-label="공유 카드 닫기">닫기 ×</button></div><div class="share-card-body"><div class="share-card-preview"><canvas aria-label="공유 카드 미리보기"></canvas></div><div class="share-card-controls"><h3>나만의 공유 카드</h3><label>디자인<select data-design>${Object.entries(DESIGNS).map(([key,label],index)=>`<option value="${key}">${index+1} · ${label}</option>`).join('')}</select></label><label>이미지 비율<select data-ratio><option value="story">스토리 · 9:16</option><option value="landscape">가로형 · 4:3</option></select></label><p data-note>뮤지엄 라벨과 전시장 벽은 작품 전체를 보여주고, 포스터는 화면을 채우도록 작품 일부를 잘라 보여줍니다.</p><p role="status" aria-live="polite" data-status></p><button type="button" data-save disabled>PNG 이미지 저장</button><button type="button" data-native hidden>기기에서 공유</button><button type="button" data-link>링크 복사</button><small>저장한 이미지를 인스타그램 스토리 등에 직접 올려주세요. 링크는 별도로 붙여넣을 수 있습니다.</small></div></div>`;
+ const dialog=document.createElement('dialog');dialog.className='share-card-dialog';dialog.setAttribute('aria-label',t('detail.makeCard'));dialog.innerHTML=`<div class="share-card-head"><h2>Share this moment.</h2><button type="button" data-close aria-label="${t('card.close')}">${t('card.closeButton')}</button></div><div class="share-card-body"><div class="share-card-preview"><canvas aria-label="${t('card.preview')}"></canvas></div><div class="share-card-controls"><h3>${t('card.title')}</h3><label>${t('card.design')}<select data-design>${Object.entries(DESIGNS).map(([key,label],index)=>`<option value="${key}">${index+1} · ${label}</option>`).join('')}</select></label><label>${t('card.ratio')}<select data-ratio><option value="story">${t('card.story')}</option><option value="landscape">${t('card.landscape')}</option></select></label><p data-note>${t('card.note')}</p><p role="status" aria-live="polite" data-status></p><button type="button" data-save disabled>${t('card.save')}</button><button type="button" data-native hidden>${t('card.share')}</button><button type="button" data-link>${t('ex.copyLink')}</button><small>${t('card.hint')}</small></div></div>`;
  document.body.append(dialog);dialog.showModal();const q=s=>dialog.querySelector(s),canvas=q('canvas'),ctx=canvas.getContext('2d');let blob=null,url='',version=0,closed=false;
  const clean=()=>{closed=true;version++;if(url)URL.revokeObjectURL(url);dialog.remove();};dialog.addEventListener('close',clean,{once:true});q('[data-close]').onclick=()=>dialog.close();
  const status=t=>q('[data-status]').textContent=t;
- q('[data-link]').onclick=async()=>{try{await navigator.clipboard.writeText(data.url||location.href);status('링크를 복사했습니다.');}catch{status('주소창의 링크를 복사해주세요.');}};
+ q('[data-link]').onclick=async()=>{try{await navigator.clipboard.writeText(data.url||location.href);status(t('card.linkCopied'));}catch{status(t('detail.copyManually'));}};
  q('[data-save]').onclick=()=>{if(!url)return;const a=document.createElement('a');a.href=url;a.download='UNFRAME-'+q('[data-design]').value+'-'+q('[data-ratio]').value+'.png';a.click();};
- q('[data-native]').onclick=async()=>{if(!blob)return;try{await navigator.share({files:[new File([blob],'UNFRAME.png',{type:'image/png'})]});}catch(error){if(error.name!=='AbortError')status('이미지를 저장한 뒤 공유해주세요.');}};
- async function render(){const token=++version;blob=null;q('[data-save]').disabled=true;q('[data-native]').hidden=true;status('이미지를 준비하고 있습니다…');try{
+ q('[data-native]').onclick=async()=>{if(!blob)return;try{await navigator.share({files:[new File([blob],'UNFRAME.png',{type:'image/png'})]});}catch(error){if(error.name!=='AbortError')status(t('card.saveFirst'));}};
+ async function render(){const token=++version;blob=null;q('[data-save]').disabled=true;q('[data-native]').hidden=true;status(t('card.preparing'));try{
  await Promise.all([document.fonts.load('600 60px "Noto Serif KR"'),document.fonts.load('400 30px "Noto Sans KR"'),document.fonts.load('500 30px "Noto Sans KR"')]).catch(()=>{});await document.fonts.ready;const img=new Image();img.crossOrigin='anonymous';const src=imageURL(data.image);if(!src)throw Error('image');await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=src;});if(closed||token!==version)return;
  const [w,h]=sizes[q('[data-ratio]').value];canvas.width=w;canvas.height=h;
  drawCard(ctx,q('[data-design]').value,w,h,img,data);
- const next=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!next)throw Error('export');if(closed||token!==version)return;if(url)URL.revokeObjectURL(url);blob=next;url=URL.createObjectURL(blob);q('[data-save]').disabled=false;const file=new File([blob],'UNFRAME.png',{type:'image/png'});q('[data-native]').hidden=!navigator.canShare?.({files:[file]});status(`${w} × ${h} px · 저장 준비 완료`);
- }catch{if(!closed&&token===version)status('이미지를 불러오지 못했습니다. 다른 디자인을 선택하거나 잠시 후 다시 시도해주세요.');}}
+ const next=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!next)throw Error('export');if(closed||token!==version)return;if(url)URL.revokeObjectURL(url);blob=next;url=URL.createObjectURL(blob);q('[data-save]').disabled=false;const file=new File([blob],'UNFRAME.png',{type:'image/png'});q('[data-native]').hidden=!navigator.canShare?.({files:[file]});status(t('card.ready',{w,h}));
+ }catch{if(!closed&&token===version)status(t('card.failed'));}}
  q('[data-design]').onchange=render;q('[data-ratio]').onchange=render;await render();
 }

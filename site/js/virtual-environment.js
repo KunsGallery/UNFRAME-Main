@@ -2,7 +2,7 @@
 // Existing room dimensions, artwork placement and storage remain owned by UNFRAME.
 export function environmentOptions(settings){return {lighting:settings.lighting||'general',ceiling:settings.ceiling||'plain',outdoor:settings.outdoor===true};}
 export function surfaceTexture(THREE,renderer,name,repeatX=1,repeatY=1){
- const texture=new THREE.TextureLoader().load(`/assets/virtual-textures/${name}.webp`,undefined,undefined,()=>console.warn('갤러리 표면 텍스처를 불러오지 못했습니다.'));
+ const texture=new THREE.TextureLoader().load(`/assets/virtual-textures/${name}.webp`,undefined,undefined,()=>console.warn('Gallery surface texture failed to load.'));
  texture.encoding=THREE.sRGBEncoding;texture.wrapS=texture.wrapT=THREE.MirroredRepeatWrapping;texture.repeat.set(repeatX,repeatY);texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);return texture;
 }
 export function materialTexture(THREE,kind){
@@ -35,7 +35,7 @@ export function buildOutdoor(THREE,scene,renderer,fallbackTexture,{leafCount,off
  hedge.castShadow=hedge.receiveShadow=true;leaves.receiveShadow=true;group.add(hedge,leaves);
  const backdropMaterial=new THREE.MeshBasicMaterial({map:fallbackTexture(),side:THREE.DoubleSide,toneMapped:false,fog:false});
  const backdrop=new THREE.Mesh(new THREE.PlaneGeometry(32,16),backdropMaterial);backdrop.rotation.y=-Math.PI/2;backdrop.position.set(15.4,5.6,0);group.add(backdrop);
- let disposed=false;new THREE.TextureLoader().load('/assets/virtual-textures/long-gallery-woodland-v1.webp',texture=>{if(disposed){texture.dispose();return;}texture.encoding=THREE.sRGBEncoding;texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);backdropMaterial.map.dispose();backdropMaterial.map=texture;backdropMaterial.needsUpdate=true;},undefined,()=>console.warn('숲 이미지를 불러오지 못해 기본 풍경을 표시합니다.'));
+ let disposed=false;new THREE.TextureLoader().load('/assets/virtual-textures/long-gallery-woodland-v1.webp',texture=>{if(disposed){texture.dispose();return;}texture.encoding=THREE.sRGBEncoding;texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);backdropMaterial.map.dispose();backdropMaterial.map=texture;backdropMaterial.needsUpdate=true;},undefined,()=>console.warn('Forest image failed to load; showing the default view.'));
  const reduced=matchMedia('(prefers-reduced-motion:reduce)');
  return {update:time=>{if(!reduced.matches)leaves.rotation.z=Math.sin(time*.6)*.0012;},dispose:()=>{disposed=true;}};
 }

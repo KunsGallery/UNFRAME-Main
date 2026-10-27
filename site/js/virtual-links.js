@@ -9,7 +9,7 @@ export function artFromHash(hash,ids){
 }
 // Viewpoints scale with the room: arrival stands 4.2m from the front wall, shortcuts sit
 // within the walkable bounds facing each wall.
-export const WALL_VIEWS={front:{label:'전면 벽',yaw:Math.PI/2},left:{label:'좌측 벽',yaw:Math.PI},right:{label:'우측 벽',yaw:0}};
+export const WALL_VIEWS={front:{yaw:Math.PI/2},left:{yaw:Math.PI},right:{yaw:0}};
 export const playerBounds=room=>({minX:-room.w/2+1,maxX:room.w/2-1.2,minZ:-room.d/2+1,maxZ:room.d/2-1});
 export function wallViewpoint(wall,room=ROOMS.large){
  if(!Object.hasOwn(WALL_VIEWS,wall))return null;
