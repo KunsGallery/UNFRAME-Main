@@ -38,3 +38,8 @@ test('English routes mirror the public Korean routes',()=>{
  for(const line of ['/exhibition/:id /detail.html 200','/en/exhibition/:id /en/detail.html 200','/en/virtual-gallery/:id /en/virtual-gallery.html 200','/en/about /en/about.html 200','/en /en/index.html 200','/en/exhibitions/:id /en/exhibition/:id 301'])assert.ok(lines.includes(line),line);
  assert.ok(!lines.some(line=>line.startsWith('/en/admin')||line.startsWith('/en/artist-studio')));
 });
+
+test('build-time hreflang links are absolute when an origin is given',()=>{
+ const html=translateHTML(page('<p>x</p>'),'en',{path:'/about',origin:'https://unframe.kr'});
+ for(const [code,href] of [['ko','https://unframe.kr/about'],['en','https://unframe.kr/en/about'],['x-default','https://unframe.kr/about']])assert.ok(html.includes(`hreflang="${code}" href="${href}"`),code);
+});

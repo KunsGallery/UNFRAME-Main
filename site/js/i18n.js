@@ -10,6 +10,9 @@ export function t(key,vars={},l=lang()){
 // Staff and artist screens stay Korean, and static files have no English copy.
 const UNLOCALIZED=/^\/(en(\/|$)|admin|artist-studio|assets\/|js\/|config\.js)/;
 export function localHref(path,l=lang()){
+ // Same-origin absolute links (pasted into admin fields) behave like site paths.
+ const origin=globalThis.location?.origin;
+ if(l==='en'&&origin&&typeof path==='string'&&path.startsWith(origin+'/')){const local=path.slice(origin.length);return UNLOCALIZED.test(local)?path:localHref(local,l);}
  if(l!=='en'||typeof path!=='string'||!path.startsWith('/')||path.startsWith('//')||UNLOCALIZED.test(path))return path;
  return '/en'+path;
 }

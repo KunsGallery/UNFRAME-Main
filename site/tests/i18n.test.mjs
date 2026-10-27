@@ -55,3 +55,16 @@ test('the footer has an English version with no Korean left',async()=>{
  assert.ok(!/[가-힣]/.test(footerHTML('en')));
  assert.match(footerHTML('ko'),/장소 및 운영안내/);
 });
+test('same-origin absolute links stay on the English site',()=>{
+ const saved=globalThis.location;globalThis.location={pathname:'/en/',href:'https://u.kr/en/',origin:'https://u.kr'};
+ try{
+  assert.equal(localHref('https://u.kr/exhibition/x#ex-online','en'),'/en/exhibition/x#ex-online');
+  assert.equal(localHref('https://other.kr/exhibition/x','en'),'https://other.kr/exhibition/x');
+  assert.equal(localHref('https://u.kr/admin','en'),'https://u.kr/admin');
+ }finally{if(saved===undefined)delete globalThis.location;else globalThis.location=saved;}
+});
+test('runtime hreflang targets drop query and hash',async()=>{
+ const {alternateHref}=await import('../js/language-switch.js');
+ assert.equal(alternateHref('https://u.kr/virtual-gallery/x?preview=1#art-2','en'),'https://u.kr/en/virtual-gallery/x');
+ assert.equal(alternateHref('https://u.kr/en/exhibition/x?y=1','ko'),'https://u.kr/exhibition/x');
+});

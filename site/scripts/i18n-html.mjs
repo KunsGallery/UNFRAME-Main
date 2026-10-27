@@ -10,8 +10,8 @@ export const I18N_READY=['index.html','about.html','exhibition.html','detail.htm
 export const PAGE_PATHS={'index.html':'/','exhibition.html':'/exhibition','project.html':'/project','about.html':'/about'};
 const english=key=>{const entry=DICT[key];if(!entry)throw new Error(`Missing translation key: ${key}`);return entry.en;};
 const escapeAttr=value=>value.replaceAll('&','&amp;').replaceAll('"','&quot;');
-export const alternateLinks=path=>[['ko',path],['en',localHref(path,'en')],['x-default',path]].map(([code,href])=>`<link rel="alternate" hreflang="${code}" href="${href}">`).join('');
-export function translateHTML(html,l,{path}={}){
+export const alternateLinks=(path,origin='')=>[['ko',path],['en',localHref(path,'en')],['x-default',path]].map(([code,href])=>`<link rel="alternate" hreflang="${code}" href="${origin}${href}">`).join('');
+export function translateHTML(html,l,{path,origin=''}={}){
  let out=html;
  if(l==='en'){
   out=out.replace(/<html lang="ko">/,'<html lang="en">');
@@ -24,7 +24,7 @@ export function translateHTML(html,l,{path}={}){
   });
   out=out.replace(/(\s(?:href|src|action)=)"(\/[^"]*)"/g,(match,attr,url)=>`${attr}"${localHref(url,'en')}"`);
  }
- if(path)out=out.replace('</head>',alternateLinks(path)+'</head>');
+ if(path)out=out.replace('</head>',alternateLinks(path,origin)+'</head>');
  return out;
 }
 // Removes every element carrying `attribute`, counting nested tags of the same name.

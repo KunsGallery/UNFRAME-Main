@@ -10,6 +10,8 @@ await writeFile(resolve(dist,'config.js'),'// Generated Firebase web configurati
 await writeFile(resolve(dist,'_redirects'),redirectLines().join('\n')+'\n');
 // Korean pages gain hreflang links; English copies are written under /en.
 await mkdir(resolve(dist,'en'));
-for(const name of PUBLIC_PAGES){const html=await readFile(resolve(root,name),'utf8'),path=PAGE_PATHS[name];await writeFile(resolve(dist,name),translateHTML(html,'ko',{path}));await writeFile(resolve(dist,'en',name),translateHTML(html,'en',{path}));}
+// Netlify sets URL to the site's primary address; hreflang links must be absolute.
+const origin=(process.env.URL||'https://unframe-main.netlify.app').replace(/\/$/,'');
+for(const name of PUBLIC_PAGES){const html=await readFile(resolve(root,name),'utf8'),path=PAGE_PATHS[name];await writeFile(resolve(dist,name),translateHTML(html,'ko',{path,origin}));await writeFile(resolve(dist,'en',name),translateHTML(html,'en',{path,origin}));}
 await writeFile(resolve(dist,'_headers'),'/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n/config.js\n  Cache-Control: no-store\n/admin*\n  X-Robots-Tag: noindex, nofollow\n/artist-studio*\n  X-Robots-Tag: noindex, nofollow\n  Cache-Control: no-store\n/shop-preview*\n  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow, noarchive\n/project-lab*\n  X-Robots-Tag: noindex, nofollow\n/project-scroll*\n  X-Robots-Tag: noindex, nofollow\n');
 console.log('Netlify deploy folder prepared: dist/');

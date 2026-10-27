@@ -53,7 +53,7 @@ async function renderCurrent(items){
   const roomFailure=failed||mediaFailed||results.some(result=>result.status==='rejected');
   target.innerHTML=currentExhibitionsView(items,loaded,cover,{failed:roomFailure});
   renderViewingRooms(chosen.map(choice=>loaded.find(room=>room.gallery.id===choice.gallery.id)).filter(Boolean),cover,{failed:roomFailure});
-  galleryLinks=Object.fromEntries(rooms.map(({exhibition})=>[exhibition.id,`/exhibition/${encodeURIComponent(exhibition.id)}#ex-online`]));updateHero();
+  galleryLinks=Object.fromEntries(rooms.map(({exhibition})=>[exhibition.id,localHref(`/exhibition/${encodeURIComponent(exhibition.id)}`)+'#ex-online']));updateHero();
   clearPageImages();pageImages=newImages;
  }catch{if(version===generation){target.innerHTML=currentExhibitionsView(items,[],cover,{failed:true});renderViewingRooms([],cover,{failed:true});}for(const url of newImages)URL.revokeObjectURL(url);}
 }

@@ -1,7 +1,7 @@
 import {environmentOptions,surfaceTexture,materialTexture,buildOutdoor,canvasSideMaterials} from './virtual-environment.js';
 import {layoutArtworks,artworkMount,roomOf,saleBadge} from './virtual-model.js';
 import {createTour} from './virtual-tour.js';
-import {t} from './i18n.js';
+import {t,lang} from './i18n.js';
 import {mountHud} from './virtual-hud.js';
 import {wallViewpoint,entryView,playerBounds} from './virtual-links.js';
 import {bindTouchLook} from './virtual-input.js';
@@ -1422,7 +1422,7 @@ GalleryApp.rebalanceArtworksOnWalls=function(){
 GalleryApp.buildObjects=function(){
  const loader=THREE.GLTFLoader?new THREE.GLTFLoader():null,focused=environmentOptions(gallerySettings).lighting==='focused';
  for(const art of artworksData.filter(item=>item.placement)){
-  const group=buildObjectGroup(THREE,art.placement,{loader,photoTexture:()=>TextureGenerator.createArtworkTexture(art).texture,onError:()=>this.showToast(t('room3d.modelFailed',{title:art.title}))});
+  const group=buildObjectGroup(THREE,art.placement,{loader,photoTexture:()=>TextureGenerator.createArtworkTexture(art).texture,onError:()=>this.showToast(t('room3d.modelFailed',{title:art.titleEn&&lang()==='en'?art.titleEn:art.title}))});
   this.scene.add(group);this.artworkObjects.push(group);
   const [x,z]=art.placement.position,light=new THREE.SpotLight(0xf5f5ef,focused?1.6:.8,9,Math.PI/7,.55,1.2),target=new THREE.Object3D();
   light.position.set(x,4,z);target.position.set(x,0,z);this.scene.add(target);light.target=target;light.castShadow=QUALITY[quality].shadows;this.scene.add(light);this.spotlights.push(light);
