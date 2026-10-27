@@ -5,7 +5,7 @@ import {localHref} from '../js/i18n.js';
 // shop-preview, project-scroll and project-lab are staff-only or draft pages (noindex) and stay Korean.
 export const PUBLIC_PAGES=['index.html','exhibition.html','detail.html','project.html','about.html','virtual-gallery.html'];
 // Pages whose fixed copy is fully marked; tests require their English build to be Hangul-free.
-export const I18N_READY=[];
+export const I18N_READY=['index.html','about.html'];
 // Pages with one fixed address get build-time hreflang links; the others add them at runtime.
 export const PAGE_PATHS={'index.html':'/','exhibition.html':'/exhibition','project.html':'/project','about.html':'/about'};
 const english=key=>{const entry=DICT[key];if(!entry)throw new Error(`Missing translation key: ${key}`);return entry.en;};

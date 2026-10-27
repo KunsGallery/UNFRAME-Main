@@ -11,3 +11,13 @@ test('multiple current exhibitions repeat poster-info and work groups without pr
 test('room cards describe spaces, prefer work preview, and escape source text',()=>{const a=room('a');a.gallery.settings.title='<script>';const html=viewingRoomsView([a],x=>x);assert.ok(html.includes('/work-a.jpg'));assert.ok(!html.includes('/poster.jpg'));assert.ok(html.includes('/virtual-gallery/a'));assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('viewing-artist'));});
 
 test('room previews choose different works when spaces share their first artwork',()=>{const a=room('a'),b=room('b');b.gallery.artworks=[...a.gallery.artworks,...b.gallery.artworks];assert.deepEqual(roomPreviews([a,b]).map(x=>x.preview.title),['작품 a','작품 b']);});
+test('English home cards use English titles and fall back to Korean',()=>{
+ const saved=globalThis.location;globalThis.location={pathname:'/en/',href:'https://u.kr/en/'};
+ try{
+  const a={...ex('first'),titleEn:'First Light',locationEn:'Seoul'},b={...ex('second'),titleEn:'  '};
+  const html=currentExhibitionsView([a,b],[room('a',a)],x=>x);
+  assert.match(html,/<h3>First Light<\/h3>/);assert.match(html,new RegExp(`<h3>${b.title}</h3>`));
+  assert.match(html,/Seoul/);assert.match(html,/href="\/en\/exhibition\/first"/);
+  assert.ok(!/전시 자세히 보기/.test(html));
+ }finally{if(saved===undefined)delete globalThis.location;else globalThis.location=saved;}
+});
