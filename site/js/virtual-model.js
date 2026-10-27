@@ -8,6 +8,7 @@ export const WALL_COLORS={'#f6f4ee':'웜 화이트','#fafaf8':'퓨어 화이트'
 export const wallColorOptions=current=>Object.hasOwn(WALL_COLORS,current)||!/^#[0-9a-fA-F]{6}$/.test(current||'')?WALL_COLORS:{...WALL_COLORS,[current]:`기존 색상 (${current})`};
 // Room presets in metres. 'large' is the original room; galleries without roomSize keep it.
 import {placeObjects} from './object-placement.js';
+import {validateEnglish,ARTWORK_ENGLISH} from './i18n.js';
 export const ROOMS={small:{id:'small',label:'소 · 10 × 8m',w:10,d:8,wall:6},medium:{id:'medium',label:'중 · 13 × 11m',w:13,d:11,wall:8},large:{id:'large',label:'대 · 16 × 14m',w:16,d:14,wall:10}};
 export const roomOf=settings=>ROOMS[settings?.roomSize]||ROOMS.large;
 export const SHAPES={rect:'사각형',circle:'원형',free:'자유형 (투명 배경 PNG)'};
@@ -32,6 +33,7 @@ export function validateGallery(data,artworks=[]){
  if(data.lighting!==undefined&&!Object.hasOwn(LIGHTING,data.lighting)||data.ceiling!==undefined&&!Object.hasOwn(CEILINGS,data.ceiling))throw new Error('조명과 천장 설정을 확인해주세요.');
  if(data.roomSize!==undefined&&!Object.hasOwn(ROOMS,data.roomSize))throw new Error('공간 크기 설정을 확인해주세요.');
  if(data.artistNote!==undefined&&!bounded(data.artistNote,600))throw new Error('작가 소개는 600자 이내로 입력해주세요.');
+ validateEnglish(data,{titleEn:200,subtitleEn:1000,artistNoteEn:600});
  if(['published','outdoor','showPrices'].some(key=>typeof data[key]!=='boolean'))throw new Error('게시 및 공간 설정을 확인해주세요.');
  if(data.published&&!artworks.length)throw new Error('공개하려면 작품을 한 점 이상 등록해주세요.');
  if(data.published)layoutArtworks(artworks,data.roomSize);
@@ -49,6 +51,7 @@ export function validateArtwork(data){
  if(data.shape==='circle'&&data.widthCm!==data.heightCm)throw new Error('원형 작품은 지름 하나로 입력해주세요.');
  if(data.shape==='circle'&&!['canvas','none'].includes(data.frame))throw new Error('원형 작품은 캔버스 또는 프레임 없음(종이)으로 선택해주세요.');
  if(data.shape==='free'&&data.frame!=='none')throw new Error('자유형 작품은 프레임 없이 투명 배경 이미지로 걸립니다. 형태를 프레임 없음으로 선택해주세요.');
+ validateEnglish(data,ARTWORK_ENGLISH);
  if(data.kind!==undefined&&!['flat','object'].includes(data.kind))throw new Error('작품 종류를 선택해주세요.');
  if(data.kind==='object')validateObject(data);
  if(!data.image?.url&&!data.image?.path)throw new Error('작품 이미지를 업로드해주세요.');

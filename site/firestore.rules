@@ -98,10 +98,20 @@ service cloud.firestore {
     && items.join('|').matches('^$|^'+prefix+'[^/|~]{1,400}(\\|'+prefix+'[^/|~]{1,400})*$')
     && items.join('~').matches('^$|^'+prefix+'[^/|~]{1,400}(~'+prefix+'[^/|~]{1,400})*$');
   }
+  // Optional English copy of an entered text field, bounded like its Korean field.
+  function optText(data,field,max) {
+   return !(field in data) || (data[field] is string && data[field].size()<=max);
+  }
+  // Checked only when present: legacy photo lists already use most of the expression budget.
+  function validExhibitionEnglish(data) {
+   return optText(data,'titleEn',200) && optText(data,'summaryEn',600) && optText(data,'descriptionEn',30000)
+    && optText(data,'locationEn',1000) && optText(data,'hoursEn',1000) && optText(data,'admissionEn',1000);
+  }
   function valid(data,id) {
    return id.size()<=100 && id.matches('^[A-Za-z0-9_-]+$')
     && data.keys().hasAll(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths'])
-    && data.keys().hasOnly(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths','viewingRoomEnabled'])
+    && data.keys().hasOnly(['title','slug','startDate','endDate','location','artists','summary','description','hours','admission','address','mapUrl','bookingUrl','cover','gallery','published','order','updatedAt','imagePaths','viewingRoomEnabled','titleEn','summaryEn','descriptionEn','locationEn','hoursEn','admissionEn'])
+    && (!data.keys().hasAny(['titleEn','summaryEn','descriptionEn','locationEn','hoursEn','admissionEn']) || validExhibitionEnglish(data))
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.slug is string && data.slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && data.slug.size()<=200
     && data.startDate is string && data.startDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -136,7 +146,8 @@ service cloud.firestore {
   function validHighlight(data,id) {
    return id.size()<=128 && id.matches('^[A-Za-z0-9_-]+$')
     && data.keys().hasAll(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','order','updatedAt'])
-    && data.keys().hasOnly(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','nowFeatured','order','updatedAt'])
+    && data.keys().hasOnly(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','nowFeatured','order','updatedAt','titleEn','summaryEn'])
+    && optText(data,'titleEn',200) && optText(data,'summaryEn',600)
     && data.kind in ['event','virtual','news']
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.summary is string && data.summary.size()<=600
@@ -184,7 +195,8 @@ service cloud.firestore {
   function validVirtualGallery(data,exid) {
    return virtualId(exid)
     && data.keys().hasAll(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt'])
-    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order','lighting','ceiling','artistEmail','artistNote','roomSize'])
+    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order','lighting','ceiling','artistEmail','artistNote','roomSize','titleEn','subtitleEn','artistNoteEn'])
+    && optText(data,'titleEn',200) && optText(data,'subtitleEn',1000) && optText(data,'artistNoteEn',600)
     && validVirtualAssociation(data,exid)
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.subtitle is string && data.subtitle.size()<=1000
@@ -222,7 +234,8 @@ service cloud.firestore {
   }
   function validArtworkFields(data) {
    return data.keys().hasAll(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt'])
-    && data.keys().hasOnly(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt','canvasThickness','canvasEdge','shape','saleStatus','kind','depthCm','spot','yaw','plinth','copies','model'])
+    && data.keys().hasOnly(['title','titleEn','artist','year','medium','widthCm','heightCm','price','description','wall','frame','order','image','updatedAt','canvasThickness','canvasEdge','shape','saleStatus','kind','depthCm','spot','yaw','plinth','copies','model','descriptionEn','mediumEn'])
+    && optText(data,'descriptionEn',5000) && optText(data,'mediumEn',500)
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.titleEn is string && data.titleEn.size()<=200
     && data.artist is string && data.artist.size()>0 && data.artist.size()<=300
@@ -362,6 +375,7 @@ service cloud.firestore {
     allow read: if staff() || (submissionOwner(get(submissionPath(sid)).data) && submissionLive(get(submissionPath(sid)).data));
     allow create, update: if virtualId(artid) && (artistArtworkWrite(sid) || staffArtworkWrite(sid))
      && validArtworkFields(request.resource.data)
+     && !request.resource.data.keys().hasAny(['descriptionEn','mediumEn'])
      && validSubmissionImage(request.resource.data.image,sid,artid,getAfter(submissionPath(sid)).data.targetGalleryId)
      && (!('model' in request.resource.data)
       || validModel(request.resource.data.model,'virtualSubmissions/'+sid+'/'+artid+'/')

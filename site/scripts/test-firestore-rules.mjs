@@ -428,6 +428,8 @@ await expectStatus('staff creates email-locked invite',200,commit([put(`virtualS
 const staffWork=(sid,data,aid=artid)=>subWork(sid,data,aid,staff);
 await expectStatus('staff pre-uploads artwork to an invite',200,staffWork(open,subArtwork(open)));
 await expectStatus('staff pre-upload requires the parent touch',403,commit([put(`virtualSubmissions/${open}/artworks/second-art`,subArtwork(open,'second-art'),{stamp:[]})]));
+await expectStatus('submission artworks never carry English copies',403,staffWork(open,subArtwork(open,artid,{descriptionEn:'About'})));
+await expectStatus('submission artworks never carry English medium',403,staffWork(open,subArtwork(open,artid,{mediumEn:'Oil'})));
 await expectStatus('staff pre-upload keeps image scoping',403,staffWork(open,subArtwork(open,artid,{image:{...artwork.image,path:`virtualSubmissions/${locked}/${artid}/11111111-2222-4333-8444-555555555555.jpeg`}})));
 await expectStatus('staff sets space settings before the invite opens',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,theme:'wood'}},{mask:['settings']})]));
 await expectStatus('artist cannot write an unclaimed invite artwork',403,subWork(open,subArtwork(open,'second-art'),'second-art'));
@@ -512,4 +514,26 @@ await expectStatus('bound artist opens a revision with existing artwork',200,com
 await expectStatus('revision may keep gallery images',200,subWork(revision,{...keptArtwork,title:'고친 제목'}));
 await expectStatus('revision may add submission images',200,subWork(revision,subArtwork(revision,'second-art'),'second-art'));
 
+// Optional English copies of entered content.
+{
+ const enId='rules-english';
+ await request(`exhibitions/${enId}`,{method:'DELETE',auth:'owner'});
+ const english={titleEn:'Rules',summaryEn:'s'.repeat(600),descriptionEn:'d',locationEn:'Seoul',hoursEn:'11-7',admissionEn:'Free'};
+ await expectStatus('exhibition with English copy',200,request(`exhibitions/${enId}`,{method:'PATCH',data:{...fixture(enId),...english}}));
+ for(const [key,max] of Object.entries({titleEn:200,summaryEn:600,descriptionEn:30000,locationEn:1000,hoursEn:1000,admissionEn:1000})){
+  await expectStatus(`exhibition ${key} too long`,403,request(`exhibitions/${enId}`,{method:'PATCH',data:{...fixture(enId),[key]:'x'.repeat(max+1)}}));
+  await expectStatus(`exhibition ${key} not a string`,403,request(`exhibitions/${enId}`,{method:'PATCH',data:{...fixture(enId),[key]:3}}));
+ }
+ await expectStatus('highlight with English copy',200,saveNews({...news,titleEn:'News',summaryEn:'Short'}));
+ await expectStatus('highlight titleEn too long',403,saveNews({...news,titleEn:'x'.repeat(201)}));
+ await expectStatus('highlight summaryEn too long',403,saveNews({...news,summaryEn:'x'.repeat(601)}));
+ await expectStatus('re-seed English gallery parent',200,request(`exhibitions/${exid}`,{method:'PATCH',data:fixture(exid)}));
+ const galleryNow={...settings,updatedAt:new Date().toISOString()};
+ await expectStatus('gallery with English copy',200,request(galleryPath,{method:'PATCH',data:{...galleryNow,titleEn:'Room',subtitleEn:'About',artistNoteEn:'Note'}}));
+ for(const [key,max] of Object.entries({titleEn:200,subtitleEn:1000,artistNoteEn:600}))await expectStatus(`gallery ${key} too long`,403,request(galleryPath,{method:'PATCH',data:{...galleryNow,[key]:'x'.repeat(max+1)}}));
+ const workNow={...artwork,updatedAt:new Date().toISOString()};
+ await expectStatus('gallery artwork with English copy',200,request(artworkPath,{method:'PATCH',data:{...workNow,descriptionEn:'About',mediumEn:'Oil'}}));
+ await expectStatus('gallery artwork descriptionEn too long',403,request(artworkPath,{method:'PATCH',data:{...workNow,descriptionEn:'x'.repeat(5001)}}));
+ await expectStatus('gallery artwork mediumEn too long',403,request(artworkPath,{method:'PATCH',data:{...workNow,mediumEn:'x'.repeat(501)}}));
+}
 console.log(`Firestore emulator: ${checks} checks passed.`);

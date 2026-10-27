@@ -215,3 +215,14 @@ test('spot choices follow the room size',()=>{
  assert.equal(Object.keys(spotOptions('large')).length,6);
  assert.match(spotOptions('medium').center,/중앙/);
 });
+
+test('optional English gallery and artwork fields are bounded',async()=>{
+ const {validateGallery,validateArtwork,defaultGallery,emptyArtwork}=await import('../js/virtual-model.js');
+ const gallery={...defaultGallery({title:'t',summary:''}),titleEn:'Room',subtitleEn:'',artistNoteEn:'Note'};
+ assert.doesNotThrow(()=>validateGallery(gallery));
+ for(const [field,max] of Object.entries({titleEn:200,subtitleEn:1000,artistNoteEn:600}))assert.throws(()=>validateGallery({...gallery,[field]:'x'.repeat(max+1)}),/영문/,field);
+ const art={...emptyArtwork(),title:'a',artist:'b',image:{url:'x',path:'',alt:''},descriptionEn:'About',mediumEn:'Oil'};
+ assert.doesNotThrow(()=>validateArtwork(art));
+ assert.throws(()=>validateArtwork({...art,descriptionEn:'x'.repeat(5001)}),/영문/);
+ assert.throws(()=>validateArtwork({...art,mediumEn:'x'.repeat(501)}),/영문/);
+});

@@ -24,6 +24,11 @@ export function localized(item,field,l=lang()){
  if(l==='en'&&typeof english==='string'&&english.trim())return english;
  return item?.[field]??'';
 }
+// English copies of entered content are optional strings bounded like their Korean field.
+export function validateEnglish(item,limits){
+ for(const [field,max] of Object.entries(limits)){const value=item[field];if(value!==undefined&&(typeof value!=='string'||value.length>max))throw new Error(`영문 입력 내용을 확인해주세요. (${field}: ${max.toLocaleString('ko-KR')}자 이하)`);}
+}
+export const ARTWORK_ENGLISH={descriptionEn:5000,mediumEn:500};
 const MEMORY='unframe-lang';
 export function rememberLanguage(l){try{globalThis.localStorage?.setItem(MEMORY,l);}catch{}}
 export function preferredLanguage(){try{const value=globalThis.localStorage?.getItem(MEMORY);return value==='en'||value==='ko'?value:null;}catch{return null;}}

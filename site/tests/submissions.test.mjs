@@ -333,3 +333,25 @@ test('objects do not use up front-wall slots, and a room-size change must fit th
  await assert.rejects(saveSubmissionSettings(id,{theme:'white',wallColor:'#f6f4ee',lighting:'general',ceiling:'plain',roomSize:'small'}),/전시 자리/);
  delete globalThis.localStorage;
 });
+
+test('revisions leave English fields out of the draft and approval keeps them',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();
+ await saveSubmissionArtwork(id,fix(work('w1')));await setSubmissionStatus(id,'submitted');
+ const galleryId=await approveSubmission(id,{publish:true,copy:async()=>{}});
+ const {saveVirtualArtwork,saveVirtualSettings}=await import('../js/virtual-store.js');
+ const before=await getVirtualGallery(galleryId,{admin:true});
+ await saveVirtualSettings(galleryId,{...before.settings,titleEn:'Room'},before.artworks);
+ await saveVirtualArtwork(galleryId,{...before.artworks[0],descriptionEn:'Kept',mediumEn:'Oil'});
+ const revision=await createRevision(galleryId);
+ const draft=await getSubmission(revision);
+ assert.equal(draft.artworks[0].descriptionEn,undefined);assert.equal(draft.artworks[0].mediumEn,undefined);
+ await saveSubmissionArtwork(revision,{...draft.artworks[0],title:'고친 제목'});
+ const added=work('w9',{wall:'left'});await saveSubmissionArtwork(revision,{...added,image:{...added.image,path:added.image.path.replace('SUB',revision)}});
+ await setSubmissionStatus(revision,'submitted');
+ await approveSubmission(revision,{publish:false,copy:async()=>{},remove:async()=>{}});
+ const after=await getVirtualGallery(galleryId,{admin:true});
+ const w1=after.artworks.find(art=>art.id==='w1'),w9=after.artworks.find(art=>art.id==='w9');
+ assert.equal(w1.title,'고친 제목');assert.equal(w1.descriptionEn,'Kept');assert.equal(w1.mediumEn,'Oil');
+ assert.equal(w9.descriptionEn,undefined);assert.equal(after.settings.titleEn,'Room');
+ delete globalThis.localStorage;
+});

@@ -8,3 +8,9 @@ test('published event requires dates and destination, virtual gallery can be und
 test('NOW selection is independent of hero, bounded to four, canonical projects and active published news',()=>{const values=Array.from({length:6},(_,i)=>item({kind:'news',project:['UP','음','U#','U.A.U'][i%4],title:`소식 ${i}`,order:i,featured:false,nowFeatured:true}));values.push(item({kind:'news',project:'UP',title:'임시',published:false,nowFeatured:true}),item({kind:'event',project:'음',nowFeatured:true,startDate:'2026-10-01',endDate:'2026-10-12',order:0}),item({kind:'virtual',nowFeatured:true}));assert.deepEqual(selectedNews(values,'2026-10-13').map(x=>x.title),['소식 0','소식 1','소식 2','소식 3']);assert.equal(selectedHighlights(values,'2026-10-13').length,1);assert.doesNotThrow(()=>validateHighlight(values[0]));assert.throws(()=>validateHighlight({...values[0],project:'다른 프로젝트'}));assert.throws(()=>validateHighlight({...values[0],nowFeatured:'true'}));assert.throws(()=>validateHighlight(item({nowFeatured:true})));});
 
 test('SALON event saves and appears in JOURNAL without being assigned to another project',()=>{const salon=item({kind:'event',project:'UNFRAME SALON',title:'UNFRAME SALON Vol. 4',nowFeatured:true,featured:true,startDate:'2026-10-31',endDate:'2026-10-31'});assert.doesNotThrow(()=>validateHighlight(salon));assert.equal(selectedNews([salon],'2026-10-26')[0].project,'UNFRAME SALON');assert.equal(selectedHighlights([salon],'2026-10-26')[0].project,'UNFRAME SALON');assert.equal(selectedNews([salon],'2026-11-01').length,0);assert.equal(selectedNews([{...salon,published:false}],'2026-10-26').length,0);});
+
+test('optional English highlight fields are bounded',()=>{
+ assert.doesNotThrow(()=>validateHighlight(item({titleEn:'Gallery',summaryEn:''})));
+ assert.throws(()=>validateHighlight(item({titleEn:'x'.repeat(201)})),/영문/);
+ assert.throws(()=>validateHighlight(item({summaryEn:'x'.repeat(601)})),/영문/);
+});
