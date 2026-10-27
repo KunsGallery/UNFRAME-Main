@@ -2,6 +2,7 @@ import {demo,firestoreClient,session,login,logout,getExhibition,removeImage,copy
 import {getVirtualGallery,listVirtualGalleries,saveVirtualSettings,saveVirtualArtwork,deleteVirtualArtwork,deleteVirtualGallery} from './virtual-store.js';
 import {validateArtwork,layoutArtworks,defaultArtistGallery,galleryExhibitionId,THEMES,LIGHTING,CEILINGS,ROOMS} from './virtual-model.js';
 import {placeObjects} from './object-placement.js';
+import {ARTWORK_ENGLISH} from './i18n.js';
 import {EXPIRY_DAYS,newSubmissionId,expiryFrom,isExpired,artistCanEdit,canTransition,validateInvite,isSubmissionPath} from './submission-model.js';
 // Artist uploads stay in virtualSubmissions until staff approve them; rules and the media
 // worker enforce ownership and expiry in production, this module mirrors them in demo mode.
@@ -20,7 +21,8 @@ export function pickSubmissionSettings(settings={}){
  if(settings.artistNote!==undefined){const note=String(settings.artistNote).trim();if(note.length>600)throw new Error('작가 소개는 600자 이내로 입력해주세요.');data.artistNote=note;}
  return data;
 }
-const artworkData=artwork=>{const {id,...data}=artwork;const out={...data,updatedAt:nowISO(),image:{url:demo?artwork.image.url:'',path:artwork.image.path,alt:artwork.image.alt}};if(artwork.model)out.model=demo?{...artwork.model}:{path:artwork.model.path,name:artwork.model.name||''};return out;};
+// English copies are staff-only gallery fields; artist drafts never carry them.
+const artworkData=artwork=>{const {id,descriptionEn,mediumEn,...data}=artwork;const out={...data,updatedAt:nowISO(),image:{url:demo?artwork.image.url:'',path:artwork.image.path,alt:artwork.image.alt}};if(artwork.model)out.model=demo?{...artwork.model}:{path:artwork.model.path,name:artwork.model.name||''};return out;};
 function checkArtworkImage(submission,art){
  const path=art.image?.path||'';
  if(demo&&!path)return;
@@ -210,7 +212,8 @@ export async function approveSubmission(id,{publish,copy=copyImages,remove=remov
  const pairs=[],works=artworks.map(art=>{
   // Images and GLB models move from the submission folder into the gallery folder, keeping names.
   const move=path=>{if(!isSubmissionPath(path,id))return path;const to=path.replace(`virtualSubmissions/${id}/`,`virtualGalleries/${galleryId}/`);pairs.push({from:path,to});return to;};
-  const moved={...art,image:{...art.image,path:move(art.image?.path)}};
+  const moved={...art,image:{...art.image,path:move(art.image?.path)}},previous=existing?.artworks.find(old=>old.id===art.id);
+  for(const field of Object.keys(ARTWORK_ENGLISH))if(typeof previous?.[field]==='string')moved[field]=previous[field];
   if(art.model)moved.model={...art.model,path:move(art.model.path)};
   return moved;
  });

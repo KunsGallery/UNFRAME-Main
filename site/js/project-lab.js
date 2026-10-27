@@ -11,7 +11,7 @@ const effects={
 };
 const descriptions={up:'포스터가 소리에 반응하는 듯한 움직임. 선택한 트랙에 따라 소개의 핵심 문장도 바뀝니다.',mm:'완성된 작품 이전의 생각들이 대화의 호흡으로 나타납니다. 다음 문장을 직접 넘겨보세요.',print:'독립출판의 소개를 실제 책처럼 넘겨 읽습니다. 버튼, 방향키 또는 좌우 스와이프로 넘길 수 있습니다.',uau:'관계가 만들어지는 순간을 선으로 표현합니다. 화면을 움직이면 연결이 반응하고, 버튼을 누르면 연대가 펼쳐집니다.'};
 document.querySelector('#lab-experiments').innerHTML=PROJECTS.map(p=>`<section id="${p.id}" class="experiment experiment-${p.id}" aria-labelledby="heading-${p.id}"><div class="experiment-copy"><h2 id="heading-${p.id}">${e(p.name)}</h2><h3>${e(p.title)}</h3><p class="effect-description">${e(descriptions[p.id])}</p><p class="highlight-quote" data-highlight>${e(p.summary)}</p>${p.id==='up'?'<div class="track-selector" aria-label="소개 트랙 선택"><button data-track="0" aria-pressed="true">Exhibition OST</button><button data-track="1" aria-pressed="false">Director’s Playlist</button></div><p id="track-copy" aria-live="polite">전시의 시간을 음악으로 남기는 기록.</p>':`<p class="project-context">${e(p.paragraphs[0])}</p>`}<a class="lab-project-link" href="${e(p.url)}" target="_blank" rel="noopener">실제 프로젝트 보기 <span aria-hidden="true">↗</span><span class="sr-only">새 창에서 열기</span></a></div><div class="experiment-playground">${effects[p.id]}</div></section>`).join('');
-document.querySelector('#site-footer').innerHTML=footerHTML;
+document.querySelector('#site-footer').innerHTML=footerHTML("ko");
 // A visible default keeps all content readable, even when motion is disabled.
 const highlighted=new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('in-view',entry.isIntersecting)),{threshold:.6});
 document.querySelectorAll('[data-highlight]').forEach(el=>highlighted.observe(el));

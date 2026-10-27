@@ -10,6 +10,7 @@ import {subscribeHighlights} from './highlights.js';
 import {selectedHighlights} from './highlight-model.js';
 import {dateRange,exhibitionState,sortExhibitions,todaySeoul} from './model.js';
 import {chrome} from './ui.js';
+import {t,localized,localHref} from './i18n.js';
 import {CONFIG} from '../config.js';
 import {publicHomeCover} from './home-media.js';
 import {setHeroSlides,setHeroFailure} from './home-slider.js';
@@ -27,7 +28,7 @@ addEventListener('pageshow',event=>{if(event.persisted&&exhibitionsReady)renderC
 const cover=image=>demo?image:publicHomeCover(image,CONFIG.mediaBaseUrl);
 async function updateHero(){
  if(!exhibitionsReady||!highlightsReady)return;
- const entries=[...heroExhibitions(exhibitions).map(item=>({key:`exhibition-${item.id}`,kind:exhibitionState(item)==='upcoming'?'예정 전시':'현재 전시',title:item.title,artists:item.artists,location:item.location,summary:item.summary,date:dateRange(item),cover:item.cover,url:`/exhibition/${encodeURIComponent(item.id)}`,action:'전시 보기',secondaryUrl:galleryLinks[item.id]})),...selectedHighlights(highlights).filter(item=>item.kind!=='virtual').map(item=>({key:`highlight-${item.id}`,kind:`${item.project?item.project+' · ':''}${item.startDate>todaySeoul()?'예정 이벤트':item.kind==='news'?'프로젝트 소식':'프로젝트 이벤트'}`,title:item.title,summary:item.summary,date:item.startDate?dateRange(item):'',cover:item.cover,url:item.url,action:item.kind==='news'?'소식 보기':'이벤트 보기'}))];
+ const entries=[...heroExhibitions(exhibitions).map(item=>({key:`exhibition-${item.id}`,kind:exhibitionState(item)==='upcoming'?t('home.upcomingExhibition'):t('home.currentExhibition'),title:localized(item,'title'),artists:item.artists,location:localized(item,'location'),summary:localized(item,'summary'),date:dateRange(item),cover:item.cover,url:localHref(`/exhibition/${encodeURIComponent(item.id)}`),action:t('home.viewExhibition'),secondaryUrl:galleryLinks[item.id]})),...selectedHighlights(highlights).filter(item=>item.kind!=='virtual').map(item=>({key:`highlight-${item.id}`,kind:`${item.project?item.project+' · ':''}${item.startDate>todaySeoul()?t('home.upcomingEvent'):item.kind==='news'?t('home.projectNews'):t('home.projectEvent')}`,title:localized(item,'title'),summary:localized(item,'summary'),date:item.startDate?dateRange(item):'',cover:item.cover,url:localHref(item.url),action:item.kind==='news'?t('home.viewNews'):t('home.viewEvent')}))];
  if(!entries.length&&(exhibitionsFailed||highlightsFailed)){setHeroFailure();return;}
  setHeroSlides(entries.map(item=>({...item,image:cover(item.cover)?.url,alt:item.cover?.alt})));
 }
@@ -35,7 +36,7 @@ async function renderCurrent(items){
  exhibitions=items;exhibitionsReady=true;exhibitionsFailed=false;updateHero();
  const version=++generation,target=document.querySelector('#home-exhibitions'),announcement=document.querySelector('#home-announcement-link');
  const current=sortExhibitions(items.filter(item=>exhibitionState(item)==='current'))[0];
- if(current){announcement.textContent=`현재 전시 · ${current.title} · ${dateRange(current)}`;announcement.href=`/exhibition/${encodeURIComponent(current.id)}`;}else{announcement.textContent='전시 · 프로젝트의 새로운 소식을 만나보세요';announcement.href='/exhibition';}
+ if(current){announcement.textContent=t('home.announceCurrent',{title:localized(current,'title'),date:dateRange(current)});announcement.href=localHref(`/exhibition/${encodeURIComponent(current.id)}`);}else{announcement.textContent=t('nav.announcement');announcement.href=localHref('/exhibition');}
  target.innerHTML=currentExhibitionsView(items,[],cover,{loading:true});
  const newImages=[],cache=new Map();
  const hydrate=image=>{const key=image?.path||image?.url;if(!key)return Promise.resolve(image);if(!cache.has(key))cache.set(key,resolveImage(image).then(im=>{if(im.url?.startsWith('blob:'))newImages.push(im.url);return im;}));return cache.get(key);};
@@ -52,11 +53,11 @@ async function renderCurrent(items){
   const roomFailure=failed||mediaFailed||results.some(result=>result.status==='rejected');
   target.innerHTML=currentExhibitionsView(items,loaded,cover,{failed:roomFailure});
   renderViewingRooms(chosen.map(choice=>loaded.find(room=>room.gallery.id===choice.gallery.id)).filter(Boolean),cover,{failed:roomFailure});
-  galleryLinks=Object.fromEntries(rooms.map(({exhibition})=>[exhibition.id,`/exhibition/${encodeURIComponent(exhibition.id)}#ex-online`]));updateHero();
+  galleryLinks=Object.fromEntries(rooms.map(({exhibition})=>[exhibition.id,localHref(`/exhibition/${encodeURIComponent(exhibition.id)}`)+'#ex-online']));updateHero();
   clearPageImages();pageImages=newImages;
  }catch{if(version===generation){target.innerHTML=currentExhibitionsView(items,[],cover,{failed:true});renderViewingRooms([],cover,{failed:true});}for(const url of newImages)URL.revokeObjectURL(url);}
 }
-function exhibitionError(){generation++;document.querySelector('#viewing-room').hidden=false;clearPageImages();document.querySelector('#home-viewing-room').innerHTML='<div class="viewing-copy"><h2 id="viewing-room-title">Online Viewing Rooms</h2><p>온라인 전시를 불러오지 못했습니다. 잠시 후 다시 확인해주세요.</p><a href="/virtual-gallery">버추얼갤러리 살펴보기 ↗</a></div>';exhibitions=[];exhibitionsReady=true;exhibitionsFailed=true;updateHero();document.querySelector('#home-exhibitions').innerHTML='<div class="home-empty"><p>전시 정보를 불러오지 못했습니다. 연결 상태를 확인해주세요.</p><a href="/exhibition">전시 페이지로 이동</a></div>';}
+function exhibitionError(){generation++;document.querySelector('#viewing-room').hidden=false;clearPageImages();document.querySelector('#home-viewing-room').innerHTML=`<div class="viewing-copy"><h2 id="viewing-room-title">Online Viewing Rooms</h2><p>${t('home.roomsFailed')}</p><a href="${localHref('/virtual-gallery')}">${t('home.exploreGallery')}</a></div>`;exhibitions=[];exhibitionsReady=true;exhibitionsFailed=true;updateHero();document.querySelector('#home-exhibitions').innerHTML=`<div class="home-empty"><p>${t('home.exhibitionsFailed')}</p><a href="${localHref('/exhibition')}">${t('home.goExhibitions')}</a></div>`;}
 function highlightsError(){highlights=[];highlightsReady=true;highlightsFailed=true;updateHero();renderNews([],true);}
 subscribeExhibitions(renderCurrent,exhibitionError).catch(exhibitionError);
 subscribeHighlights(items=>{highlights=items;highlightsReady=true;highlightsFailed=false;updateHero();renderNews(items);},highlightsError).catch(highlightsError);

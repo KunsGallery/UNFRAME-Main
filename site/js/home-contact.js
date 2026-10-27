@@ -1,7 +1,8 @@
+import {t} from './i18n.js';
 const dialog=document.querySelector('#home-contact-dialog');
 const topics={
- rental:{title:'대관문의',description:'전시·행사·촬영 등 공간 사용을 위한 문의입니다. 희망 일정, 사용 목적과 예상 인원을 준비해주세요.'},
- collaboration:{title:'협업·제안',description:'언프레임과 함께할 프로젝트와 협업을 위한 문의입니다. 제안 내용, 희망 일정과 관련 자료를 준비해주세요.'}
+ rental:{title:t('contact.rental'),description:t('contact.rentalText')},
+ collaboration:{title:t('contact.collab'),description:t('contact.collabText')}
 };
 document.querySelectorAll('[data-contact-kind]').forEach(button=>button.addEventListener('click',()=>{
  const topic=topics[button.dataset.contactKind];if(!topic)return;

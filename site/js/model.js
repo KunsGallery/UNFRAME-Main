@@ -1,3 +1,4 @@
+import {validateEnglish} from './i18n.js';
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 export function safeURL(value) { try { const url = new URL(value, 'https://exhibition.unframe.kr'); return ['https:','http:'].includes(url.protocol) ? value : ''; } catch { return ''; } }
 export function imageURL(value) { return /^(data:image\/(png|jpeg|webp);base64,|blob:https?:\/\/)/.test(value || '') ? value : safeURL(value); }
@@ -19,6 +20,7 @@ export function validateExhibition(item) {
   if(item.published && !(item.cover?.url || item.cover?.path)) throw new Error('대표 이미지는 게시할 때 필수입니다. 대표 이미지를 업로드해주세요.');
   if(item.published && !item.description?.trim()) throw new Error('전시 소개는 게시할 때 필수입니다. 전시 소개를 입력해주세요.');
   if(item.title.length > 200 || item.description.length > 30000 || item.summary.length > 600) throw new Error('입력 내용이 너무 깁니다.');
+  validateEnglish(item,{titleEn:200,summaryEn:600,descriptionEn:30000,locationEn:1000,hoursEn:1000,admissionEn:1000});
   return item;
 }
-export function filterExhibitions(items,{state='all',year='all',query=''}={}) { const term=query.trim().toLocaleLowerCase(); return sortExhibitions(items).filter(x => (state==='all'||exhibitionState(x)===state) && (year==='all'||x.startDate.slice(0,4)===year) && (!term||[x.title,x.artists,x.location,x.summary].join(' ').toLocaleLowerCase().includes(term))); }
+export function filterExhibitions(items,{state='all',year='all',query=''}={}) { const term=query.trim().toLocaleLowerCase(); return sortExhibitions(items).filter(x => (state==='all'||exhibitionState(x)===state) && (year==='all'||x.startDate.slice(0,4)===year) && (!term||[x.title,x.titleEn,x.artists,x.location,x.locationEn,x.summary,x.summaryEn].join(' ').toLocaleLowerCase().includes(term))); }

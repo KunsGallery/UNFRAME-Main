@@ -1,6 +1,7 @@
 import {environmentOptions,surfaceTexture,materialTexture,buildOutdoor,canvasSideMaterials} from './virtual-environment.js';
 import {layoutArtworks,artworkMount,roomOf,saleBadge} from './virtual-model.js';
 import {createTour} from './virtual-tour.js';
+import {t,lang} from './i18n.js';
 import {mountHud} from './virtual-hud.js';
 import {wallViewpoint,entryView,playerBounds} from './virtual-links.js';
 import {bindTouchLook} from './virtual-input.js';
@@ -212,14 +213,14 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
 
         ctx.fillStyle = '#64748b';
         ctx.font = '16px "Noto Sans KR", sans-serif';
-        ctx.fillText(`연도: ${art.year || '2026'}`, 36, 184);
+        ctx.fillText(t('caption.year',{year:art.year || '2026'}), 36, 184);
         const mediumStr = art.medium.length > 24 ? art.medium.substring(0, 24) + '...' : art.medium;
-        ctx.fillText(`재료: ${mediumStr}`, 36, 214);
-        ctx.fillText(`규격: ${art.dimensions} (세로×가로)`, 36, 244);
+        ctx.fillText(t('caption.medium',{medium:mediumStr}), 36, 214);
+        ctx.fillText(t('caption.size',{size:art.dimensions}), 36, 244);
 
         ctx.fillStyle = '#0284c7';
         ctx.font = 'bold 18px "Noto Sans KR", sans-serif';
-        ctx.fillText(`가격: ${art.price || '별도 문의'}`, 36, 280);
+        ctx.fillText(t('caption.price',{price:art.price || t('caption.priceOnRequest')}), 36, 280);
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '600 13px "Noto Sans KR", sans-serif';
@@ -419,7 +420,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
       },
 
       createArtworkTexture: function(art) {
-        const texture=new THREE.TextureLoader().load(art.dataUrl,loaded=>{for(const edge of loaded.userData?.edgeMaps||[]){edge.image=loaded.image;edge.needsUpdate=true;}loaded.userData?.onReady?.(loaded);},undefined,()=>GalleryApp.showToast('일부 작품 이미지를 불러오지 못했습니다. 작품 목록에서 다시 확인해주세요.'));
+        const texture=new THREE.TextureLoader().load(art.dataUrl,loaded=>{for(const edge of loaded.userData?.edgeMaps||[]){edge.image=loaded.image;edge.needsUpdate=true;}loaded.userData?.onReady?.(loaded);},undefined,()=>GalleryApp.showToast(t('room3d.imagesFailed')));
         texture.encoding=THREE.sRGBEncoding;
         return {texture,dataUrl:art.dataUrl};
       }
@@ -479,7 +480,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
 
       wallConfigs: {
         front: {
-          name: "전면 벽 (메인 벽면)",
+          name: "front",
           fixedCoord: -7.95,
           axis: 'Z',
           tMin: -5.0,
@@ -489,7 +490,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
           getSpotPos: (t) => [-7.95 + 2.4, 4.15, t]
         },
         right: {
-          name: "우측 벽 (창가 우측 벽면)",
+          name: "right",
           fixedCoord: -6.95,
           axis: 'X',
           tMin: -5.0,
@@ -499,7 +500,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
           getSpotPos: (t) => [t, 4.15, -6.95 + 2.4]
         },
         left: {
-          name: "좌측 벽 (창가 좌측 벽면)",
+          name: "left",
           fixedCoord: 6.95,
           axis: 'X',
           tMin: -5.0,
@@ -1217,7 +1218,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
 
         if (hit && hit.userData && hit.userData.data) {
           const art = hit.userData.data;
-          statusText.innerText = `${art.titleEn || art.title} (${art.artist}) • 클릭 시 정면 감상`;
+          statusText.innerText = t('room3d.hover',{title:art.titleEn || art.title,artist:art.artist});
           statusPill.classList.add('show');
           crosshair.classList.add('targeting');
           this.container.style.cursor = 'pointer';
@@ -1310,8 +1311,8 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
         document.getElementById('modal-spec-year').innerText = art.year;
         document.getElementById('modal-spec-medium').innerText = art.medium;
         document.getElementById('modal-spec-dimensions').innerText = art.dimensions;
-        document.getElementById('modal-spec-dimensions').previousElementSibling.textContent = art.kind==='object' ? '크기' : '크기 (세로 × 가로)';
-        document.getElementById('modal-spec-price').innerText = art.price || '별도 문의';
+        document.getElementById('modal-spec-dimensions').previousElementSibling.textContent = art.kind==='object' ? t('art.size') : t('art.sizeFlat');
+        document.getElementById('modal-spec-price').innerText = art.price || t('caption.priceOnRequest');
 
         document.getElementById('modal-desc').innerText = art.description;
         document.getElementById('art-modal').classList.add('active');
@@ -1421,7 +1422,7 @@ GalleryApp.rebalanceArtworksOnWalls=function(){
 GalleryApp.buildObjects=function(){
  const loader=THREE.GLTFLoader?new THREE.GLTFLoader():null,focused=environmentOptions(gallerySettings).lighting==='focused';
  for(const art of artworksData.filter(item=>item.placement)){
-  const group=buildObjectGroup(THREE,art.placement,{loader,photoTexture:()=>TextureGenerator.createArtworkTexture(art).texture,onError:()=>this.showToast(`「${art.title}」의 3D 모델을 불러오지 못해 사진으로 보여드립니다.`)});
+  const group=buildObjectGroup(THREE,art.placement,{loader,photoTexture:()=>TextureGenerator.createArtworkTexture(art).texture,onError:()=>this.showToast(t('room3d.modelFailed',{title:art.titleEn&&lang()==='en'?art.titleEn:art.title}))});
   this.scene.add(group);this.artworkObjects.push(group);
   const [x,z]=art.placement.position,light=new THREE.SpotLight(0xf5f5ef,focused?1.6:.8,9,Math.PI/7,.55,1.2),target=new THREE.Object3D();
   light.position.set(x,4,z);target.position.set(x,0,z);this.scene.add(target);light.target=target;light.castShadow=QUALITY[quality].shadows;this.scene.add(light);this.spotlights.push(light);
@@ -1460,7 +1461,7 @@ function showTourStop(stop){
  document.getElementById('tour-progress').textContent=`${stop.index} / ${stop.total}`;
  document.getElementById('tour-title').textContent=[art.title,art.artist].filter(Boolean).join(' · ');
  document.getElementById('tour-prev').disabled=stop.index===1;
- document.getElementById('tour-forward').textContent=stop.index===stop.total?'투어 마치기':'다음';
+ document.getElementById('tour-forward').textContent=stop.index===stop.total?t('tour.finish'):t('tour.next');
  tourBar.hidden=false;GalleryApp.inspectArtwork(art);
 }
 function endTour(){tour.stop();GalleryApp.isTourActive=false;tourBar.hidden=true;GalleryApp.closeModal();}
@@ -1529,7 +1530,7 @@ export function mountRoom(settings,works){
   const room=roomOf(settings),entry=entryView(room);
   GalleryApp.player.bounds=playerBounds(room);GalleryApp.player.position.set(entry.position[0],1.75,entry.position[1]);GalleryApp.player.yaw=entry.yaw;
  }
- artworksData=sourceWorks=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:work.kind==='object'?`가로 ${work.widthCm} × 깊이 ${work.depthCm} × 높이 ${work.heightCm} cm${work.copies>1?` · ${work.copies}점`:''}`:work.shape==='circle'?`지름 ${work.widthCm} cm`:`${work.heightCm} × ${work.widthCm} cm`}));
+ artworksData=sourceWorks=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:work.kind==='object'?t('art.objectSize',{w:work.widthCm,d:work.depthCm,h:work.heightCm})+(work.copies>1?' · '+t('art.copies',{count:work.copies}):''):work.shape==='circle'?t('art.diameter',{w:work.widthCm}):`${work.heightCm} × ${work.widthCm} cm`}));
  GalleryApp.init();
  bindTouchLook(GalleryApp.container,GalleryApp);
  const release=()=>{for(const key of Object.keys(GalleryApp.keys))GalleryApp.keys[key]=false;};

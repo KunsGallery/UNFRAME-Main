@@ -9,3 +9,12 @@ test('HTML and dangerous URL inputs do not become active content',()=>{assert.eq
 test('Firebase image blobs remain displayable while executable schemes are rejected',()=>{assert.equal(imageURL('blob:https://exhibition.unframe.kr/123'),'blob:https://exhibition.unframe.kr/123');assert.equal(imageURL('javascript:alert(1)'),'');});
 
 test('editor ordering respects the same upper bound as deployed rules',()=>{assert.doesNotThrow(()=>validateExhibition({...DEMO_EXHIBITIONS[0],order:1000000}));assert.throws(()=>validateExhibition({...DEMO_EXHIBITIONS[0],order:1000001}));});
+
+test('optional English exhibition fields are strings within the Korean limits',()=>{
+ const base={...DEMO_EXHIBITIONS[0]};
+ assert.doesNotThrow(()=>validateExhibition({...base,titleEn:'Resonance',summaryEn:'s',descriptionEn:'d',locationEn:'Seoul',hoursEn:'11-7',admissionEn:'Free'}));
+ for(const [field,max] of Object.entries({titleEn:200,summaryEn:600,descriptionEn:30000,locationEn:1000,hoursEn:1000,admissionEn:1000})){
+  assert.throws(()=>validateExhibition({...base,[field]:'x'.repeat(max+1)}),/영문/,field);
+  assert.throws(()=>validateExhibition({...base,[field]:3}),/영문/,field);
+ }
+});

@@ -1,7 +1,8 @@
+import {t} from './i18n.js';
 import {fitImage} from './share-card-geometry.js';
 // Geometry for the three artwork share cards. Each returns the frame around the work (art),
 // where the image is drawn (image; poster crops to fill its frame) and the main text block.
-export const DESIGNS={label:'뮤지엄 라벨',wall:'전시장 벽',poster:'포스터'};
+export const DESIGNS={get label(){return t('card.design.label');},get wall(){return t('card.design.wall');},get poster(){return t('card.design.poster');}};
 const rect=(x,y,w,h)=>({x,y,w,h});
 function contain(box,iw,ih){const [dx,dy,dw,dh]=fitImage(iw,ih,box.w,box.h,false);return rect(box.x+dx,box.y+dy,dw,dh);}
 export function cardLayout(design,w,h,iw,ih){
