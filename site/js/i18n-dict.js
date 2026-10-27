@@ -7,7 +7,7 @@ export const DICT={
 
  'footer.visit':{ko:'장소 및 운영안내',en:'Location & Hours'},
  'footer.address':{ko:'서울특별시 종로구 인사동4길 17, 1층 108호 <br>(경운동, 건국빌딩(건국관))',en:'#108, 1F, 17 Insadong 4-gil, Jongno-gu, Seoul <br>(Geonguk Building, Gyeongun-dong)'},
- 'footer.hours':{ko:'(화-일) 11:00am - 07:00pm',en:'Tue–Sun 11:00am – 7:00pm'},
+ 'footer.hours':{ko:'(화-일) 10:00am - 06:00pm · 월요일 휴관<br>전시 기간에는 매일 운영합니다',en:'Tue–Sun 10:00am – 6:00pm · Closed Mondays<br>Open daily during exhibitions'},
  'footer.company':{ko:'UNFRAME(언프레임)',en:'UNFRAME'},
  'footer.ceo':{ko:'대표: 김재우',en:'CEO: Kim Jaewoo'},
  'footer.privacyOfficer':{ko:'개인정보관리자: 박소연',en:'Privacy officer: Park Soyeon'},
