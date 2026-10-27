@@ -23,4 +23,4 @@ export function validateExhibition(item) {
   validateEnglish(item,{titleEn:200,summaryEn:600,descriptionEn:30000,locationEn:1000,hoursEn:1000,admissionEn:1000});
   return item;
 }
-export function filterExhibitions(items,{state='all',year='all',query=''}={}) { const term=query.trim().toLocaleLowerCase(); return sortExhibitions(items).filter(x => (state==='all'||exhibitionState(x)===state) && (year==='all'||x.startDate.slice(0,4)===year) && (!term||[x.title,x.artists,x.location,x.summary].join(' ').toLocaleLowerCase().includes(term))); }
+export function filterExhibitions(items,{state='all',year='all',query=''}={}) { const term=query.trim().toLocaleLowerCase(); return sortExhibitions(items).filter(x => (state==='all'||exhibitionState(x)===state) && (year==='all'||x.startDate.slice(0,4)===year) && (!term||[x.title,x.titleEn,x.artists,x.location,x.locationEn,x.summary,x.summaryEn].join(' ').toLocaleLowerCase().includes(term))); }
