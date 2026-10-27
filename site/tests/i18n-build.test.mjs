@@ -25,7 +25,7 @@ test('hangulLeft ignores scripts, styles, comments and entered-content slots',()
  assert.deepEqual(hangulLeft('<img alt="사진"><meta name="description" content="설명"><input placeholder="검색" aria-label="찾기">'),['사진','설명','검색','찾기']);
 });
 test('every public page exists and every finished page has no Korean left in English',async()=>{
- assert.equal(PUBLIC_PAGES.length,9);
+ assert.deepEqual(PUBLIC_PAGES,['index.html','exhibition.html','detail.html','project.html','about.html','virtual-gallery.html']);
  for(const name of PUBLIC_PAGES)await access(new URL(`../${name}`,import.meta.url));
  for(const name of I18N_READY){
   assert.ok(PUBLIC_PAGES.includes(name),name);

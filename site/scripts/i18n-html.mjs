@@ -2,11 +2,12 @@ import {DICT} from '../js/i18n-dict.js';
 import {localHref} from '../js/i18n.js';
 // Public pages get an English copy under /en. Marked copy is swapped from the dictionary at build
 // time so English visitors never see Korean flash before scripts run.
-export const PUBLIC_PAGES=['index.html','exhibition.html','detail.html','project.html','project-scroll.html','project-lab.html','about.html','virtual-gallery.html','shop-preview.html'];
+// shop-preview, project-scroll and project-lab are staff-only or draft pages (noindex) and stay Korean.
+export const PUBLIC_PAGES=['index.html','exhibition.html','detail.html','project.html','about.html','virtual-gallery.html'];
 // Pages whose fixed copy is fully marked; tests require their English build to be Hangul-free.
 export const I18N_READY=[];
 // Pages with one fixed address get build-time hreflang links; the others add them at runtime.
-export const PAGE_PATHS={'index.html':'/','exhibition.html':'/exhibition','project.html':'/project','project-scroll.html':'/project-scroll','project-lab.html':'/project-lab','about.html':'/about'};
+export const PAGE_PATHS={'index.html':'/','exhibition.html':'/exhibition','project.html':'/project','about.html':'/about'};
 const english=key=>{const entry=DICT[key];if(!entry)throw new Error(`Missing translation key: ${key}`);return entry.en;};
 const escapeAttr=value=>value.replaceAll('&','&amp;').replaceAll('"','&quot;');
 export const alternateLinks=path=>[['ko',path],['en',localHref(path,'en')],['x-default',path]].map(([code,href])=>`<link rel="alternate" hreflang="${code}" href="${href}">`).join('');

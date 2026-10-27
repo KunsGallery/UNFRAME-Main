@@ -44,3 +44,14 @@ test('language memory survives a storage that throws',()=>{
 test('every dictionary entry has Korean and English',()=>{
  for(const [key,value] of Object.entries(DICT)){assert.ok(value.ko?.trim(),key);assert.ok(value.en?.trim(),key);assert.ok(!/[가-힣]/.test(value.en),`${key} English has Hangul`);}
 });
+
+test('language switch options mark the current language with endonyms',async()=>{
+ const {languageOptions}=await import('../js/language-switch.js');
+ assert.deepEqual(languageOptions('en'),[{value:'ko',label:'한국어',selected:false},{value:'en',label:'English',selected:true}]);
+ assert.deepEqual(languageOptions('ko').map(option=>option.selected),[true,false]);
+});
+test('the footer has an English version with no Korean left',async()=>{
+ const {footerHTML}=await import('../js/footer.js');
+ assert.ok(!/[가-힣]/.test(footerHTML('en')));
+ assert.match(footerHTML('ko'),/장소 및 운영안내/);
+});

@@ -1,0 +1,8 @@
+/* Compact KO / EN selector in the public headers. */
+.lang-switch{display:inline-flex;align-items:center;position:relative;z-index:5}
+.lang-switch select{appearance:none;-webkit-appearance:none;background:transparent;color:inherit;border:1px solid currentColor;border-radius:999px;padding:.3rem 1.6rem .3rem .75rem;font:inherit;font-size:12px;letter-spacing:.04em;line-height:1.2;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 12px) 52%,calc(100% - 8px) 52%;background-size:4px 4px;background-repeat:no-repeat}
+.lang-switch select:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.lang-switch option{color:#111;background:#fff}
+/* Placement inside the shared site header. */
+.lang-switch-slot{display:flex;align-items:center;margin-left:auto;padding-left:1rem}
+#custom-nav .lang-switch-slot{margin-left:auto;margin-right:.75rem}
