@@ -6,3 +6,4 @@
 /* Placement inside the shared site header. */
 .lang-switch-slot{display:flex;align-items:center;margin-left:auto;padding-left:1rem}
 #custom-nav .lang-switch-slot{margin-left:auto;margin-right:.75rem}
+.study-header .lang-switch-slot{margin-left:0;padding-left:0}
