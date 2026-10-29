@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {workShareCard,galleryShareCard,worksListHTML,shortRange,artworkCaption} from '../js/virtual-gallery-view.js';
+import {workShareCard,galleryShareCard,showModalImage,worksListHTML,shortRange,artworkCaption} from '../js/virtual-gallery-view.js';
 const english=fn=>{const saved=globalThis.location;globalThis.location={pathname:'/en/virtual-gallery/g',href:'https://u.kr/en/virtual-gallery/g',origin:'https://u.kr'};try{return fn();}finally{if(saved===undefined)delete globalThis.location;else globalThis.location=saved;}};
 const art={id:'a1',title:'빛',titleEn:'Light',artist:'김작가',year:'2026',medium:'유채',mediumEn:'Oil',widthCm:40,heightCm:60,image:{url:'/a.webp',alt:''}};
 const show={title:'공명',startDate:'2026-10-23',endDate:'2026-11-01'};
@@ -29,3 +29,10 @@ test('gallery share card shows the room, its artist and exhibition, and links to
  assert.deepEqual(card.exhibition,{title:'공명',dates:'2026.10.23 — 11.01'});assert.match(card.url,/\/virtual-gallery\/g1$/);
  assert.equal(galleryShareCard({title:'공명'},{...show,artists:'여러 작가'},[],'g').artist,'여러 작가');
 });
+test('the detail image stays hidden until the new work has loaded',()=>{
+ const classes=new Set(),img={attrs:{},complete:false,classList:{add:c=>classes.add(c),remove:c=>classes.delete(c)},getAttribute(k){return this.attrs[k];},set src(v){this.attrs.src=v;}};
+ showModalImage(img,'/b.webp');assert.ok(classes.has('is-loading'));assert.equal(img.attrs.src,'/b.webp');
+ img.onload();assert.ok(!classes.has('is-loading'));
+ img.complete=true;showModalImage(img,'/b.webp');assert.ok(!classes.has('is-loading'));
+});
+test('the gallery page has no placeholder artwork image',async()=>{const {readFile}=await import('node:fs/promises');const html=await readFile(new URL('../virtual-gallery.html',import.meta.url),'utf8');assert.doesNotMatch(html,/id="modal-img"[^>]*src=/);});

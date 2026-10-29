@@ -8,6 +8,7 @@ import {bindTouchLook} from './virtual-input.js';
 import {QUALITY,deviceQuality,downgrade} from './virtual-quality.js';
 import {placeObjects,objectObstacles,resolveCollision} from './object-placement.js';
 import {buildObjectGroup,objectViewpoint} from './virtual-objects.js';
+import {showModalImage} from './virtual-gallery-view.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
 let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium';
     const TextureGenerator = {
@@ -1300,7 +1301,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
       },
 
       openModal: function(art) {
-        document.getElementById('modal-img').src = art.dataUrl;
+        showModalImage(document.getElementById('modal-img'), art.dataUrl);
 
         document.getElementById('modal-title-en').innerText = art.titleEn || art.title;
         document.getElementById('modal-title-ko').innerText = art.titleKo || '';

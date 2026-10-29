@@ -12,12 +12,12 @@ import {localizedExhibition} from './exhibition-view.js';
 import {mountLanguageSwitch} from './language-switch.js';
 // English pages show the optional …En copies of gallery and artwork text.
 const localizedSettings=settings=>({...settings,title:localized(settings,'title'),subtitle:localized(settings,'subtitle'),artistNote:localized(settings,'artistNote')});
-import {localizedWork,dimensionText,workShareCard,galleryShareCard,worksListHTML} from './virtual-gallery-view.js';
+import {localizedWork,dimensionText,workShareCard,galleryShareCard,worksListHTML,showModalImage} from './virtual-gallery-view.js';
 const $=selector=>document.querySelector(selector);
 let room;
 function info(art,settings){
  document.dispatchEvent(new CustomEvent('unframe-artwork-open',{detail:{id:art.id}}));
- $('#modal-img').src=imageURL(art.image.url);$('#modal-img').alt=art.image.alt||art.title;
+ showModalImage($('#modal-img'),imageURL(art.image.url));$('#modal-img').alt=art.image.alt||art.title;
  for(const [id,value] of Object.entries({'modal-title-en':art.titleEn||art.title,'modal-title-ko':art.titleEn?art.title:'','modal-artist':art.artist,'modal-spec-title':art.title,'modal-spec-year':art.year,'modal-spec-medium':art.medium,'modal-spec-dimensions':dimensionText(art),'modal-spec-price':art.price,'modal-desc':art.description}))$('#'+id).textContent=value;
  $('#modal-spec-dimensions').previousElementSibling.textContent=art.kind==='object'?t('art.size'):t('art.sizeFlat');
  $('#modal-spec-price').closest('.art-spec-row').hidden=!settings.showPrices||!art.price;
