@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {workShareCard,galleryShareCard,showModalImage,worksListHTML,shortRange,artworkCaption} from '../js/virtual-gallery-view.js';
+import {workShareCard,galleryShareCard,wallShareScenes,showModalImage,worksListHTML,shortRange,artworkCaption} from '../js/virtual-gallery-view.js';
 const english=fn=>{const saved=globalThis.location;globalThis.location={pathname:'/en/virtual-gallery/g',href:'https://u.kr/en/virtual-gallery/g',origin:'https://u.kr'};try{return fn();}finally{if(saved===undefined)delete globalThis.location;else globalThis.location=saved;}};
 const art={id:'a1',title:'빛',titleEn:'Light',artist:'김작가',year:'2026',medium:'유채',mediumEn:'Oil',widthCm:40,heightCm:60,image:{url:'/a.webp',alt:''}};
 const show={title:'공명',startDate:'2026-10-23',endDate:'2026-11-01'};
@@ -45,4 +45,16 @@ test('a saved entrance image is offered first, without losing artwork choices',(
  assert.deepEqual(card.works.map(work=>work.image),['/entry.jpeg','/a.webp']);
  assert.equal(card.works[0].label,'갤러리 입구 장면');assert.equal(card.image,'/entry.jpeg');
  english(()=>assert.equal(galleryShareCard({previewImage:{url:'/entry.jpeg'}},show,[],'g').works[0].label,'Gallery entrance view'));
+});
+test('wall views are captured and offered alongside the entrance and artworks',async()=>{
+ const scenes=await wallShareScenes(async wall=>wall,async wall=>`data:image/jpeg;base64,${wall}`);
+ assert.deepEqual(scenes.map(scene=>scene.label),['갤러리 좌측 벽','갤러리 우측 벽']);
+ const card=galleryShareCard({title:'갤러리',previewImage:{url:'/entry.jpeg'}},show,[art],'g',scenes);
+ assert.deepEqual(card.works.map(work=>work.image),['/entry.jpeg',...scenes.map(scene=>scene.image),'/a.webp']);
+ assert.equal(card.image,'/entry.jpeg');
+});
+test('a failed wall capture keeps other wall and artwork choices available',async()=>{
+ const scenes=await wallShareScenes(async wall=>{if(wall==='left')throw Error('failed');return wall;},async wall=>wall);
+ assert.deepEqual(scenes.map(scene=>scene.label),['갤러리 우측 벽']);
+ assert.deepEqual(galleryShareCard({title:'갤러리'},show,[art],'g',scenes).works.map(work=>work.image),['right','/a.webp']);
 });

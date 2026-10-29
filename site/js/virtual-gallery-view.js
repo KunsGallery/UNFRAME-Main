@@ -16,12 +16,17 @@ export function showModalImage(image,src){
  if(image.getAttribute('src')===src&&image.complete){image.classList.remove('is-loading');return;}
  image.classList.add('is-loading');image.onload=image.onerror=()=>image.classList.remove('is-loading');image.src=src;
 }
+export async function wallShareScenes(capture,toImage){
+ const results=await Promise.allSettled(['left','right'].map(async wall=>({label:t(wall==='left'?'vg.leftScene':'vg.rightScene'),image:await toImage(await capture(wall))})));
+ return results.filter(result=>result.status==='fulfilled'&&result.value.image).map(result=>result.value);
+}
 // The whole gallery: its title, the artist (or the exhibition's artists), a work as the image.
 // `works` lets the share dialog swap which work stands for the gallery.
-export function galleryShareCard(settings,exhibition,artworks,galleryId){
+export function galleryShareCard(settings,exhibition,artworks,galleryId,scenes=[]){
  const works=artworks.filter(art=>art.image?.url).map(art=>({label:[localized(art,'title'),art.artist].filter(Boolean).join(' · '),image:art.image.url}));
+ works.unshift(...scenes.filter(scene=>scene.image));
  if(settings.previewImage?.url)works.unshift({label:t('vg.entryScene'),image:settings.previewImage.url});
- return {title:settings.title,artist:settings.artistName||exhibition?.artists||'',meta:t('vg.shareMeta'),exhibition:{title:exhibition?.title||'',dates:shortRange(exhibition)},image:works[0]?.image,works,url:(globalThis.location?.origin||'')+localHref('/virtual-gallery/'+encodeURIComponent(galleryId))};
+ return {title:settings.title,artist:settings.artistName||exhibition?.artists||'',meta:t('vg.shareMeta'),exhibition:{title:exhibition?.title||'',dates:shortRange(exhibition)},image:works[0]?.image,works,imageLabel:t('card.galleryImage'),url:(globalThis.location?.origin||'')+localHref('/virtual-gallery/'+encodeURIComponent(galleryId))};
 }
 export function workShareCard(art,exhibition,galleryId){
  return artworkCard(art,exhibition,(globalThis.location?.origin||'')+localHref('/virtual-gallery/'+encodeURIComponent(galleryId))+hashFor(art.id));
