@@ -8,12 +8,26 @@ export function textLines(ctx,text,width,max=3){const lines=[];let line='';for(c
 export function exhibitionCard(item){return {title:item.title,artist:item.artists,meta:[dateRange(item),item.location].filter(Boolean).join(' · '),image:item.cover?.url,url:new URL(localHref('/exhibition/'+encodeURIComponent(item.id)),location.origin).href};}
 const SERIF='"Noto Serif KR","EB Garamond",Georgia,serif',SANS='"Noto Sans KR",system-ui,sans-serif',BLUE='#004aad',INK='#161a18';
 function lines(ctx,font,text,width,max){ctx.font=font;return textLines(ctx,text,width,max);}
+export const HANDLE='@unframe.kr';
+// Bottom line of every card: the Instagram handle on the left and, for artworks, the
+// exhibition on the right as a bold title plus lighter dates. The title gives way ("…")
+// before it can reach the handle; the dates drop first when even a short title won't fit.
+export function footerLine(ctx,{w,y,margin,size,color,strong},exhibition){
+ ctx.textAlign='left';ctx.fillStyle=color;ctx.font=`500 ${size}px ${SANS}`;ctx.fillText(HANDLE,margin,y);
+ const title=exhibition?.title||'';if(!title)return;
+ const room=w-margin*2-ctx.measureText(HANDLE).width-size*2.5,gap=size*.7;
+ ctx.font=`400 ${size}px ${SANS}`;let dates=exhibition.dates||'',datesWidth=dates?ctx.measureText(dates).width+gap:0;
+ ctx.font=`600 ${size}px ${SANS}`;if(dates&&ctx.measureText(title).width+datesWidth>room&&ctx.measureText(title.slice(0,6)+'…').width+datesWidth>room){dates='';datesWidth=0;}
+ const [shown='']=textLines(ctx,title,room-datesWidth,1);
+ ctx.textAlign='right';let x=w-margin;
+ if(dates){ctx.font=`400 ${size}px ${SANS}`;ctx.fillStyle=color;ctx.fillText(dates,x,y);x-=datesWidth;}
+ ctx.font=`600 ${size}px ${SANS}`;ctx.fillStyle=strong;ctx.fillText(shown,x,y);ctx.textAlign='left';
+}
 function wordmark(ctx,x,y,color,size=26){ctx.fillStyle=color;ctx.font=`600 ${size}px ${SANS}`;ctx.letterSpacing=`${size*.18}px`;ctx.fillText('UNFRAME',x,y);ctx.letterSpacing='0px';}
 // Draws one of the three designs. Geometry lives in share-card-layout.js; this only paints.
 export function drawCard(ctx,design,w,h,img,data){
  const layout=cardLayout(design,w,h,img.naturalWidth,img.naturalHeight),{art,image,text,portrait}=layout,scale=portrait?1:.82;
  const paint=(box,cover)=>{ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();ctx.drawImage(img,image.x,image.y,image.w,image.h);ctx.restore();};
- const host=data.url?new URL(data.url,'https://unframe.kr').host:'unframe.kr';
  if(design==='label'){
   ctx.fillStyle='#f3efe6';ctx.fillRect(0,0,w,h);
   wordmark(ctx,portrait?86:60,portrait?120:84,BLUE);
@@ -24,7 +38,7 @@ export function drawCard(ctx,design,w,h,img,data){
   for(const line of lines(ctx,`600 ${portrait?50:38}px ${SERIF}`,data.title,width,2)){ctx.fillText(line,text.x+pad,y);y+=portrait?62:48;}
   y+=portrait?14:8;ctx.fillStyle='#4a4f4c';for(const line of lines(ctx,`400 ${portrait?28:22}px ${SANS}`,data.artist,width,1)){ctx.fillText(line,text.x+pad,y);y+=portrait?40:32;}
   ctx.fillStyle='#8a8d8a';for(const line of lines(ctx,`400 ${portrait?22:18}px ${SANS}`,data.meta,width,2)){ctx.fillText(line,text.x+pad,y);y+=portrait?32:26;}
-  ctx.fillStyle='#8a8d8a';ctx.font=`400 ${portrait?20:16}px ${SANS}`;ctx.fillText(host,portrait?86:60,h-(portrait?84:44));
+  footerLine(ctx,{w,y:h-(portrait?84:44),margin:portrait?86:60,size:portrait?22:16,color:'#8a8d8a',strong:INK},data.exhibition);
   return;
  }
  if(design==='wall'){
@@ -38,7 +52,7 @@ export function drawCard(ctx,design,w,h,img,data){
   let y=text.y+(portrait?50:40);ctx.fillStyle=INK;
   for(const line of lines(ctx,`600 ${portrait?56:40}px ${SERIF}`,data.title,text.w,2)){ctx.fillText(line,text.x,y);y+=portrait?68:50;}
   ctx.fillStyle='#3f4442';for(const line of lines(ctx,`400 ${portrait?28:21}px ${SANS}`,[data.artist,data.meta].filter(Boolean).join(' · '),text.w,2)){ctx.fillText(line,text.x,y+6);y+=portrait?40:30;}
-  ctx.fillStyle=BLUE;ctx.font=`500 ${portrait?18:15}px ${SANS}`;ctx.letterSpacing='3px';ctx.fillText('UNFRAME VIRTUAL GALLERY',text.x,Math.min(h-(portrait?70:40),y+(portrait?50:34)));ctx.letterSpacing='0px';
+  footerLine(ctx,{w,y:h-(portrait?70:40),margin:portrait?90:60,size:portrait?22:16,color:'#5a5e5b',strong:INK},data.exhibition);
   return;
  }
  ctx.fillStyle=BLUE;ctx.fillRect(0,0,w,h);
@@ -49,7 +63,7 @@ export function drawCard(ctx,design,w,h,img,data){
  if(!portrait){y+=20;ctx.font=`500 22px ${SANS}`;for(const line of lines(ctx,`500 22px ${SANS}`,data.artist,text.w,1)){ctx.fillText(line,text.x,y);y+=32;}ctx.fillStyle='rgba(255,255,255,.75)';for(const line of lines(ctx,`400 17px ${SANS}`,data.meta,text.w,2)){ctx.fillText(line,text.x,y);y+=26;}}
  paint(art);
  if(portrait){const fy=art.y+art.h+90;ctx.fillStyle='#fff';for(const line of lines(ctx,`500 34px ${SANS}`,data.artist,w-160,1))ctx.fillText(line,80,fy);ctx.fillStyle='rgba(255,255,255,.75)';let my=fy+48;for(const line of lines(ctx,`400 24px ${SANS}`,data.meta,w-160,2)){ctx.fillText(line,80,my);my+=34;}}
- ctx.fillStyle='rgba(255,255,255,.7)';ctx.font=`400 ${portrait?20:15}px ${SANS}`;ctx.textAlign='right';ctx.fillText(host,w-(portrait?80:60),h-(portrait?70:28));ctx.textAlign='left';
+ footerLine(ctx,{w,y:h-(portrait?70:28),margin:portrait?80:60,size:portrait?22:15,color:'rgba(255,255,255,.72)',strong:'#fff'},data.exhibition);
 }
 let stylesLoaded=false;
 export async function openShareCard(data){
