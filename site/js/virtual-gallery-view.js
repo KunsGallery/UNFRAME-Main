@@ -17,8 +17,10 @@ export function showModalImage(image,src){
  image.classList.add('is-loading');image.onload=image.onerror=()=>image.classList.remove('is-loading');image.src=src;
 }
 // The whole gallery: its title, the artist (or the exhibition's artists), a work as the image.
+// `works` lets the share dialog swap which work stands for the gallery.
 export function galleryShareCard(settings,exhibition,artworks,galleryId){
- return {title:settings.title,artist:settings.artistName||exhibition?.artists||'',meta:t('vg.shareMeta'),exhibition:{title:exhibition?.title||'',dates:shortRange(exhibition)},image:artworks.find(art=>art.image?.url)?.image.url,url:(globalThis.location?.origin||'')+localHref('/virtual-gallery/'+encodeURIComponent(galleryId))};
+ const works=artworks.filter(art=>art.image?.url).map(art=>({label:[localized(art,'title'),art.artist].filter(Boolean).join(' · '),image:art.image.url}));
+ return {title:settings.title,artist:settings.artistName||exhibition?.artists||'',meta:t('vg.shareMeta'),exhibition:{title:exhibition?.title||'',dates:shortRange(exhibition)},image:works[0]?.image,works,url:(globalThis.location?.origin||'')+localHref('/virtual-gallery/'+encodeURIComponent(galleryId))};
 }
 export function workShareCard(art,exhibition,galleryId){
  return artworkCard(art,exhibition,(globalThis.location?.origin||'')+localHref('/virtual-gallery/'+encodeURIComponent(galleryId))+hashFor(art.id));
