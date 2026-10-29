@@ -40,3 +40,9 @@ test('gallery share card offers every work with an image as the featured work',(
  const card=galleryShareCard({title:'조은이'},show,[{image:{}},art,{...art,id:'a2',title:'밤',image:{url:'/b.webp'}}],'g');
  assert.deepEqual(card.works.map(w=>w.image),['/a.webp','/b.webp']);assert.equal(card.works[1].label,'밤 · 김작가');assert.equal(card.image,'/a.webp');
 });
+test('a saved entrance image is offered first, without losing artwork choices',()=>{
+ const card=galleryShareCard({title:'갤러리',previewImage:{url:'/entry.jpeg'}},show,[art],'g');
+ assert.deepEqual(card.works.map(work=>work.image),['/entry.jpeg','/a.webp']);
+ assert.equal(card.works[0].label,'갤러리 입구 장면');assert.equal(card.image,'/entry.jpeg');
+ english(()=>assert.equal(galleryShareCard({previewImage:{url:'/entry.jpeg'}},show,[],'g').works[0].label,'Gallery entrance view'));
+});

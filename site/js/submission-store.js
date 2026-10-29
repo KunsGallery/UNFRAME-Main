@@ -76,11 +76,18 @@ export async function claimInvite(id){
  return getInvite(id);
 }
 export async function saveSubmissionSettings(id,settings,{asStaff=false}={}){
- const {artworks,canEdit}=await editable(id,asStaff);if(!canEdit)throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
+ const {submission,artworks,canEdit}=await editable(id,asStaff);if(!canEdit)throw new Error('심사 요청 중에는 수정할 수 없습니다. 요청을 취소한 뒤 수정해주세요.');
  const data=pickSubmissionSettings(settings);
+ if(submission.settings.previewImage)data.previewImage=submission.settings.previewImage;
  layoutArtworks(artworks,data.roomSize);placeObjects(artworks,data.roomSize);
  if(demo){const all=read();Object.assign(all[id].submission,{settings:data,touchedAt:nowISO()});write(all);return;}
  const f=await firestoreClient();await f.db.updateDoc(f.db.doc(f.d,'virtualSubmissions',id),{settings:data,touchedAt:f.db.serverTimestamp()});
+}
+export async function saveSubmissionPreview(id,image,{asStaff=false}={}){
+ const {submission,canEdit}=await editable(id,asStaff);if(!canEdit)throw new Error('심사 요청 중에는 수정할 수 없습니다.');
+ const settings={...submission.settings,previewImage:demo?image:{path:image.path}};
+ if(demo){const all=read();all[id].submission.settings=settings;all[id].submission.touchedAt=nowISO();write(all);return;}
+ const f=await firestoreClient();await f.db.updateDoc(f.db.doc(f.d,'virtualSubmissions',id),{settings,touchedAt:f.db.serverTimestamp()});
 }
 export async function saveSubmissionArtwork(id,artwork,{remove=removeImage,asStaff=false}={}){
  const {submission,artworks,canEdit}=await editable(id,asStaff);
@@ -219,6 +226,7 @@ export async function approveSubmission(id,{publish,copy=copyImages,remove=remov
  });
  if(pairs.length)await copy(pairs);
  const settings={...base,...submission.settings,artistEmail:submission.ownerEmail};
+ if(submission.settings.previewImage?.path){const from=submission.settings.previewImage.path,to=from.replace(`virtualSubmissions/${id}/`,`virtualGalleries/${galleryId}/`);await copy([{from,to}]);settings.previewImage={path:to};}
  const published=publish||!!existing?.settings.published;
  if(published){layoutArtworks(works,settings.roomSize);placeObjects(works,settings.roomSize);}
  await saveVirtualSettings(galleryId,{...settings,published:!!existing?.settings.published&&published},existing?.artworks||[]);

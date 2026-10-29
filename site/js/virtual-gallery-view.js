@@ -20,6 +20,7 @@ export function showModalImage(image,src){
 // `works` lets the share dialog swap which work stands for the gallery.
 export function galleryShareCard(settings,exhibition,artworks,galleryId){
  const works=artworks.filter(art=>art.image?.url).map(art=>({label:[localized(art,'title'),art.artist].filter(Boolean).join(' · '),image:art.image.url}));
+ if(settings.previewImage?.url)works.unshift({label:t('vg.entryScene'),image:settings.previewImage.url});
  return {title:settings.title,artist:settings.artistName||exhibition?.artists||'',meta:t('vg.shareMeta'),exhibition:{title:exhibition?.title||'',dates:shortRange(exhibition)},image:works[0]?.image,works,url:(globalThis.location?.origin||'')+localHref('/virtual-gallery/'+encodeURIComponent(galleryId))};
 }
 export function workShareCard(art,exhibition,galleryId){

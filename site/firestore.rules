@@ -195,7 +195,8 @@ service cloud.firestore {
   function validVirtualGallery(data,exid) {
    return virtualId(exid)
     && data.keys().hasAll(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt'])
-    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order','lighting','ceiling','artistEmail','artistNote','roomSize','titleEn','subtitleEn','artistNoteEn'])
+    && data.keys().hasOnly(['title','subtitle','published','theme','wallColor','brightness','speed','outdoor','showPrices','updatedAt','exhibitionId','artistName','order','lighting','ceiling','artistEmail','artistNote','roomSize','titleEn','subtitleEn','artistNoteEn','previewImage'])
+    && (!('previewImage' in data) || validPreview(data.previewImage,'virtualGalleries',exid))
     && optText(data,'titleEn',200) && optText(data,'subtitleEn',1000) && optText(data,'artistNoteEn',600)
     && validVirtualAssociation(data,exid)
     && data.title is string && data.title.size()>0 && data.title.size()<=200
@@ -293,8 +294,14 @@ service cloud.firestore {
   function submissionLive(data) { return data.touchedAt + duration.value(10,'d') > request.time; }
   function submissionOwner(data) { return googleUser() && data.ownerEmail == request.auth.token.email; }
   function submissionPath(sid) { return /databases/$(database)/documents/virtualSubmissions/$(sid); }
-  function validSubmissionSettings(s) {
-   return s is map && s.keys().hasAll(['theme','wallColor','lighting','ceiling']) && s.keys().hasOnly(['theme','wallColor','lighting','ceiling','artistNote','roomSize'])
+  function validPreview(image,collection,id) {
+   return image is map && image.keys().hasOnly(['path']) && image.keys().hasAll(['path'])
+    && image.path is string && image.path.size()<=200
+    && image.path.matches('^'+collection+'/'+id+'/preview/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[.]jpeg$');
+  }
+  function validSubmissionSettings(s,sid) {
+   return s is map && s.keys().hasAll(['theme','wallColor','lighting','ceiling']) && s.keys().hasOnly(['theme','wallColor','lighting','ceiling','artistNote','roomSize','previewImage'])
+    && (!('previewImage' in s) || validPreview(s.previewImage,'virtualSubmissions',sid))
     && (!('roomSize' in s) || s.roomSize in ['small','medium','large'])
     && (!('artistNote' in s) || (s.artistNote is string && s.artistNote.size()<=600))
     && s.theme in ['white','black','herringbone-wood','wood','urethane']
@@ -314,7 +321,7 @@ service cloud.firestore {
     && data.approvedGalleryId is string && (data.approvedGalleryId == '' || virtualId(data.approvedGalleryId))
     && data.status in ['invited','draft','submitted','rejected']
     && data.reviewNote is string && data.reviewNote.size()<=1000
-    && validSubmissionSettings(data.settings)
+    && validSubmissionSettings(data.settings,sid)
     && data.createdAt is timestamp && data.touchedAt == request.time;
   }
   function changedOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }

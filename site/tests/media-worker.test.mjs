@@ -6,6 +6,13 @@ const b64=value=>Buffer.from(typeof value==='string'?value:JSON.stringify(value)
 async function token(extra={}){const now=Math.floor(Date.now()/1000);const data=b64({alg:'RS256',kid:'test'})+'.'+b64({aud:'unframe-main',iss:'https://securetoken.google.com/unframe-main',sub:'owner',email:'owner@example.com',email_verified:true,firebase:{sign_in_provider:'google.com'},exp:now+3600,iat:now-1,auth_time:now-1,...extra});return data+'.'+Buffer.from(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',pair.privateKey,new TextEncoder().encode(data))).toString('base64url');}
 const path='exhibitions/exhibit/12345678-1234-1234-1234-123456789012.png';
 const png=Uint8Array.from([137,80,78,71,13,10,26,10,0]);
+test('public entrance image requires an exact published gallery reference',async()=>{
+ const p='virtualGalleries/exhibit/preview/12345678-1234-1234-1234-123456789012.jpeg',f=fixture();
+ for(const [published,path,expected] of [[true,p,200],[true,p.replace('12345678','aaaaaaaa'),404],[false,p,404]]){
+  const fetcher=async()=>published?Response.json({fields:{published:{booleanValue:true},previewImage:{mapValue:{fields:{path:{stringValue:path}}}}}}):new Response('',{status:403});
+  assert.equal((await handle(new Request('https://media.example/media/'+p),f.env,fetcher)).status,expected);
+ }
+});
 function fixture({published=false,active=true,referenced=true}={}){let stored;const env={FIREBASE_PROJECT_ID:'unframe-main',ALLOWED_ORIGINS:'https://unframe-main.netlify.app',MEDIA:{async get(){return {body:png,httpEtag:'"test"'};},async put(k,v){stored={k,v};},async delete(k){stored={deleted:k};}}};const fetcher=async url=>url.includes('googleapis.com/service_accounts')?Response.json({keys:[jwk]}):url.includes('/staffEmails/')?Response.json({fields:{active:{booleanValue:active},email:{stringValue:'owner@example.com'}}}):published?Response.json({fields:{published:{booleanValue:true},cover:{mapValue:{fields:{path:{stringValue:referenced?path:'other'}}}}}}):new Response('',{status:403});return {env,fetcher,stored:()=>stored};}
 const req=(method,headers={},body)=>new Request('https://media.example/media/'+path,{method,headers,body});
 test('virtual artwork access requires a published gallery and the exact artwork reference; staff can upload scoped files',async()=>{

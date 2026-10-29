@@ -50,7 +50,7 @@ test('submission image paths stay inside their own submission',()=>{
  assert.equal(isSubmissionPath(path,'sub2'),false);
  assert.equal(isSubmissionPath('virtualGalleries/sub1/art1/x.webp','sub1'),false);
 });
-import {createInvite,getInvite,claimInvite,getSubmission,saveSubmissionSettings,saveSubmissionArtwork,deleteSubmissionArtwork,setSubmissionStatus,listSubmissions,countPending,extendSubmission,rejectSubmission,approveSubmission,purgeExpiredSubmissions,myGalleries,createRevision,artistLogin,DEMO_ARTIST_EMAIL} from '../js/submission-store.js';
+import {createInvite,getInvite,claimInvite,getSubmission,saveSubmissionSettings,saveSubmissionPreview,saveSubmissionArtwork,deleteSubmissionArtwork,setSubmissionStatus,listSubmissions,countPending,extendSubmission,rejectSubmission,approveSubmission,purgeExpiredSubmissions,myGalleries,createRevision,artistLogin,DEMO_ARTIST_EMAIL} from '../js/submission-store.js';
 import {getVirtualGallery} from '../js/virtual-store.js';
 import {emptyArtwork} from '../js/virtual-model.js';
 const exhibition={id:'resonance',title:'Resonance: 빛과 소리의 공명'};
@@ -62,6 +62,16 @@ async function invitedDraft(){
  const fix=art=>({...art,image:{...art.image,path:art.image.path.replace('SUB',invite.id)}});
  return {id:invite.id,fix};
 }
+test('entrance image survives settings edits and is copied on approval',async()=>{
+ memoryStorage();const {id,fix}=await invitedDraft();const from=`virtualSubmissions/${id}/preview/12345678-1234-1234-1234-123456789012.jpeg`;
+ await saveSubmissionPreview(id,{path:from});await saveSubmissionSettings(id,{theme:'white',wallColor:'#ffffff',lighting:'general',ceiling:'plain'});
+ assert.equal((await getSubmission(id)).submission.settings.previewImage.path,from);
+ await saveSubmissionArtwork(id,fix(work('a1')));await setSubmissionStatus(id,'submitted');
+ await assert.rejects(saveSubmissionPreview(id,{path:from}),/심사/);
+ const copied=[];const galleryId=await approveSubmission(id,{publish:true,copy:async pairs=>copied.push(...pairs)});
+ const to=`virtualGalleries/${galleryId}/preview/12345678-1234-1234-1234-123456789012.jpeg`;
+ assert.equal((await getVirtualGallery(galleryId,{admin:true})).settings.previewImage.path,to);assert.ok(copied.some(pair=>pair.from===from&&pair.to===to));delete globalThis.localStorage;
+});
 test('invited artist uploads, requests review and staff approval publishes a new artist gallery',async()=>{
  memoryStorage();
  const invite=await createInvite(exhibition,{artistName:'김하늘',invitedEmail:''});
