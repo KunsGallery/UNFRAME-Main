@@ -306,6 +306,7 @@ export const DICT={
  'card.preview':{ko:'공유 카드 미리보기',en:'Share card preview'},
  'card.title':{ko:'나만의 공유 카드',en:'Your share card'},
  'card.design':{ko:'디자인',en:'Design'},
+ 'card.work':{ko:'대표 작품',en:'Featured work'},
  'card.ratio':{ko:'이미지 비율',en:'Image ratio'},
  'card.story':{ko:'스토리 · 9:16',en:'Story · 9:16'},
  'card.landscape':{ko:'가로형 · 4:3',en:'Landscape · 4:3'},

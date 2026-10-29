@@ -36,3 +36,7 @@ test('the detail image stays hidden until the new work has loaded',()=>{
  img.complete=true;showModalImage(img,'/b.webp');assert.ok(!classes.has('is-loading'));
 });
 test('the gallery page has no placeholder artwork image',async()=>{const {readFile}=await import('node:fs/promises');const html=await readFile(new URL('../virtual-gallery.html',import.meta.url),'utf8');assert.doesNotMatch(html,/id="modal-img"[^>]*src=/);});
+test('gallery share card offers every work with an image as the featured work',()=>{
+ const card=galleryShareCard({title:'조은이'},show,[{image:{}},art,{...art,id:'a2',title:'밤',image:{url:'/b.webp'}}],'g');
+ assert.deepEqual(card.works.map(w=>w.image),['/a.webp','/b.webp']);assert.equal(card.works[1].label,'밤 · 김작가');assert.equal(card.image,'/a.webp');
+});
