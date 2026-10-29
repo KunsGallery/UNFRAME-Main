@@ -12,7 +12,7 @@ import {localizedExhibition} from './exhibition-view.js';
 import {mountLanguageSwitch} from './language-switch.js';
 // English pages show the optional …En copies of gallery and artwork text.
 const localizedSettings=settings=>({...settings,title:localized(settings,'title'),subtitle:localized(settings,'subtitle'),artistNote:localized(settings,'artistNote')});
-import {localizedWork,dimensionText,workShareCard,worksListHTML} from './virtual-gallery-view.js';
+import {localizedWork,dimensionText,workShareCard,galleryShareCard,worksListHTML} from './virtual-gallery-view.js';
 const $=selector=>document.querySelector(selector);
 let room;
 function info(art,settings){
@@ -88,7 +88,8 @@ async function show(id){
  else{const chooser=document.createElement('a');chooser.href=localHref(`/exhibition/${encodeURIComponent(parentId)}`)+'#ex-online';chooser.className='glass-btn virtual-gallery-choice';chooser.textContent=t('vg.chooseGallery');$('.top-actions').append(chooser);
  document.querySelectorAll('[data-return]').forEach(link=>link.href=localHref(`/exhibition/${encodeURIComponent(parentId)}`));}
  const artworks=await Promise.all(data.artworks.map(async art=>({...localizedWork(art),image:await resolveImage(art.image),...(art.model?.path?{model:{...art.model,load:()=>resolveImage(art.model).then(model=>model.url)}}:{})})));
- if(!preview&&exhibition.published&&settings.published){const share=document.createElement('button');share.className='action-btn-primary';share.textContent=t('room.shareCard');share.type='button';$('.modal-btn-row').append(share);let selected;document.addEventListener('unframe-artwork-open',event=>{selected=artworks.find(art=>art.id===event.detail.id);share.hidden=!selected;});share.onclick=()=>{if(selected)openShareCard(workShareCard(selected,shownExhibition,id));};}
+ if(!preview&&exhibition.published&&settings.published){const share=document.createElement('button');share.className='action-btn-primary';share.textContent=t('room.shareCard');share.type='button';$('.modal-btn-row').append(share);let selected;document.addEventListener('unframe-artwork-open',event=>{selected=artworks.find(art=>art.id===event.detail.id);share.hidden=!selected;});share.onclick=()=>{if(selected)openShareCard(workShareCard(selected,shownExhibition,id));};
+  const card=galleryShareCard(settings,shownExhibition,artworks,id);if(card.image){const whole=document.createElement('button');whole.type='button';whole.className='glass-btn virtual-gallery-share';whole.textContent=t('vg.share');whole.onclick=()=>openShareCard(card);$('.top-actions').append(whole);}}
  $('#works-list').innerHTML=artworks.length?worksListHTML(artworks):`<p>${t('vg.noWorks')}</p>`;
  $('#btn-list').onclick=()=>$('#works-dialog').showModal();$('#works-close').onclick=()=>$('#works-dialog').close();
  document.querySelectorAll('[data-art]').forEach(button=>button.onclick=()=>{$('#works-dialog').close();const art=artworks.find(item=>item.id===button.dataset.art);if(room)room.inspect(art.id);else info(art,settings);});

@@ -271,6 +271,8 @@ export const DICT={
  'vg.staffPreview':{ko:'관리자 미리보기 · 저장된 설정을 확인하는 화면입니다.',en:'Staff preview · showing the saved settings.'},
  'vg.defaultSubtitle':{ko:'{title}의 작품을 온라인 공간에서 만나보세요.',en:'See the works from {title} in an online space.'},
  'vg.backToStudio':{ko:'← 업로드 화면으로',en:'← Back to uploads'},
+ 'vg.share':{ko:'갤러리 공유',en:'Share gallery'},
+ 'vg.shareMeta':{ko:'UNFRAME 온라인 전시실',en:'UNFRAME online viewing room'},
  'vg.chooseGallery':{ko:'갤러리 선택',en:'Choose gallery'},
  'vg.noWorks':{ko:'등록된 작품이 없습니다. 관리자에서 작품을 추가해주세요.',en:'No works have been added yet.'},
  'vg.no3d':{ko:'이 기기에서 3D 공간을 시작하지 못했습니다. 작품 목록에서 이미지와 설명을 감상할 수 있습니다.',en:'The 3D space could not start on this device. You can still see the images and descriptions in the artwork list.'},
