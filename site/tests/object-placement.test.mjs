@@ -83,3 +83,9 @@ test('model source must be glb or photo',()=>{
  assert.doesNotThrow(()=>validateArtwork(object('s1',{model:{path:'virtualGalleries/g/s1/12345678-1234-1234-1234-123456789abc.glb',name:'a.glb',source:'photo'}})));
  assert.throws(()=>validateArtwork(object('s2',{model:{path:'virtualGalleries/g/s2/12345678-1234-1234-1234-123456789abc.glb',name:'a.glb',source:'ai'}})),/3D/);
 });
+test('stored models keep path, name and the photo source but drop display-only fields',async()=>{
+ const {storedModel}=await import('../js/virtual-model.js');
+ assert.deepEqual(storedModel({path:'p.glb',name:'a',source:'photo',url:'blob:x',load:()=>{}}),{path:'p.glb',name:'a',source:'photo'});
+ assert.deepEqual(storedModel({path:'p.glb'}),{path:'p.glb',name:''});
+ assert.equal(storedModel(undefined),undefined);
+});

@@ -1,6 +1,6 @@
 import {demo,firestoreClient,session,login,logout,getExhibition,removeImage,copyImages,purgeSubmissionImages,purgeGalleryImages} from './store.js';
 import {getVirtualGallery,listVirtualGalleries,saveVirtualSettings,saveVirtualArtwork,deleteVirtualArtwork,deleteVirtualGallery} from './virtual-store.js';
-import {validateArtwork,layoutArtworks,defaultArtistGallery,galleryExhibitionId,THEMES,LIGHTING,CEILINGS,ROOMS} from './virtual-model.js';
+import {storedModel,validateArtwork,layoutArtworks,defaultArtistGallery,galleryExhibitionId,THEMES,LIGHTING,CEILINGS,ROOMS} from './virtual-model.js';
 import {placeObjects} from './object-placement.js';
 import {ARTWORK_ENGLISH} from './i18n.js';
 import {EXPIRY_DAYS,newSubmissionId,expiryFrom,isExpired,artistCanEdit,canTransition,validateInvite,isSubmissionPath} from './submission-model.js';
@@ -22,7 +22,7 @@ export function pickSubmissionSettings(settings={}){
  return data;
 }
 // English copies are staff-only gallery fields; artist drafts never carry them.
-const artworkData=artwork=>{const {id,descriptionEn,mediumEn,...data}=artwork;const out={...data,updatedAt:nowISO(),image:{url:demo?artwork.image.url:'',path:artwork.image.path,alt:artwork.image.alt}};if(artwork.model)out.model=demo?{...artwork.model}:{path:artwork.model.path,name:artwork.model.name||''};return out;};
+const artworkData=artwork=>{const {id,descriptionEn,mediumEn,...data}=artwork;const out={...data,updatedAt:nowISO(),image:{url:demo?artwork.image.url:'',path:artwork.image.path,alt:artwork.image.alt}};if(artwork.model)out.model=demo?{...artwork.model}:storedModel(artwork.model);return out;};
 function checkArtworkImage(submission,art){
  const path=art.image?.path||'';
  if(demo&&!path)return;

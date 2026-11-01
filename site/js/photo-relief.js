@@ -54,3 +54,15 @@ export function reliefGeometry({width:w,height:h,mask,depth,strength,maxDepth,ce
  positions.set(pos);uvs.set(uv);
  return {positions,uvs,front:Uint32Array.from(front),back:Uint32Array.from(back),bounds,aspect:(bw-1)/(bh-1)};
 }
+// A photo that is already a cut-out (enough transparent pixels) supplies its own mask.
+export function cutoutMask(rgba){
+ const count=rgba.length/4,mask=new Uint8Array(count);let clear=0;
+ for(let i=0;i<count;i++){const alpha=rgba[i*4+3];mask[i]=alpha>127?255:0;if(alpha<250)clear++;}
+ return clear/count>.02?mask:null;
+}
+// Nearest-neighbour resize of an 8-bit grey image to 0–1 floats.
+export function resampleGray(source,sw,sh,dw,dh){
+ const out=new Float32Array(dw*dh);
+ for(let y=0;y<dh;y++)for(let x=0;x<dw;x++)out[y*dw+x]=source[Math.min(sh-1,Math.floor(y*sh/dh))*sw+Math.min(sw-1,Math.floor(x*sw/dw))]/255;
+ return out;
+}

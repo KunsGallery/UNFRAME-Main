@@ -60,6 +60,8 @@ export function validateArtwork(data){
  if(!bounded(data.image?.alt,1000))throw new Error('이미지 설명은 1,000자 이내로 입력해주세요.');
  return data;
 }
+// What a model keeps in Firestore: never the resolved url or loader.
+export const storedModel=model=>model?{path:model.path,name:model.name||'',...(model.source?{source:model.source}:{})}:model;
 export const PLINTHS={none:'좌대 없음',low:'낮은 좌대 (10cm)',high:'높은 좌대 (60cm)'};
 function validateObject(data){
  if(!between(data.depthCm,10,500))throw new Error('오브제의 깊이는 10~500cm로 입력해주세요.');

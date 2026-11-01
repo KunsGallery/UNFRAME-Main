@@ -57,3 +57,13 @@ test('relief normals face forward on a flat front',()=>{
  const positions=new Float32Array([0,0,0,0,0,0, 1,0,0,1,0,0, 0,1,0,0,1,0]),front=Uint32Array.from([0,2,4]);
  const n=reliefNormals(positions,front,new Uint32Array());assert.deepEqual([...n.slice(0,3)].map(Math.round),[0,0,1]);
 });
+import {cutoutMask,resampleGray} from '../js/photo-relief.js';
+test('a transparent PNG gives its own mask; an opaque photo needs background removal',()=>{
+ const rgba=new Uint8ClampedArray(4*4*4).fill(255);for(let i=0;i<8;i++)rgba[i*4+3]=0;
+ assert.deepEqual([...cutoutMask(rgba).slice(0,9)],[0,0,0,0,0,0,0,0,255]);
+ assert.equal(cutoutMask(new Uint8ClampedArray(4*4*4).fill(255)),null);
+});
+test('depth maps are resampled to the mask size',()=>{
+ const out=resampleGray(Uint8Array.from([0,255,0,255]),2,2,4,2);
+ assert.equal(out.length,8);assert.ok(Math.abs(out[0])<1e-6&&Math.abs(out[7]-1)<1e-6);
+});
