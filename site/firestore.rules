@@ -202,7 +202,7 @@ service cloud.firestore {
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.subtitle is string && data.subtitle.size()<=1000
     && data.published is bool && data.theme in ['white','black','herringbone-wood','wood','urethane']
-    && (!('lighting' in data) || data.lighting in ['general','focused'])
+    && (!('lighting' in data) || data.lighting in ['general','focused','museum'])
     && (!('ceiling' in data) || data.ceiling in ['plain','luminous'])
     && (!('artistEmail' in data) || (data.artistEmail is string && data.artistEmail.size()>0 && data.artistEmail.size()<=320))
     && (!('artistNote' in data) || (data.artistNote is string && data.artistNote.size()<=600))
@@ -228,7 +228,8 @@ service cloud.firestore {
   }
   // 3D objects: one uncompressed GLB stored beside the artwork's images.
   function validModel(model,prefix) {
-   return model is map && model.keys().hasAll(['path','name']) && model.keys().hasOnly(['path','name'])
+   return model is map && model.keys().hasAll(['path','name']) && model.keys().hasOnly(['path','name','source'])
+    && (!('source' in model) || model.source in ['glb','photo'])
     && model.name is string && model.name.size()<=200
     && model.path is string && model.path.size()<=512
     && model.path.matches('^'+prefix+'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[.]glb$');
@@ -306,7 +307,7 @@ service cloud.firestore {
     && (!('artistNote' in s) || (s.artistNote is string && s.artistNote.size()<=600))
     && s.theme in ['white','black','herringbone-wood','wood','urethane']
     && s.wallColor is string && s.wallColor.matches('^#[0-9a-fA-F]{6}$')
-    && s.lighting in ['general','focused'] && s.ceiling in ['plain','luminous'];
+    && s.lighting in ['general','focused','museum'] && s.ceiling in ['plain','luminous'];
   }
   function validSubmission(data,sid) {
    return sid.matches('^[A-Za-z0-9]{22}$')

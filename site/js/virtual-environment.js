@@ -1,6 +1,7 @@
 // Rendering-only adaptation of the user-supplied UAU single-room reference.
 // Existing room dimensions, artwork placement and storage remain owned by UNFRAME.
-export function environmentOptions(settings){return {lighting:settings.lighting||'general',ceiling:settings.ceiling||'plain',outdoor:settings.outdoor===true};}
+// 다크 뮤지엄 keeps the ceiling dark even when the luminous ceiling was chosen.
+export function environmentOptions(settings){const lighting=settings.lighting||'general';return {lighting,ceiling:lighting==='museum'?'plain':settings.ceiling||'plain',outdoor:settings.outdoor===true};}
 export function surfaceTexture(THREE,renderer,name,repeatX=1,repeatY=1){
  const texture=new THREE.TextureLoader().load(`/assets/virtual-textures/${name}.webp`,undefined,undefined,()=>console.warn('Gallery surface texture failed to load.'));
  texture.encoding=THREE.sRGBEncoding;texture.wrapS=texture.wrapT=THREE.MirroredRepeatWrapping;texture.repeat.set(repeatX,repeatY);texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);return texture;

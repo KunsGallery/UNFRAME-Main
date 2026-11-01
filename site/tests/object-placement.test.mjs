@@ -71,3 +71,15 @@ test('changing the room size is checked against object spots',()=>{
  assert.throws(()=>validateGallery({...defaultGallery({title:'t',summary:''}),roomSize:'small'},[object('a',{spot:'corner-back-left'})]),/전시 자리/);
  assert.doesNotThrow(()=>validateGallery({...defaultGallery({title:'t',summary:''}),roomSize:'medium'},[object('a',{spot:'corner-back-left'})]));
 });
+test('photo relief objects stand only in corner spots',()=>{
+ const photo=(id,spot)=>object(id,{spot,model:{path:`virtualGalleries/g/${id}/12345678-1234-1234-1234-123456789abc.glb`,name:'relief.glb',source:'photo'}});
+ for(const room of Object.values(ROOMS))assert.ok(objectSpots(room,{photo:true}).every(spot=>spot.type==='corner'),room.id);
+ assert.equal(objectSpots(ROOMS.large,{photo:true}).length,4);
+ assert.doesNotThrow(()=>placeObjects([photo('p1','corner-front-left')],'large'));
+ assert.throws(()=>placeObjects([photo('p2','center-left')],'large'),/사진으로 만든 입체라 모서리 자리에만/);
+ assert.doesNotThrow(()=>placeObjects([object('g1',{spot:'center-left'})],'large'));
+});
+test('model source must be glb or photo',()=>{
+ assert.doesNotThrow(()=>validateArtwork(object('s1',{model:{path:'virtualGalleries/g/s1/12345678-1234-1234-1234-123456789abc.glb',name:'a.glb',source:'photo'}})));
+ assert.throws(()=>validateArtwork(object('s2',{model:{path:'virtualGalleries/g/s2/12345678-1234-1234-1234-123456789abc.glb',name:'a.glb',source:'ai'}})),/3D/);
+});

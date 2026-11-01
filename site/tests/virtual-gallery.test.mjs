@@ -226,3 +226,12 @@ test('optional English gallery and artwork fields are bounded',async()=>{
  assert.throws(()=>validateArtwork({...art,descriptionEn:'x'.repeat(5001)}),/영문/);
  assert.throws(()=>validateArtwork({...art,mediumEn:'x'.repeat(501)}),/영문/);
 });
+test('dark museum lighting is a valid choice with charcoal and black floor defaults',async()=>{
+ const {LIGHTING,MUSEUM_DEFAULTS}=await import('../js/virtual-model.js');
+ const base=defaultGallery({title:'전시',summary:''});
+ assert.equal(LIGHTING.museum,'다크 뮤지엄');
+ assert.doesNotThrow(()=>validateGallery({...base,lighting:'museum'}));
+ assert.throws(()=>validateGallery({...base,lighting:'dim'}),/조명/);
+ assert.deepEqual(MUSEUM_DEFAULTS,{wallColor:'#3a3c3b',theme:'black',ceiling:'plain'});
+ assert.equal(environmentOptions({lighting:'museum',ceiling:'luminous'}).ceiling,'plain');
+});

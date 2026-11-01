@@ -106,6 +106,9 @@ await expectStatus('unknown room size denied',403,saveGallery({...settings,roomS
 await expectStatus('restore gallery room size',200,saveGallery(settings));
 const objectArt={...artwork,kind:'object',depthCm:50,spot:'corner-front-left',yaw:45,plinth:'low',copies:2,model:{path:`virtualGalleries/${exid}/${artid}/11111111-2222-4333-8444-555555555555.glb`,name:'lamp.glb'}};
 await expectStatus('object artwork with GLB model',200,saveArtwork(objectArt));
+await expectStatus('photo relief model source is accepted',200,saveArtwork({...objectArt,model:{...objectArt.model,source:'photo'}}));
+await expectStatus('unknown model source is rejected',403,saveArtwork({...objectArt,model:{...objectArt.model,source:'ai'}}));
+await expectStatus('unknown model keys are rejected',403,saveArtwork({...objectArt,model:{...objectArt.model,depthMap:'x'}}));
 await expectStatus('object model must live under its artwork',403,saveArtwork({...objectArt,model:{...objectArt.model,path:`virtualGalleries/other/${artid}/11111111-2222-4333-8444-555555555555.glb`}}));
 await expectStatus('object model must be a GLB',403,saveArtwork({...objectArt,model:{...objectArt.model,path:`virtualGalleries/${exid}/${artid}/11111111-2222-4333-8444-555555555555.exe`}}));
 await expectStatus('unknown artwork kind denied',403,saveArtwork({...objectArt,kind:'statue'}));
@@ -316,6 +319,7 @@ for(const galleryId of [upgradeParent,upgradeArtist]){
  await expectStatus(`${galleryId}: clear optional fixture`,200,request(galleryPath,{method:'DELETE',auth:'owner'}));
  await expectStatus(`${galleryId}: optional settings create`,200,request(galleryPath,{method:'PATCH',data:enhanced}));
  await expectStatus(`${galleryId}: optional settings update`,200,request(galleryPath,{method:'PATCH',data:{...enhanced,lighting:'general',ceiling:'plain'}}));
+ await expectStatus(`${galleryId}: dark museum lighting`,200,request(galleryPath,{method:'PATCH',data:{...enhanced,lighting:'museum',ceiling:'plain'}}));
  await expectStatus(`${galleryId}: legacy settings update`,200,request(galleryPath,{method:'PATCH',data:legacySettings}));
  const invalidSettings=[['lighting enum',{lighting:'spotlight'}],['lighting type',{lighting:1}],['lighting null',{lighting:null}],['ceiling enum',{ceiling:'open'}],['ceiling type',{ceiling:true}],['invalid floor',{theme:'plastic'}]];
  for(const [label,extra] of invalidSettings){
@@ -445,6 +449,7 @@ await expectStatus('other account cannot read claimed invite',403,request(`virtu
 await expectStatus('other account cannot re-claim',403,commit([put(`virtualSubmissions/${open}`,{ownerEmail:'other@example.com',status:'draft'},{mask:['ownerEmail','status']})],otherToken));
 await expectStatus('owner reads submission',200,request(`virtualSubmissions/${open}`,{auth:artistToken}));
 const previewId='11111111-2222-4333-8444-555555555555.jpeg';
+await expectStatus('owner picks dark museum lighting',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,lighting:'museum'}},{mask:['settings']})]));
 await expectStatus('owner saves scoped entrance image',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,previewImage:{path:`virtualSubmissions/${open}/preview/${previewId}`}}},{mask:['settings']})],artistToken));
 await expectStatus('owner cannot reference another submission entrance',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,previewImage:{path:`virtualSubmissions/${locked}/preview/${previewId}`}}},{mask:['settings']})],artistToken));
 await expectStatus('other account cannot save entrance image',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,previewImage:{path:`virtualSubmissions/${open}/preview/${previewId}`}}},{mask:['settings']})],otherToken));
