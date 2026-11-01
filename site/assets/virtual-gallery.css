@@ -31,7 +31,7 @@ body:has(#tour-bar:not([hidden])) .nav-controls-container,body:has(#tour-bar:not
 @media(prefers-reduced-motion:reduce){.top-header,.top-right-panel,.nav-controls-container,.bottom-left-panel,#tour-bar{transition:none}}
 .wall-jumps{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;justify-content:flex-end}
 #start-progress{font-size:13px;color:#5a625f;min-height:1.4em;margin:6px 0 10px}
-.artwork-modal-img-wrap{overflow:hidden}.artwork-modal-img{cursor:zoom-in;transition:transform .25s ease}.artwork-modal-img.is-zoomed{transform:scale(2);cursor:zoom-out}
+.artwork-modal-img-wrap{overflow:hidden}.artwork-modal-img{cursor:zoom-in;transition:transform .25s ease,opacity .2s ease}.artwork-modal-img.is-loading{opacity:0}.artwork-modal-img.is-zoomed{transform:scale(2);cursor:zoom-out}
 @media(prefers-reduced-motion:reduce){.artwork-modal-img{transition:none}}
 .start-card{max-height:min(88svh,760px);overflow-y:auto}
 .start-info{display:grid;gap:14px;text-align:left;margin:4px 0 18px}

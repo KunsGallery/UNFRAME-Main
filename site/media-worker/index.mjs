@@ -103,8 +103,8 @@ export async function handle(request,env,fetcher=fetch){
    else
    if(path.collection==='virtualGalleries'){
     // Anonymous document reads also require a published parent exhibition in rules.
-    const [gallery,artwork]=await Promise.all([document(env,`virtualGalleries/${path.id}`,null,fetcher),document(env,`virtualGalleries/${path.id}/artworks/${path.artId}`,null,fetcher)]);
-    published=gallery?.published?.booleanValue===true&&[artwork?.image?.mapValue?.fields?.path?.stringValue,artwork?.model?.mapValue?.fields?.path?.stringValue].includes(path.key);
+    const [gallery,artwork]=await Promise.all([document(env,`virtualGalleries/${path.id}`,null,fetcher),path.artId==='preview'?null:document(env,`virtualGalleries/${path.id}/artworks/${path.artId}`,null,fetcher)]);
+    published=gallery?.published?.booleanValue===true&&(path.artId==='preview'?gallery?.previewImage?.mapValue?.fields?.path?.stringValue===path.key:[artwork?.image?.mapValue?.fields?.path?.stringValue,artwork?.model?.mapValue?.fields?.path?.stringValue].includes(path.key));
    }else{
     const record=await document(env,`${path.collection}/${path.id}`,null,fetcher);
     const references=[record?.cover?.mapValue?.fields?.path?.stringValue,...(record?.gallery?.arrayValue?.values||[]).map(value=>typeof value.stringValue==='string'?value.stringValue.split('\u001f')[0]:value.mapValue?.fields?.path?.stringValue)];

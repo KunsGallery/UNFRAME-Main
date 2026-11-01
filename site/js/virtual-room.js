@@ -8,6 +8,7 @@ import {bindTouchLook} from './virtual-input.js';
 import {QUALITY,deviceQuality,downgrade} from './virtual-quality.js';
 import {placeObjects,objectObstacles,resolveCollision} from './object-placement.js';
 import {buildObjectGroup,objectViewpoint} from './virtual-objects.js';
+import {showModalImage} from './virtual-gallery-view.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
 let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium';
     const TextureGenerator = {
@@ -1300,7 +1301,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
       },
 
       openModal: function(art) {
-        document.getElementById('modal-img').src = art.dataUrl;
+        showModalImage(document.getElementById('modal-img'), art.dataUrl);
 
         document.getElementById('modal-title-en').innerText = art.titleEn || art.title;
         document.getElementById('modal-title-ko').innerText = art.titleKo || '';
@@ -1550,5 +1551,16 @@ export function mountRoom(settings,works){
  // Back/forward cache retains the live room; dispose only when leaving for good.
  window.addEventListener('pagehide',event=>{if(!event.persisted)stop();});
  for(const button of document.querySelectorAll('[data-wall]'))button.addEventListener('click',()=>{const view=wallViewpoint(button.dataset.wall,roomOf(gallerySettings));if(view)GalleryApp.goToWall(view);});
- return {applyLook:({theme,wallColor})=>{GalleryApp.setTheme(theme);GalleryApp.materials.walls.color.set(wallColor);},close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
+ const captureView=view=>{
+  const renderer=GalleryApp.renderer, camera=GalleryApp.camera.clone();
+  camera.position.set(view.position[0],GalleryApp.player.height,view.position[1]);camera.rotation.set(0,view.yaw,0,'YXZ');camera.aspect=1200/630;camera.updateProjectionMatrix();
+  const size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio();
+  const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=630;
+  try{renderer.setPixelRatio(1);renderer.setSize(1200,630,false);renderer.render(GalleryApp.scene,camera);canvas.getContext('2d').drawImage(renderer.domElement,0,0);}
+  finally{renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(GalleryApp.scene,GalleryApp.camera);}
+  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error(t('vg.captureFailed'))),'image/jpeg',0.9));
+ };
+ const captureEntry=()=>captureView(entryView(roomOf(gallerySettings)));
+ const captureWall=wall=>{if(!['left','right'].includes(wall))throw new Error('Invalid wall');return captureView(wallViewpoint(wall,roomOf(gallerySettings)));};
+ return {captureEntry,captureWall,applyLook:({theme,wallColor})=>{GalleryApp.setTheme(theme);GalleryApp.materials.walls.color.set(wallColor);},close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
 }

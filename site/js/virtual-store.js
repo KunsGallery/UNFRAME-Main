@@ -30,6 +30,10 @@ export async function saveVirtualSettings(id,settings,artworks){
  if(demo){const all=read();all[id]={settings:data,artworks:all[id]?.artworks||[]};localSave(all);return;}
  const f=await firestoreClient();await f.db.setDoc(f.db.doc(f.d,'virtualGalleries',id),data);
 }
+export async function saveGalleryPreview(id,image){
+ if(demo){const all=read();if(!all[id])throw new Error('갤러리를 찾을 수 없습니다.');all[id].settings.previewImage=image;localSave(all);return;}
+ const f=await firestoreClient();await f.db.updateDoc(f.db.doc(f.d,'virtualGalleries',id),{previewImage:{path:image.path},updatedAt:new Date().toISOString()});
+}
 export async function saveVirtualArtwork(id,artwork){
  validateArtwork(artwork);const {id:artId,...data}=artwork;data.updatedAt=new Date().toISOString();
  if(demo){const all=read();if(!all[id])throw new Error('공간 설정을 먼저 저장해주세요.');const works=all[id].artworks,index=works.findIndex(work=>work.id===artId);if(index<0)works.push({...data,id:artId});else works[index]={...data,id:artId};localSave(all);return;}

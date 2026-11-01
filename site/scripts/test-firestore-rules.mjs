@@ -444,6 +444,10 @@ await expectStatus('claimed invite is no longer public',403,request(`virtualSubm
 await expectStatus('other account cannot read claimed invite',403,request(`virtualSubmissions/${open}`,{auth:otherToken}));
 await expectStatus('other account cannot re-claim',403,commit([put(`virtualSubmissions/${open}`,{ownerEmail:'other@example.com',status:'draft'},{mask:['ownerEmail','status']})],otherToken));
 await expectStatus('owner reads submission',200,request(`virtualSubmissions/${open}`,{auth:artistToken}));
+const previewId='11111111-2222-4333-8444-555555555555.jpeg';
+await expectStatus('owner saves scoped entrance image',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,previewImage:{path:`virtualSubmissions/${open}/preview/${previewId}`}}},{mask:['settings']})],artistToken));
+await expectStatus('owner cannot reference another submission entrance',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,previewImage:{path:`virtualSubmissions/${locked}/preview/${previewId}`}}},{mask:['settings']})],artistToken));
+await expectStatus('other account cannot save entrance image',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,previewImage:{path:`virtualSubmissions/${open}/preview/${previewId}`}}},{mask:['settings']})],otherToken));
 await expectStatus('owner updates settings',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,theme:'wood'}},{mask:['settings']})],artistToken));
 await expectStatus('owner picks a room size',200,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,roomSize:'small'}},{mask:['settings']})],artistToken));
 await expectStatus('owner cannot pick an unknown room size',403,commit([put(`virtualSubmissions/${open}`,{settings:{...subSettings,roomSize:'huge'}},{mask:['settings']})],artistToken));
@@ -494,6 +498,8 @@ await expectStatus('staff deletes expired submission',200,commit([remove(`virtua
 const owned='artist-rules-owned';
 await request(`virtualGalleries/${owned}/artworks/${artid}`,{method:'DELETE',auth:'owner'});await request(`virtualGalleries/${owned}`,{method:'DELETE',auth:'owner'});
 await expectStatus('gallery accepts artist email',200,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:'artist@example.com'})}));
+await expectStatus('gallery accepts scoped entrance image',200,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:'artist@example.com',previewImage:{path:`virtualGalleries/${owned}/preview/${previewId}`}})}));
+await expectStatus('gallery rejects another gallery entrance image',403,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:'artist@example.com',previewImage:{path:`virtualGalleries/another/preview/${previewId}`}})}));
 await expectStatus('gallery accepts artist intro',200,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:'artist@example.com',artistNote:'작가 소개'})}));
 await expectStatus('gallery rejects long artist intro',403,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:'artist@example.com',artistNote:'가'.repeat(601)})}));
 await expectStatus('gallery rejects non-string artist email',403,request(`virtualGalleries/${owned}`,{method:'PATCH',data:artistSettings(owned,{published:false,artistEmail:5})}));

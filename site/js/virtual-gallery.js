@@ -1,7 +1,7 @@
 import {openShareCard} from './share-card.js';
-import {demo,listExhibitions,getExhibition,resolveImage,session,isStaff} from './store.js';
-import {getVirtualGallery,listVirtualGalleries} from './virtual-store.js';
-import {submissionPreview} from './submission-store.js';
+import {demo,listExhibitions,getExhibition,resolveImage,session,isStaff,uploadImage,removeImage} from './store.js';
+import {getVirtualGallery,listVirtualGalleries,saveGalleryPreview} from './virtual-store.js';
+import {submissionPreview,saveSubmissionPreview} from './submission-store.js';
 import {artFromHash,hashFor} from './virtual-links.js';
 import {introHTML} from './virtual-intro.js';
 import {previewOverrides,lookFromMessage} from './virtual-embed.js';
@@ -12,12 +12,12 @@ import {localizedExhibition} from './exhibition-view.js';
 import {mountLanguageSwitch} from './language-switch.js';
 // English pages show the optional …En copies of gallery and artwork text.
 const localizedSettings=settings=>({...settings,title:localized(settings,'title'),subtitle:localized(settings,'subtitle'),artistNote:localized(settings,'artistNote')});
-import {localizedWork,dimensionText,workShareCard,worksListHTML} from './virtual-gallery-view.js';
+import {localizedWork,dimensionText,workShareCard,galleryShareCard,wallShareScenes,worksListHTML,showModalImage} from './virtual-gallery-view.js';
 const $=selector=>document.querySelector(selector);
 let room;
 function info(art,settings){
  document.dispatchEvent(new CustomEvent('unframe-artwork-open',{detail:{id:art.id}}));
- $('#modal-img').src=imageURL(art.image.url);$('#modal-img').alt=art.image.alt||art.title;
+ showModalImage($('#modal-img'),imageURL(art.image.url));$('#modal-img').alt=art.image.alt||art.title;
  for(const [id,value] of Object.entries({'modal-title-en':art.titleEn||art.title,'modal-title-ko':art.titleEn?art.title:'','modal-artist':art.artist,'modal-spec-title':art.title,'modal-spec-year':art.year,'modal-spec-medium':art.medium,'modal-spec-dimensions':dimensionText(art),'modal-spec-price':art.price,'modal-desc':art.description}))$('#'+id).textContent=value;
  $('#modal-spec-dimensions').previousElementSibling.textContent=art.kind==='object'?t('art.size'):t('art.sizeFlat');
  $('#modal-spec-price').closest('.art-spec-row').hidden=!settings.showPrices||!art.price;
@@ -38,7 +38,7 @@ async function index(){
 // longer than ten seconds, and failed images still count as finished.
 function watchLoading(){
  const manager=window.THREE?.DefaultLoadingManager,progress=$('#start-progress'),button=$('#enter-gallery-btn');
- let ready=false;const finish=()=>{if(ready)return;ready=true;progress.textContent='';button.disabled=false;};
+ let ready=false;const finish=()=>{if(ready)return;ready=true;progress.textContent='';button.disabled=false;const capture=$('#capture-entry');if(capture)capture.disabled=false;};
  if(!manager)return finish();
  manager.onProgress=(url,loaded,total)=>{if(!ready)progress.textContent=t('vg.progress',{loaded:Math.min(loaded,total),total});};
  manager.onLoad=finish;setTimeout(finish,10000);
@@ -62,6 +62,11 @@ function bindImageZoom(){
  image.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();set(!zoomed);}});
  wrap.addEventListener('pointermove',pan);
  document.addEventListener('unframe-artwork-open',()=>set(false));
+}
+// Wall captures are temporary: the share card uses local data URLs and never uploads them.
+async function shareWallScenes(room){
+ if(!room?.captureWall)return [];
+ return wallShareScenes(wall=>room.captureWall(wall),blob=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);}));
 }
 async function show(id){
  bindImageZoom();
@@ -88,13 +93,24 @@ async function show(id){
  else{const chooser=document.createElement('a');chooser.href=localHref(`/exhibition/${encodeURIComponent(parentId)}`)+'#ex-online';chooser.className='glass-btn virtual-gallery-choice';chooser.textContent=t('vg.chooseGallery');$('.top-actions').append(chooser);
  document.querySelectorAll('[data-return]').forEach(link=>link.href=localHref(`/exhibition/${encodeURIComponent(parentId)}`));}
  const artworks=await Promise.all(data.artworks.map(async art=>({...localizedWork(art),image:await resolveImage(art.image),...(art.model?.path?{model:{...art.model,load:()=>resolveImage(art.model).then(model=>model.url)}}:{})})));
- if(!preview&&exhibition.published&&settings.published){const share=document.createElement('button');share.className='action-btn-primary';share.textContent=t('room.shareCard');share.type='button';$('.modal-btn-row').append(share);let selected;document.addEventListener('unframe-artwork-open',event=>{selected=artworks.find(art=>art.id===event.detail.id);share.hidden=!selected;});share.onclick=()=>{if(selected)openShareCard(workShareCard(selected,shownExhibition,id));};}
+ if(settings.previewImage)settings.previewImage=await resolveImage(settings.previewImage).catch(()=>null);
+ if(!preview&&exhibition.published&&settings.published){const share=document.createElement('button');share.className='action-btn-primary';share.textContent=t('room.shareCard');share.type='button';$('.modal-btn-row').append(share);let selected;document.addEventListener('unframe-artwork-open',event=>{selected=artworks.find(art=>art.id===event.detail.id);share.hidden=!selected;});share.onclick=()=>{if(selected)openShareCard(workShareCard(selected,shownExhibition,id));};
+  const card=galleryShareCard(settings,shownExhibition,artworks,id);if(card.image){const whole=document.createElement('button');whole.type='button';whole.className='glass-btn virtual-gallery-share';whole.textContent=t('vg.share');whole.onclick=async()=>{whole.disabled=true;whole.textContent=t('vg.preparingShare');try{const scenes=await shareWallScenes(room);await openShareCard(galleryShareCard(settings,shownExhibition,artworks,id,scenes));}finally{whole.disabled=false;whole.textContent=t('vg.share');}};$('.top-actions').append(whole);}}
  $('#works-list').innerHTML=artworks.length?worksListHTML(artworks):`<p>${t('vg.noWorks')}</p>`;
  $('#btn-list').onclick=()=>$('#works-dialog').showModal();$('#works-close').onclick=()=>$('#works-dialog').close();
  document.querySelectorAll('[data-art]').forEach(button=>button.onclick=()=>{$('#works-dialog').close();const art=artworks.find(item=>item.id===button.dataset.art);if(room)room.inspect(art.id);else info(art,settings);});
  try{
   watchLoading();
   const {mountRoom}=await import('./virtual-room.js');room=mountRoom(settings,artworks);
+  if((submissionId||authorized||preview&&demo)&&!embedded.embed){
+   const button=document.createElement('button');button.id='capture-entry';button.type='button';button.className='glass-btn';button.disabled=$('#enter-gallery-btn').disabled;button.textContent=t('vg.captureEntry');$('#start-info').after(button);
+   button.onclick=async()=>{button.disabled=true;const old=data.settings.previewImage?.path;let image;
+    try{const blob=await room.captureEntry();image=await uploadImage(new File([blob],'gallery-entry.jpeg',{type:'image/jpeg'}),submissionId||id,()=>{},submissionId?'virtualSubmissions':'virtualGalleries','preview');
+     if(submissionId)await saveSubmissionPreview(submissionId,image,{asStaff:await isStaff(await session())});else await saveGalleryPreview(id,image);
+     data.settings.previewImage=image;if(old&&old!==image.path)await removeImage(old).catch(()=>{});alert(t('vg.captureSaved'));
+    }catch(error){if(image?.path)await removeImage(image.path).catch(()=>{});alert(error.message||t('vg.captureFailed'));}finally{button.disabled=false;}
+   };
+  }
   bindArtworkLinks(artworks);
   if(embedded.embed){$('#start-overlay').classList.add('hidden');addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;const look=lookFromMessage(event.data);if(look)room.applyLook(look);});}
  }catch(error){
