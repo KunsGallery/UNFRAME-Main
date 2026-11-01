@@ -3,14 +3,16 @@ import {ROOMS,layoutArtworks} from './virtual-model.js';
 // Fixed exhibition spots for objects. Corner spots sit 1.2m from both walls so the walls hide
 // the back of a work; centre spots suit full 360° scans. Every spot faces the entrance.
 const CORNER_SPAN=1.8,CENTER_SPAN=3,GAP=.3,CLEARANCE=1;
-export function objectSpots(room){
+// Photo reliefs have no real back, so they only get corner spots where the walls hide it.
+export const isPhotoRelief=art=>art?.model?.source==='photo';
+export function objectSpots(room,{photo=false}={}){
  const entry=entryView(room).position,front=-room.w/2+1.2,back=room.w/2-1.6,side=room.d/2-1.2,mid=-room.w/2+room.w*.75;
  const spot=(id,label,type,x,z)=>({id,label,type,position:[x,z],yaw:Math.atan2(entry[0]-x,entry[1]-z),maxSpan:type==='corner'?CORNER_SPAN:CENTER_SPAN});
  const spots=[spot('corner-front-left','정면 왼쪽 모서리','corner',front,side),spot('corner-front-right','정면 오른쪽 모서리','corner',front,-side)];
  if(room.id!=='small')spots.push(spot('corner-back-left','뒤쪽 왼쪽 모서리','corner',back,side),spot('corner-back-right','뒤쪽 오른쪽 모서리','corner',back,-side));
  if(room.id==='large')spots.push(spot('center-left','중앙 왼쪽','center',mid,2.5),spot('center-right','중앙 오른쪽','center',mid,-2.5));
  else spots.push(spot('center','중앙','center',mid,0));
- return spots;
+ return photo?spots.filter(spot=>spot.type==='corner'):spots;
 }
 export const objectSpan=art=>{const copies=art.copies||1;return copies*art.widthCm/100+(copies-1)*GAP;};
 export function placeObjects(artworks,roomSize){
@@ -19,6 +21,7 @@ export function placeObjects(artworks,roomSize){
  for(const art of artworks.filter(item=>item.kind==='object')){
   const spot=spots.find(item=>item.id===art.spot);
   if(!spot)throw new Error(`「${art.title}」의 전시 자리를 다시 선택해주세요. 현재 공간 크기에 없는 자리입니다.`);
+  if(isPhotoRelief(art)&&spot.type!=='corner')throw new Error(`「${art.title}」은(는) 사진으로 만든 입체라 모서리 자리에만 놓을 수 있습니다. 모서리 자리를 선택해주세요.`);
   if(used.has(spot.id))throw new Error(`「${used.get(spot.id)}」와 「${art.title}」가 같은 전시 자리를 쓰고 있습니다. 다른 자리를 골라주세요.`);
   const span=objectSpan(art),footprint=Math.max(span,(art.depthCm||0)/100);
   if(footprint>spot.maxSpan+1e-9)throw new Error(`「${art.title}」은(는) ${spot.label} 자리(최대 ${Math.round(spot.maxSpan*100)}cm)에 들어가지 않습니다. 연작 수량을 줄이거나 중앙 자리를 선택해주세요.`);

@@ -226,3 +226,21 @@ test('optional English gallery and artwork fields are bounded',async()=>{
  assert.throws(()=>validateArtwork({...art,descriptionEn:'x'.repeat(5001)}),/영문/);
  assert.throws(()=>validateArtwork({...art,mediumEn:'x'.repeat(501)}),/영문/);
 });
+test('dark museum lighting is a valid choice with charcoal and black floor defaults',async()=>{
+ const {LIGHTING,MUSEUM_DEFAULTS}=await import('../js/virtual-model.js');
+ const base=defaultGallery({title:'전시',summary:''});
+ assert.equal(LIGHTING.museum,'다크 뮤지엄');
+ assert.doesNotThrow(()=>validateGallery({...base,lighting:'museum'}));
+ assert.throws(()=>validateGallery({...base,lighting:'dim'}),/조명/);
+ assert.deepEqual(MUSEUM_DEFAULTS,{wallColor:'#3a3c3b',theme:'black',ceiling:'plain'});
+ assert.equal(environmentOptions({lighting:'museum',ceiling:'luminous'}).ceiling,'plain');
+});
+test('dark museum preset: dim room, warm narrow spots and floor light pools; other presets unchanged',async()=>{
+ const {lightingPreset}=await import('../js/virtual-environment.js');
+ const museum=lightingPreset('museum',true),general=lightingPreset('general',true),focused=lightingPreset('focused',false);
+ assert.ok(museum.ambient<=.06&&museum.hemisphere<=.05&&museum.sun<=.1,'room is dark');
+ assert.equal(museum.wallSpot.color,0xffd9a8);assert.ok(museum.wallSpot.angle<general.wallSpot.angle);assert.ok(museum.objectSpot.intensity>general.objectSpot.intensity);
+ assert.equal(museum.pool,true);assert.equal(general.pool,false);
+ assert.deepEqual([general.ambient,general.sun,general.wallSpot.intensity,general.objectSpot.intensity],[.6,1.2,.75,.8]);
+ assert.deepEqual([focused.ambient,focused.sun,focused.wallSpot.intensity,focused.objectSpot.intensity],[.24,.2,1.5,1.6]);
+});

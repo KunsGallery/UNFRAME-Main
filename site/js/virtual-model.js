@@ -1,7 +1,9 @@
 export const THEMES={white:'화이트',black:'블랙 헤링본','herringbone-wood':'우드 헤링본',wood:'내추럴 우드',urethane:'새틴 우레탄'};
 export const WALLS={front:'전면 벽',right:'우측 벽',left:'좌측 벽'};
 export const FRAMES={canvas:'캔버스 (테두리 없음)',black:'블랙 액자',white:'화이트 액자',wood:'우드 액자',none:'프레임 없음 (종이)'};
-export const LIGHTING={general:'전체 조명',focused:'작품 중심 조명'};
+export const LIGHTING={general:'전체 조명',focused:'작품 중심 조명',museum:'다크 뮤지엄'};
+// Picking 다크 뮤지엄 the first time fills these; the staff or artist may change them afterwards.
+export const MUSEUM_DEFAULTS={wallColor:'#3a3c3b',theme:'black',ceiling:'plain'};
 export const CEILINGS={plain:'일반 천장',luminous:'광천장'};
 // Gallery wall paints offered in the editors. Saved galleries with another colour keep it.
 export const WALL_COLORS={'#f6f4ee':'웜 화이트','#fafaf8':'퓨어 화이트','#e4e3df':'라이트 그레이','#cfc9bf':'웜 그레이','#3a3c3b':'차콜','#2f3d35':'딥 그린','#26324a':'딥 네이비'};
@@ -58,6 +60,8 @@ export function validateArtwork(data){
  if(!bounded(data.image?.alt,1000))throw new Error('이미지 설명은 1,000자 이내로 입력해주세요.');
  return data;
 }
+// What a model keeps in Firestore: never the resolved url or loader.
+export const storedModel=model=>model?{path:model.path,name:model.name||'',...(model.source?{source:model.source}:{})}:model;
 export const PLINTHS={none:'좌대 없음',low:'낮은 좌대 (10cm)',high:'높은 좌대 (60cm)'};
 function validateObject(data){
  if(!between(data.depthCm,10,500))throw new Error('오브제의 깊이는 10~500cm로 입력해주세요.');
@@ -66,6 +70,7 @@ function validateObject(data){
  if(!Object.hasOwn(PLINTHS,data.plinth))throw new Error('좌대를 선택해주세요.');
  if(!Number.isInteger(data.copies)||!between(data.copies,1,5))throw new Error('연작 수량은 1~5점으로 입력해주세요.');
  if(!data.model?.path&&!data.model?.url)throw new Error('3D 모델(GLB) 파일을 업로드해주세요.');
+ if(data.model.source!==undefined&&!['glb','photo'].includes(data.model.source))throw new Error('3D 모델 종류를 확인해주세요.');
 }
 export function artworkMount(frame,thickness=3.5){
  const framed=['black','white','wood'].includes(frame);

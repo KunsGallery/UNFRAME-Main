@@ -1,6 +1,7 @@
 // Rendering-only adaptation of the user-supplied UAU single-room reference.
 // Existing room dimensions, artwork placement and storage remain owned by UNFRAME.
-export function environmentOptions(settings){return {lighting:settings.lighting||'general',ceiling:settings.ceiling||'plain',outdoor:settings.outdoor===true};}
+// 다크 뮤지엄 keeps the ceiling dark even when the luminous ceiling was chosen.
+export function environmentOptions(settings){const lighting=settings.lighting||'general';return {lighting,ceiling:lighting==='museum'?'plain':settings.ceiling||'plain',outdoor:settings.outdoor===true};}
 export function surfaceTexture(THREE,renderer,name,repeatX=1,repeatY=1){
  const texture=new THREE.TextureLoader().load(`/assets/virtual-textures/${name}.webp`,undefined,undefined,()=>console.warn('Gallery surface texture failed to load.'));
  texture.encoding=THREE.sRGBEncoding;texture.wrapS=texture.wrapT=THREE.MirroredRepeatWrapping;texture.repeat.set(repeatX,repeatY);texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);return texture;
@@ -46,4 +47,11 @@ export function canvasSideMaterials(THREE,texture,edge){
   if(index<2){map.repeat.set(.025,1);map.offset.set(index===0?.975:0,0);}else{map.repeat.set(1,.025);map.offset.set(0,index===2?.975:0);}
   return new THREE.MeshStandardMaterial({map,roughness:.95,color:0xffffff});
  });
+}
+// Light levels per lighting choice. 다크 뮤지엄 drops the room almost to black and lets warm,
+// narrow spots (about 3000K) pick out each work, with a soft pool of light under floor objects.
+export function lightingPreset(lighting,outdoor){
+ if(lighting==='museum')return {ambient:.05,hemisphere:.04,sun:.06,wallSpot:{color:0xffd9a8,intensity:2.4,angle:Math.PI/9,penumbra:.55},objectSpot:{color:0xffd9a8,intensity:2.8,angle:Math.PI/10,penumbra:.5},pool:true,background:0x0d0d0c,ceiling:0x161616};
+ const focused=lighting==='focused';
+ return {ambient:focused?.24:.6,hemisphere:focused?.15:.3,sun:outdoor?(focused?.7:1.2):.2,wallSpot:{color:0xf5f5ef,intensity:focused?1.5:.75,angle:Math.PI/6,penumbra:.6},objectSpot:{color:0xf5f5ef,intensity:focused?1.6:.8,angle:Math.PI/7,penumbra:.55},pool:false,background:0xe6e3db,ceiling:0xf5f6ef};
 }

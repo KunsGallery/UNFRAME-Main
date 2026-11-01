@@ -1,5 +1,6 @@
 import {objectSpots} from './object-placement.js';
-import {ROOMS} from './virtual-model.js';
+import {ROOMS,storedModel,MUSEUM_DEFAULTS} from './virtual-model.js';
+export {storedModel};
 // Shared artwork-form rules for the admin editor and the artist studio.
 // Round works use one diameter and a canvas edge or paper; free-form works hang without a mount.
 export function normalizeShape(data){
@@ -36,4 +37,29 @@ export function bindKindControls(form){
   else form.elements.shape?.dispatchEvent(new Event('change'));
  };
  form.elements.kind.addEventListener('change',sync);sync();
+}
+// Photo reliefs (model.source 'photo') only stand in corner spots: centre options are disabled,
+// and a chosen centre spot moves to the first corner. Returns true when it had to move.
+export function syncPhotoSpots(select,photo){
+ for(const option of select.options)option.disabled=photo&&!option.value.startsWith('corner-');
+ if(photo&&select.selectedOptions[0]?.disabled){select.value=[...select.options].find(option=>!option.disabled)?.value||'';return true;}
+ return false;
+}
+export const reliefControlHTML=(prefix,off='')=>`<div class="relief-control"><button type="button" class="button secondary" id="${prefix}-relief" ${off}>사진으로 입체 만들기</button><small>작품 사진 한 장으로 앞면이 입체인 오브제를 만듭니다. 처음 한 번 약 70MB를 내려받습니다(와이파이 권장). 모서리 자리 전용입니다.</small></div>`;
+// Opens the relief dialog for the form's photo, height and depth, then uploads the GLB with
+// `upload(file)` and returns the model marked as a photo relief (or null when closed).
+export async function makePhotoRelief(form,art,upload,{maxBytes}={}){
+ const {openReliefMaker}=await import('./photo-relief-maker.js');
+ const result=await openReliefMaker({imageUrl:art.image?.url,heightCm:Number(form.elements.heightCm.value),depthCm:Number(form.elements.depthCm.value),maxBytes});
+ if(!result)return null;
+ const model=await upload(new File([result.bytes],'photo-relief.glb',{type:'model/gltf-binary'}));
+ return {...model,name:'사진으로 만든 입체',source:'photo'};
+}
+// Picking 다크 뮤지엄 fills the recommended wall, floor and ceiling once; later edits stay.
+export function bindMuseumDefaults(form){
+ const select=form?.elements.lighting;if(!select)return;let previous=select.value;
+ select.addEventListener('change',()=>{
+  if(select.value==='museum'&&previous!=='museum')for(const [key,value] of Object.entries(MUSEUM_DEFAULTS)){const field=form.elements[key];if(field&&field.value!==value){field.value=value;field.dispatchEvent(new Event('change',{bubbles:true}));}}
+  previous=select.value;
+ });
 }

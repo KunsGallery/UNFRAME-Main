@@ -5,7 +5,7 @@ import {studioState,studioError} from './artist-studio-model.js';
 import {previewURL} from './virtual-embed.js';
 import {prepareImage} from './image-prep.js';
 import {THEMES,WALLS,FRAMES,LIGHTING,CEILINGS,SHAPES,SALE_STATUS,ROOMS,PLINTHS,emptyArtwork,wallColorOptions} from './virtual-model.js';
-import {normalizeShape,bindShapeControls,normalizeKind,bindKindControls,spotOptions} from './artwork-form.js';
+import {normalizeShape,bindShapeControls,normalizeKind,bindKindControls,spotOptions,syncPhotoSpots,reliefControlHTML,makePhotoRelief,storedModel,bindMuseumDefaults} from './artwork-form.js';
 import {escapeHTML as e,imageURL} from './model.js';
 import {$,toast,confirmDelete} from './ui.js';
 // Invited artists upload here; nothing becomes public until UNFRAME staff approve it.
@@ -68,7 +68,7 @@ function editor(){
 }
 // Floor and wall colour update the framed room instantly; lighting and ceiling rebuild it.
 function bindLivePreview(){
- const form=$('#studio-settings');
+ const form=$('#studio-settings');bindMuseumDefaults(form);
  // On phones the room loads only on request; it costs data and battery.
  $('#studio-live-open')?.addEventListener('click',event=>{event.target.outerHTML=`<iframe id="studio-live" title="공간 설정 3D 미리보기" src="${e(previewURL(id,Object.fromEntries(new FormData(form))))}"></iframe>`;});
  form.addEventListener('change',event=>{
@@ -97,7 +97,7 @@ function renderList(){
 // Object fields: floor spot for the current room size, plinth, series count, front direction, GLB.
 function objectFields(art,editable,field){
  const room=submission.settings.roomSize||'large',spots=spotOptions(room),off=editable?'':'disabled';
- return `<div data-kind="object" class="studio-object"><div class="studio-row studio-row-pair">${field('depthCm','깊이 (cm)',art.depthCm??50,true,'type="number" inputmode="decimal" min="10" max="500" step="any"')}${field('copies','연작 수량',art.copies??1,true,'type="number" inputmode="numeric" min="1" max="5" step="1"')}</div><div class="studio-row"><label class="field"><span>전시 자리 ${badge(true)}</span><select name="spot" ${off}>${options(spots,art.spot||Object.keys(spots)[0])}</select></label><label class="field"><span>좌대 ${badge(true)}</span><select name="plinth" ${off}>${options(PLINTHS,art.plinth||'low')}</select></label></div><label class="field"><span>앞면 방향 <output id="yaw-out">${e(art.yaw??0)}°</output></span><input type="range" name="yaw" min="0" max="359" step="1" value="${e(art.yaw??0)}" ${off}></label><div class="studio-photo"><span class="studio-photo-label">3D 모델 (GLB) ${badge(true)}</span><label class="button secondary studio-photo-button ${editable?'':'is-disabled'}">${art.model?.path||art.model?.url?'GLB 파일 바꾸기':'GLB 파일 선택'}<input id="studio-model" type="file" accept=".glb,model/gltf-binary" ${off}></label><small id="studio-model-name">${e(art.model?.name||'')}</small><small>휴대폰 스캔 앱(Polycam, Scaniverse 등)으로 작품을 한 바퀴 돌며 찍거나, Meshy·Tripo 같은 웹사이트의 무료 'Image to 3D'로 사진 한 장에서 만들 수 있습니다. 압축하지 않은 GLB, 30MB 이하로 내보내 주세요. 모서리 자리는 작품 뒷면이 보이지 않고, 중앙 자리는 사방에서 보입니다. 위의 작품 이미지는 목록·상세·공유카드에 쓰이는 대표 사진입니다.</small></div><p id="studio-model-status" role="status"></p></div>`;
+ return `<div data-kind="object" class="studio-object"><div class="studio-row studio-row-pair">${field('depthCm','깊이 (cm)',art.depthCm??50,true,'type="number" inputmode="decimal" min="10" max="500" step="any"')}${field('copies','연작 수량',art.copies??1,true,'type="number" inputmode="numeric" min="1" max="5" step="1"')}</div><div class="studio-row"><label class="field"><span>전시 자리 ${badge(true)}</span><select name="spot" ${off}>${options(spots,art.spot||Object.keys(spots)[0])}</select></label><label class="field"><span>좌대 ${badge(true)}</span><select name="plinth" ${off}>${options(PLINTHS,art.plinth||'low')}</select></label></div><label class="field"><span>앞면 방향 <output id="yaw-out">${e(art.yaw??0)}°</output></span><input type="range" name="yaw" min="0" max="359" step="1" value="${e(art.yaw??0)}" ${off}></label><div class="studio-photo"><span class="studio-photo-label">3D 모델 (GLB) ${badge(true)}</span><label class="button secondary studio-photo-button ${editable?'':'is-disabled'}">${art.model?.path||art.model?.url?'GLB 파일 바꾸기':'GLB 파일 선택'}<input id="studio-model" type="file" accept=".glb,model/gltf-binary" ${off}></label><small id="studio-model-name">${e(art.model?.name||'')}</small><small>3D 파일이 없으면 아래 <b>사진으로 입체 만들기</b>로 위의 작품 사진 한 장에서 만들 수 있습니다(앞면만 입체 · 모서리 자리 전용). 3D 파일은 휴대폰 스캔 앱(Polycam, Scaniverse 등)으로 만들 수 있고, 압축하지 않은 GLB, 30MB 이하로 내보내 주세요. 모서리 자리는 작품 뒷면이 보이지 않고, 중앙 자리는 사방에서 보입니다. 위의 작품 이미지는 목록·상세·공유카드에 쓰이는 대표 사진입니다.</small></div>${reliefControlHTML('studio',off)}<p id="studio-model-status" role="status">${art.model?.source==='photo'?'사진으로 만든 입체가 연결되어 있습니다.':''}</p></div>`;
 }
 function renderForm(){
  const wrap=$('#studio-form-wrap'),editable=canEdit();
@@ -109,10 +109,12 @@ function renderForm(){
  $('#studio-sheet-close').onclick=()=>{if(dirty&&!confirm('저장하지 않은 작품 변경 내용을 버릴까요?'))return;selected=null;dirty=false;renderList();renderForm();};
  if(editable)bindShapeControls(form);
  bindKindControls(form);
+ if(form.elements.spot)syncPhotoSpots(form.elements.spot,art.model?.source==='photo');
  if(!editable)return;
  form.elements.yaw.oninput=()=>{$('#yaw-out').textContent=`${form.elements.yaw.value}°`;};
- $('#studio-model').onchange=async event=>{const file=event.target.files[0];if(!file)return;busy=true;try{art.model=await uploadModel(file,id,percent=>$('#studio-model-status').textContent=`업로드 중 ${percent}%`,'virtualSubmissions',art.id);$('#studio-model-name').textContent=art.model.name;dirty=true;$('#studio-model-status').textContent='업로드 완료 · 작품 저장을 눌러 반영해주세요.';}catch(error){$('#studio-model-status').textContent=studioError(error);}finally{busy=false;event.target.value='';}};
- $('#studio-image').onchange=async event=>{const picked=event.target.files[0];if(!picked)return;busy=true;try{$('#studio-image-status').textContent='사진을 준비하는 중…';const file=await prepareImage(picked);const image=await uploadImage(file,id,percent=>$('#studio-image-status').textContent=`업로드 중 ${percent}%`,'virtualSubmissions',art.id);art.image=await resolveImage({...image,alt:form.elements.imageAlt.value||file.name});$('#studio-image-preview').src=art.image.url;$('#studio-image-preview').hidden=false;dirty=true;$('#studio-image-status').textContent='업로드 완료 · 작품 저장을 눌러 반영해주세요.';}catch(error){$('#studio-image-status').textContent=studioError(error);}finally{busy=false;event.target.value='';}};
+ $('#studio-model').onchange=async event=>{const file=event.target.files[0];if(!file)return;busy=true;try{art.model=await uploadModel(file,id,percent=>$('#studio-model-status').textContent=`업로드 중 ${percent}%`,'virtualSubmissions',art.id);syncPhotoSpots(form.elements.spot,false);$('#studio-model-name').textContent=art.model.name;dirty=true;$('#studio-model-status').textContent='업로드 완료 · 작품 저장을 눌러 반영해주세요.';}catch(error){$('#studio-model-status').textContent=studioError(error);}finally{busy=false;event.target.value='';}};
+ $('#studio-relief').onclick=async()=>{if(busy)return;busy=true;try{const model=await makePhotoRelief(form,art,file=>uploadModel(file,id,percent=>$('#studio-model-status').textContent=`업로드 중 ${percent}%`,'virtualSubmissions',art.id),{maxBytes:demo?2*1024*1024:undefined});if(model){art.model=model;dirty=true;$('#studio-model-name').textContent=model.name;$('#studio-model-status').textContent=syncPhotoSpots(form.elements.spot,true)?'입체를 연결했습니다. 사진 입체는 모서리 자리에만 놓을 수 있어 전시 자리를 바꿨습니다. 작품 저장을 눌러 반영해주세요.':'입체를 연결했습니다 · 작품 저장을 눌러 반영해주세요.';}}catch(error){$('#studio-model-status').textContent=studioError(error);}finally{busy=false;}};
+ $('#studio-image').onchange=async event=>{const picked=event.target.files[0];if(!picked)return;busy=true;try{$('#studio-image-status').textContent='사진을 준비하는 중…';const file=await prepareImage(picked);const image=await uploadImage(file,id,percent=>$('#studio-image-status').textContent=`업로드 중 ${percent}%`,'virtualSubmissions',art.id);art.image=await resolveImage({...image,alt:form.elements.imageAlt.value||file.name});$('#studio-image-preview').src=art.image.url;$('#studio-image-preview').hidden=false;dirty=true;$('#studio-image-status').textContent='업로드 완료 · 작품 저장을 눌러 반영해주세요.'+(art.model?.source==='photo'?' · 새 사진으로 입체를 다시 만들 수 있습니다.':'');}catch(error){$('#studio-image-status').textContent=studioError(error);}finally{busy=false;event.target.value='';}};
  form.onsubmit=async event=>{
   event.preventDefault();const values=new FormData(form),data={...art,artist:submission.artistName};
   for(const key of ['title','year','medium','description','wall','frame','shape','saleStatus','price','kind','spot','plinth'])data[key]=String(values.get(key)||'').trim();
@@ -121,7 +123,7 @@ function renderForm(){
   data.image={...art.image,alt:String(values.get('imageAlt')||'').trim()};
   const shaped=normalizeKind({...data,...normalizeShape(data)}),{url,...stored}=shaped.image;
   const payload={...shaped,image:demo?shaped.image:{...stored,url:''}};
-  if(payload.model&&!demo)payload.model={path:payload.model.path,name:payload.model.name||''};
+  if(payload.model&&!demo)payload.model=storedModel(payload.model);
   $('#studio-art-status').textContent='저장 중…';
   await run(()=>saveSubmissionArtwork(id,payload,{asStaff:staffMode}),'작품을 저장했습니다.',{closeSheet:true});if(!phone.matches)selected=artworks.find(item=>item.id===art.id)||selected;
  };
