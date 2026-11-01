@@ -38,3 +38,22 @@ test('cells outside the mask make no geometry and unused vertices are dropped',(
  assert.ok(Math.abs((maxX-minX)-1/3)<.05,`width ${maxX-minX}`);
  assert.ok(Math.abs((maxX+minX)/2)<1e-6,'centred');
 });
+import {encodeReliefGLB,reliefNormals} from '../js/photo-relief-export.js';
+const parseGLB=bytes=>{const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);const jsonLength=view.getUint32(12,true);return {magic:new TextDecoder().decode(bytes.slice(0,4)),version:view.getUint32(4,true),length:view.getUint32(8,true),json:JSON.parse(new TextDecoder().decode(bytes.slice(20,20+jsonLength))),binLength:view.getUint32(20+jsonLength,true),binType:view.getUint32(24+jsonLength,true)};};
+test('relief exports as a plain glTF 2 binary with a textured front and a dark back',()=>{
+ const {w,h,mask,depth}=scene();const g=reliefGeometry({width:w,height:h,mask,depth:normalizeDepth(depth,mask,w,h,0),strength:.6,maxDepth:.3,cells:30});
+ const jpeg=new Uint8Array([255,216,255,224,1,2,3]);const bytes=encodeReliefGLB(g,jpeg);const glb=parseGLB(bytes);
+ assert.equal(glb.magic,'glTF');assert.equal(glb.version,2);assert.equal(glb.length,bytes.length);assert.equal(glb.binType,0x004E4942);
+ assert.equal(glb.json.extensionsRequired,undefined);
+ const [frontPrim,backPrim]=glb.json.meshes[0].primitives,acc=glb.json.accessors;
+ assert.equal(acc[frontPrim.attributes.POSITION].count,g.positions.length/3);
+ assert.equal(acc[frontPrim.indices].count,g.front.length);assert.equal(acc[backPrim.indices].count,g.back.length);
+ assert.ok(glb.json.materials[frontPrim.material].pbrMetallicRoughness.baseColorTexture);
+ assert.equal(glb.json.images[0].mimeType,'image/jpeg');
+ assert.deepEqual(acc[frontPrim.attributes.POSITION].max.map(v=>Math.round(v*100)/100)[1],1);
+ assert.equal(bytes.length%4,0);
+});
+test('relief normals face forward on a flat front',()=>{
+ const positions=new Float32Array([0,0,0,0,0,0, 1,0,0,1,0,0, 0,1,0,0,1,0]),front=Uint32Array.from([0,2,4]);
+ const n=reliefNormals(positions,front,new Uint32Array());assert.deepEqual([...n.slice(0,3)].map(Math.round),[0,0,1]);
+});
