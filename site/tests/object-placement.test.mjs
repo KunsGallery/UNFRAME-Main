@@ -23,8 +23,8 @@ test('spots face the entrance and the artist yaw adds to it',()=>{
 test('placement rejects missing spots, shared spots and works too large for a spot',()=>{
  assert.throws(()=>placeObjects([object('a',{spot:'corner-back-left'})],'small'),/전시 자리/);
  assert.throws(()=>placeObjects([object('a'),object('b')],'medium'),/같은 전시 자리/);
- assert.throws(()=>placeObjects([object('a',{widthCm:200})],'medium'),/180cm/);
- assert.throws(()=>placeObjects([object('a',{widthCm:60,copies:3})],'medium'),/180cm/);
+ assert.throws(()=>placeObjects([object('a',{widthCm:250})],'medium'),/240cm/);
+ assert.throws(()=>placeObjects([object('a',{widthCm:60,copies:4})],'medium'),/240cm/);
  const [series]=placeObjects([object('a',{widthCm:40,copies:3})],'medium');
  assert.ok(Math.abs(series.span-(1.2+0.6))<1e-9);
  assert.doesNotThrow(()=>placeObjects([object('a',{spot:'center',widthCm:250,depthCm:200})],'medium'));
@@ -88,4 +88,13 @@ test('stored models keep path, name and the photo source but drop display-only f
  assert.deepEqual(storedModel({path:'p.glb',name:'a',source:'photo',url:'blob:x',load:()=>{}}),{path:'p.glb',name:'a',source:'photo'});
  assert.deepEqual(storedModel({path:'p.glb'}),{path:'p.glb',name:''});
  assert.equal(storedModel(undefined),undefined);
+});
+test('a 200cm-wide object fits a corner, which moves out so it clears both walls',()=>{
+ const room=ROOMS.large,chair=object('chair',{widthCm:200,depthCm:80,heightCm:90,spot:'corner-front-left'});
+ const [placed]=placeObjects([chair],'large');
+ const half=1,x=placed.position[0],z=placed.position[1];
+ assert.ok(room.w/2-Math.abs(x)>=half+.15-1e-9&&room.d/2-Math.abs(z)>=half+.15-1e-9,`clears walls at ${x},${z}`);
+ const small=placeObjects([object('s',{widthCm:60})],'large')[0];
+ assert.deepEqual(small.position,small.spot.position,'small works keep the usual spot');
+ assert.throws(()=>placeObjects([object('big',{widthCm:250})],'large'),/최대 240cm/);
 });

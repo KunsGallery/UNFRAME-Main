@@ -2,7 +2,7 @@ import {entryView} from './virtual-links.js';
 import {ROOMS,layoutArtworks} from './virtual-model.js';
 // Fixed exhibition spots for objects. Corner spots sit 1.2m from both walls so the walls hide
 // the back of a work; centre spots suit full 360° scans. Every spot faces the entrance.
-const CORNER_SPAN=1.8,CENTER_SPAN=3,GAP=.3,CLEARANCE=1;
+const CORNER_SPAN=2.4,CENTER_SPAN=3,WALL_CLEAR=.15,GAP=.3,CLEARANCE=1;
 // Photo reliefs have no real back, so they only get corner spots where the walls hide it.
 export const isPhotoRelief=art=>art?.model?.source==='photo';
 export function objectSpots(room,{photo=false}={}){
@@ -25,14 +25,20 @@ export function placeObjects(artworks,roomSize){
   if(used.has(spot.id))throw new Error(`「${used.get(spot.id)}」와 「${art.title}」가 같은 전시 자리를 쓰고 있습니다. 다른 자리를 골라주세요.`);
   const span=objectSpan(art),footprint=Math.max(span,(art.depthCm||0)/100);
   if(footprint>spot.maxSpan+1e-9)throw new Error(`「${art.title}」은(는) ${spot.label} 자리(최대 ${Math.round(spot.maxSpan*100)}cm)에 들어가지 않습니다. 연작 수량을 줄이거나 중앙 자리를 선택해주세요.`);
-  if(spot.type==='corner'){const blocking=wallWorks.find(work=>blocksCorner(work,spot.position,footprint/2,room));if(blocking)throw new Error(`「${art.title}」이(가) ${spot.label}에서 벽 작품 「${blocking.title}」을 가립니다. 벽 작품을 옮기거나 다른 자리를 선택해주세요.`);}
-  used.set(spot.id,art.title);placed.push({art,spot,position:spot.position,yaw:spot.yaw+(art.yaw||0)*Math.PI/180,span});
+  const position=spot.type==='corner'?cornerPosition(spot.position,footprint/2,room):spot.position;
+  if(spot.type==='corner'){const blocking=wallWorks.find(work=>blocksCorner(work,position,footprint/2,room));if(blocking)throw new Error(`「${art.title}」이(가) ${spot.label}에서 벽 작품 「${blocking.title}」을 가립니다. 벽 작품을 옮기거나 다른 자리를 선택해주세요.`);}
+  used.set(spot.id,art.title);placed.push({art,spot,position,yaw:spot.yaw+(art.yaw||0)*Math.PI/180,span});
  }
  return placed;
 }
 // A corner object may not stand in front of a wall work on either of the walls it touches:
 // along the wall, the work plus its viewing margin must clear the object's footprint.
 const VIEW_MARGIN=.3;
+// Large works step out of the corner so they keep WALL_CLEAR from both walls; small ones stay put.
+function cornerPosition([x,z],radius,room){
+ const inset=(half,value)=>Math.sign(value)*(half-Math.max(half-Math.abs(value),radius+WALL_CLEAR));
+ return [inset(room.w/2,x),inset(room.d/2,z)];
+}
 function blocksCorner(work,[x,z],radius,room){
  const width=work.size[0];
  if(work.wall==='front')return x<0&&Math.abs(work.position[2]-z)<width/2+radius+VIEW_MARGIN;
