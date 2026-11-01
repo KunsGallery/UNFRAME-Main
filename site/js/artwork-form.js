@@ -1,5 +1,5 @@
 import {objectSpots} from './object-placement.js';
-import {ROOMS,storedModel} from './virtual-model.js';
+import {ROOMS,storedModel,MUSEUM_DEFAULTS} from './virtual-model.js';
 export {storedModel};
 // Shared artwork-form rules for the admin editor and the artist studio.
 // Round works use one diameter and a canvas edge or paper; free-form works hang without a mount.
@@ -54,4 +54,12 @@ export async function makePhotoRelief(form,art,upload,{maxBytes}={}){
  if(!result)return null;
  const model=await upload(new File([result.bytes],'photo-relief.glb',{type:'model/gltf-binary'}));
  return {...model,name:'사진으로 만든 입체',source:'photo'};
+}
+// Picking 다크 뮤지엄 fills the recommended wall, floor and ceiling once; later edits stay.
+export function bindMuseumDefaults(form){
+ const select=form?.elements.lighting;if(!select)return;let previous=select.value;
+ select.addEventListener('change',()=>{
+  if(select.value==='museum'&&previous!=='museum')for(const [key,value] of Object.entries(MUSEUM_DEFAULTS)){const field=form.elements[key];if(field&&field.value!==value){field.value=value;field.dispatchEvent(new Event('change',{bubbles:true}));}}
+  previous=select.value;
+ });
 }

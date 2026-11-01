@@ -48,3 +48,10 @@ export function canvasSideMaterials(THREE,texture,edge){
   return new THREE.MeshStandardMaterial({map,roughness:.95,color:0xffffff});
  });
 }
+// Light levels per lighting choice. 다크 뮤지엄 drops the room almost to black and lets warm,
+// narrow spots (about 3000K) pick out each work, with a soft pool of light under floor objects.
+export function lightingPreset(lighting,outdoor){
+ if(lighting==='museum')return {ambient:.05,hemisphere:.04,sun:.06,wallSpot:{color:0xffd9a8,intensity:2.4,angle:Math.PI/9,penumbra:.55},objectSpot:{color:0xffd9a8,intensity:2.8,angle:Math.PI/10,penumbra:.5},pool:true,background:0x0d0d0c,ceiling:0x161616};
+ const focused=lighting==='focused';
+ return {ambient:focused?.24:.6,hemisphere:focused?.15:.3,sun:outdoor?(focused?.7:1.2):.2,wallSpot:{color:0xf5f5ef,intensity:focused?1.5:.75,angle:Math.PI/6,penumbra:.6},objectSpot:{color:0xf5f5ef,intensity:focused?1.6:.8,angle:Math.PI/7,penumbra:.55},pool:false,background:0xe6e3db,ceiling:0xf5f6ef};
+}

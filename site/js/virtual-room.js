@@ -1,4 +1,4 @@
-import {environmentOptions,surfaceTexture,materialTexture,buildOutdoor,canvasSideMaterials} from './virtual-environment.js';
+import {environmentOptions,lightingPreset,surfaceTexture,materialTexture,buildOutdoor,canvasSideMaterials} from './virtual-environment.js';
 import {layoutArtworks,artworkMount,roomOf,saleBadge} from './virtual-model.js';
 import {createTour} from './virtual-tour.js';
 import {t,lang} from './i18n.js';
@@ -551,8 +551,9 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
 
       setupScene: function() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xe6e3db);
-        this.scene.fog = new THREE.Fog(0xe6e3db,20,45);
+        const background=lightingPreset(environmentOptions(gallerySettings).lighting,gallerySettings.outdoor).background;
+        this.scene.background = new THREE.Color(background);
+        this.scene.fog = new THREE.Fog(background,20,45);
       },
 
       setupCamera: function() {
@@ -567,11 +568,11 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
       },
 
       setupLights: function() {
-        const focused=environmentOptions(gallerySettings).lighting==='focused';
-        const ambientLight = new THREE.AmbientLight(0xf5f5f0, focused?.24:.6);
+        const preset=lightingPreset(environmentOptions(gallerySettings).lighting,gallerySettings.outdoor);
+        const ambientLight = new THREE.AmbientLight(0xf5f5f0, preset.ambient);
         this.scene.add(ambientLight);
 
-        const sunLight = new THREE.DirectionalLight(0xf5f5f0, gallerySettings.outdoor?(focused?.7:1.2):.2);
+        const sunLight = new THREE.DirectionalLight(0xf5f5f0, preset.sun);
         sunLight.position.set(24, 18, -6);
         sunLight.target.position.set(0, 0, 0);
         sunLight.castShadow = true;
@@ -587,7 +588,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
         this.scene.add(sunLight);
         this.scene.add(sunLight.target);
 
-        const hemisphereLight = new THREE.HemisphereLight(0xf2f4ef, 0x71725d, focused?.15:.3);
+        const hemisphereLight = new THREE.HemisphereLight(0xf2f4ef, 0x71725d, preset.hemisphere);
         this.scene.add(hemisphereLight);
       },
 
@@ -663,7 +664,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
 
         const ceilingGeo = new THREE.PlaneGeometry(roomW, roomD);
         const luminous=environmentOptions(gallerySettings).ceiling==='luminous';
-        const ceilingMat = new THREE.MeshStandardMaterial({color:0xf5f6ef,roughness:.9,emissive:luminous?0xf5f5ee:0x000000,emissiveIntensity:luminous?.5:0,map:luminous?surfaceTexture(THREE,this.renderer,'ceiling-diffuser',3,3):null});
+        const ceilingMat = new THREE.MeshStandardMaterial({color:lightingPreset(environmentOptions(gallerySettings).lighting,gallerySettings.outdoor).ceiling,roughness:.9,emissive:luminous?0xf5f5ee:0x000000,emissiveIntensity:luminous?.5:0,map:luminous?surfaceTexture(THREE,this.renderer,'ceiling-diffuser',3,3):null});
         if(luminous){const fill=new THREE.HemisphereLight(0xf5f5ef,0x777764,environmentOptions(gallerySettings).lighting==='focused'?.15:.4);this.scene.add(fill);}
         const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
         ceiling.position.set(0, roomH, 0);
@@ -979,7 +980,8 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
           const cfg = this.wallConfigs[art.wall] || this.wallConfigs['front'];
           const spotPos = cfg.getSpotPos(cfg.axis === 'Z' ? art.position[2] : art.position[0]);
 
-          const spotLight = new THREE.SpotLight(0xf5f5ef, environmentOptions(gallerySettings).lighting==='focused'?1.5:.75, 12, Math.PI / 6, 0.6, 1.2);
+          const {wallSpot}=lightingPreset(environmentOptions(gallerySettings).lighting,gallerySettings.outdoor);
+          const spotLight = new THREE.SpotLight(wallSpot.color, wallSpot.intensity, 12, wallSpot.angle, wallSpot.penumbra, 1.2);
           spotLight.position.set(...spotPos);
 
           const spotTarget = new THREE.Object3D();
@@ -1421,14 +1423,31 @@ GalleryApp.rebalanceArtworksOnWalls=function(){
  artworksData=[...layoutArtworks(sourceWorks,gallerySettings.roomSize),...placements.map(placement=>({...placement.art,placement}))];
 };
 GalleryApp.buildObjects=function(){
- const loader=THREE.GLTFLoader?new THREE.GLTFLoader():null,focused=environmentOptions(gallerySettings).lighting==='focused';
+ const loader=THREE.GLTFLoader?new THREE.GLTFLoader():null,preset=lightingPreset(environmentOptions(gallerySettings).lighting,gallerySettings.outdoor),spot=preset.objectSpot,pool=preset.pool?lightPoolTexture():null;
  for(const art of artworksData.filter(item=>item.placement)){
   const group=buildObjectGroup(THREE,art.placement,{loader,photoTexture:()=>TextureGenerator.createArtworkTexture(art).texture,onError:()=>this.showToast(t('room3d.modelFailed',{title:art.titleEn&&lang()==='en'?art.titleEn:art.title}))});
   this.scene.add(group);this.artworkObjects.push(group);
-  const [x,z]=art.placement.position,light=new THREE.SpotLight(0xf5f5ef,focused?1.6:.8,9,Math.PI/7,.55,1.2),target=new THREE.Object3D();
-  light.position.set(x,4,z);target.position.set(x,0,z);this.scene.add(target);light.target=target;light.castShadow=QUALITY[quality].shadows;this.scene.add(light);this.spotlights.push(light);
+  const [x,z]=art.placement.position,light=new THREE.SpotLight(spot.color,spot.intensity,9,spot.angle,spot.penumbra,1.2),target=new THREE.Object3D();
+  // 다크 뮤지엄 lights the work from the front and above, like a gallery track light, so its face is lit.
+  const ahead=preset.pool?1.2:0,yaw=art.placement.spot?.yaw??0;
+  light.position.set(x+Math.sin(yaw)*ahead,4,z+Math.cos(yaw)*ahead);target.position.set(x,preset.pool?art.heightCm/200:0,z);this.scene.add(target);light.target=target;light.castShadow=QUALITY[quality].shadows;this.scene.add(light);this.spotlights.push(light);
+  if(pool)this.scene.add(lightPool(art.placement,pool));
  }
 };
+// 다크 뮤지엄: a soft warm pool on the floor and a faint beam above each floor object. Both are
+// additive, unlit planes/cones, so they cost no lights or shadow maps.
+function lightPoolTexture(){
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d'),glow=ctx.createRadialGradient(128,128,0,128,128,128);
+ glow.addColorStop(0,'rgba(255,217,168,.55)');glow.addColorStop(.45,'rgba(255,217,168,.22)');glow.addColorStop(1,'rgba(255,217,168,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,256,256);
+ const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;return texture;
+}
+function lightPool(placement,texture){
+ const group=new THREE.Group(),[x,z]=placement.position,radius=Math.max(placement.span,placement.art.depthCm/100)/2+.7;
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(radius*2,radius*2),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}));
+ floor.rotation.x=-Math.PI/2;floor.position.set(x,.006,z);group.add(floor);
+ const beam=new THREE.Mesh(new THREE.CylinderGeometry(.06,radius*.8,4,32,1,true),new THREE.MeshBasicMaterial({color:0xffd9a8,transparent:true,opacity:.035,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,toneMapped:false}));
+ beam.position.set(x,2,z);group.add(beam);return group;
+}
 const wallInspect=GalleryApp.inspectArtwork;
 GalleryApp.inspectArtwork=function(art){
  if(art.kind!=='object'||!art.placement)return wallInspect.call(this,art);

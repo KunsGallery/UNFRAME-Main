@@ -5,7 +5,7 @@ import {studioState,studioError} from './artist-studio-model.js';
 import {previewURL} from './virtual-embed.js';
 import {prepareImage} from './image-prep.js';
 import {THEMES,WALLS,FRAMES,LIGHTING,CEILINGS,SHAPES,SALE_STATUS,ROOMS,PLINTHS,emptyArtwork,wallColorOptions} from './virtual-model.js';
-import {normalizeShape,bindShapeControls,normalizeKind,bindKindControls,spotOptions,syncPhotoSpots,reliefControlHTML,makePhotoRelief,storedModel} from './artwork-form.js';
+import {normalizeShape,bindShapeControls,normalizeKind,bindKindControls,spotOptions,syncPhotoSpots,reliefControlHTML,makePhotoRelief,storedModel,bindMuseumDefaults} from './artwork-form.js';
 import {escapeHTML as e,imageURL} from './model.js';
 import {$,toast,confirmDelete} from './ui.js';
 // Invited artists upload here; nothing becomes public until UNFRAME staff approve it.
@@ -68,7 +68,7 @@ function editor(){
 }
 // Floor and wall colour update the framed room instantly; lighting and ceiling rebuild it.
 function bindLivePreview(){
- const form=$('#studio-settings');
+ const form=$('#studio-settings');bindMuseumDefaults(form);
  // On phones the room loads only on request; it costs data and battery.
  $('#studio-live-open')?.addEventListener('click',event=>{event.target.outerHTML=`<iframe id="studio-live" title="공간 설정 3D 미리보기" src="${e(previewURL(id,Object.fromEntries(new FormData(form))))}"></iframe>`;});
  form.addEventListener('change',event=>{
