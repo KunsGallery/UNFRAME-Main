@@ -1,7 +1,7 @@
 import {entryView,playerBounds} from './virtual-links.js';
 import {objectViewpoint} from './virtual-objects.js';
 import {escapeHTML as e} from './model.js';
-import {DEFAULT_TIMELINE} from './reel-music.js';
+import {DEFAULT_TIMELINE,beatTimeline,waveformPeaks,loudestWindow,detectBeat,upTracks,decodeMusic,monoSamples} from './reel-music.js';
 
 // A 30 second 9:16 promotional reel recorded from the saved gallery. Staff-only, so the copy is
 // Korean like the admin. Shots: 0–5s intro, 5–26s the chosen works in order, 26–30s end card.
@@ -58,7 +58,7 @@ export function reelCamera(time,works,room,style,timeline=DEFAULT_TIMELINE){
 export function textLayout(w,h){return {left:w*.07,maxWidth:w*.74,top:h*.47,bottom:h*.72};}
 export const textAlpha=(time,start,end)=>clamp(Math.min((time-start-.15)/.5,(end-time)/.4),0,1);
 export const formatInfo=mime=>({ext:mime.startsWith('video/mp4')?'mp4':'webm',instagram:mime.startsWith('video/mp4')});
-function mimeType(){return ['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type))||'';}
+function mimeType(audio=false){return (audio?['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']:['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']).find(type=>MediaRecorder.isTypeSupported(type))||'';}
 const SERIF='"Noto Serif KR","EB Garamond",Georgia,serif',SANS='"Noto Sans KR",system-ui,sans-serif';
 function textLines(ctx,text,x,y,maxWidth,lineHeight,maxLines=3){
  const words=String(text||'').split(/\s+/).filter(Boolean);let line='',count=0;
@@ -87,43 +87,90 @@ export function openReelStudio({room,artworks,exhibition,settings}){
  const date=exhibition.startDate&&exhibition.endDate?`${exhibition.startDate.replaceAll('-','.')} — ${exhibition.endDate.replaceAll('-','.')}`:'';
  const supported=window.MediaRecorder?mimeType():'',format=supported?formatInfo(supported):null;
  const formatNote=!supported?'이 브라우저는 영상 저장을 지원하지 않습니다. 최신 크롬이나 사파리에서 만들어주세요.':format.instagram?'MP4로 저장되어 인스타그램에 바로 올릴 수 있습니다.':'이 브라우저는 WebM으로만 저장합니다. 인스타그램에 올리려면 최신 크롬이나 사파리에서 만들거나 MP4로 변환해주세요.';
- dialog.innerHTML=`<div class="reel-shell"><header class="reel-head"><div><span>UNFRAME / VIRTUAL GALLERY</span><h2 id="reel-heading">전시 릴스 만들기</h2><p>저장된 갤러리로 30초 영상을 만듭니다.</p></div><button type="button" data-close aria-label="릴스 제작 닫기">닫기 ×</button></header><div class="reel-body"><div class="reel-preview"><canvas width="360" height="640" aria-label="릴스 미리보기"></canvas><p data-preview-label>작품을 선택하고 미리보기를 시작하세요.</p></div><div class="reel-settings"><label>전시 제목<input data-title maxlength="100" value="${e(exhibition.title||settings.title||'')}"></label><label>소개 문구 <small>선택</small><input data-subtitle maxlength="100" value="${e(settings.artistName||'')}"></label><label>전시 기간 <small>선택</small><input data-dates maxlength="100" value="${e(date)}"></label><label>촬영 스타일<select data-style><option value="tour">공간 투어</option><option value="detail">작품 집중</option></select></label><fieldset><legend>영상에 담을 작품</legend><p>최대 3점 · 선택 순서대로 촬영합니다.</p><div data-works>${artworks.map((art,i)=>`<label class="reel-work"><input type="checkbox" value="${e(art.id)}" ${i<3?'checked':''}><span>${e(art.title||'제목 없음')}<small>${e(art.artist||'')}</small></span></label>`).join('')}</div><p data-order></p></fieldset><label>영상 크기<select data-size><option value="720">720 × 1280 · 권장</option><option value="1080">1080 × 1920 · 고화질</option></select></label><p class="reel-note">${formatNote} 음악은 넣지 않습니다(인스타그램에서 추가하세요). 촬영 중에는 이 화면을 열어두세요. 다크 뮤지엄 조명 갤러리에서 찍으면 더 고급스럽게 나옵니다.</p><div class="reel-actions"><button type="button" data-preview>미리보기</button><button type="button" data-record ${supported?'':'disabled'}>영상 만들기</button><button type="button" data-cancel hidden>취소</button><a data-download hidden>영상 다운로드</a></div><progress data-progress max="30" value="0" aria-label="촬영 진행률"></progress><p class="reel-status" role="status" aria-live="polite" data-status></p><video data-video controls playsinline hidden></video></div></div></div>`;
+ dialog.innerHTML=`<div class="reel-shell"><header class="reel-head"><div><span>UNFRAME / VIRTUAL GALLERY</span><h2 id="reel-heading">전시 릴스 만들기</h2><p>저장된 갤러리로 30초 영상을 만듭니다.</p></div><button type="button" data-close aria-label="릴스 제작 닫기">닫기 ×</button></header><div class="reel-body"><div class="reel-preview"><canvas width="360" height="640" aria-label="릴스 미리보기"></canvas><p data-preview-label>작품을 선택하고 미리보기를 시작하세요.</p></div><div class="reel-settings"><label>전시 제목<input data-title maxlength="100" value="${e(exhibition.title||settings.title||'')}"></label><label>소개 문구 <small>선택</small><input data-subtitle maxlength="100" value="${e(settings.artistName||'')}"></label><label>전시 기간 <small>선택</small><input data-dates maxlength="100" value="${e(date)}"></label><label>촬영 스타일<select data-style><option value="tour">공간 투어</option><option value="detail">작품 집중</option></select></label><fieldset class="reel-music"><legend>음악 <small>선택</small></legend><select data-music aria-label="음악"><option value="">음악 없음</option><optgroup label="UP 곡 · 언프레임 발행" data-up></optgroup><option value="file">내 음악 파일 올리기…</option></select><input type="file" data-music-file accept="audio/*" hidden><canvas data-wave width="640" height="72" hidden aria-label="음악 파형 · 눌러서 시작점 바꾸기"></canvas><label class="reel-check"><input type="checkbox" data-beat checked> 박자에 맞춰 장면 바꾸기</label><p data-music-info>시중 음원은 인스타그램에서 음소거될 수 있습니다. UP 곡이나 사용 허락을 받은 곡을 쓰세요.</p></fieldset><fieldset><legend>영상에 담을 작품</legend><p>최대 3점 · 선택 순서대로 촬영합니다.</p><div data-works>${artworks.map((art,i)=>`<label class="reel-work"><input type="checkbox" value="${e(art.id)}" ${i<3?'checked':''}><span>${e(art.title||'제목 없음')}<small>${e(art.artist||'')}</small></span></label>`).join('')}</div><p data-order></p></fieldset><label>영상 크기<select data-size><option value="720">720 × 1280 · 권장</option><option value="1080">1080 × 1920 · 고화질</option></select></label><p class="reel-note">${formatNote} 음악을 고르지 않으면 소리 없이 저장됩니다(인스타그램에서 추가할 수 있습니다). 촬영 중에는 이 화면을 열어두세요. 다크 뮤지엄 조명 갤러리에서 찍으면 더 고급스럽게 나옵니다.</p><div class="reel-actions"><button type="button" data-preview>미리보기</button><button type="button" data-record ${supported?'':'disabled'}>영상 만들기</button><button type="button" data-cancel hidden>취소</button><a data-download hidden>영상 다운로드</a></div><progress data-progress max="30" value="0" aria-label="촬영 진행률"></progress><p class="reel-status" role="status" aria-live="polite" data-status></p><video data-video controls playsinline hidden></video></div></div></div>`;
  document.body.append(dialog);const $=q=>dialog.querySelector(q),canvas=$('canvas'),status=$('[data-status]'),progress=$('progress'),boxes=[...dialog.querySelectorAll('[data-works] input')];
  let selected=boxes.filter(x=>x.checked).map(x=>x.value),busy=false,abort=null,url='';
  const showOrder=()=>{$('[data-order]').textContent=selected.length?'촬영 순서: '+selected.map(id=>artworks.find(art=>art.id===id)?.title||'제목 없음').join(' → '):'선택한 작품이 없습니다.';};showOrder();
  boxes.forEach(box=>box.addEventListener('change',()=>{if(box.checked){if(selected.length>=3){box.checked=false;status.textContent='작품은 최대 3점까지 선택할 수 있습니다.';return;}selected.push(box.value);}else selected=selected.filter(id=>id!==box.value);showOrder();status.textContent=selected.length?`선택한 작품 ${selected.length}점`: '작품을 한 점 이상 선택해주세요.';}));
  // Runs once, from the close button directly or from the dialog's close event (Esc).
- let cleaned=false;const cleanup=()=>{if(cleaned)return;cleaned=true;if(abort)abort();room.endReel?.();if(url)URL.revokeObjectURL(url);dialog.remove();};
+ let cleaned=false;const cleanup=()=>{if(cleaned)return;cleaned=true;if(abort)abort();room.endReel?.();audio?.close?.();if(url)URL.revokeObjectURL(url);dialog.remove();};
  $('[data-close]').onclick=()=>{if(busy)return;dialog.close();cleanup();};dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});dialog.addEventListener('close',cleanup);
  function setBusy(value){busy=value;dialog.querySelectorAll('input, select, [data-preview], [data-record], [data-close]').forEach(el=>el.disabled=value||(el.matches('[data-record]')&&!supported));$('[data-cancel]').hidden=!value;}
  const fields=()=>({title:$('[data-title]').value,subtitle:$('[data-subtitle]').value,dates:$('[data-dates]').value});
+ // ---- 음악: UP 곡 또는 올린 파일, 30초 구간, 박자 ----
+ let audio=null,music=null,musicChoice='';
+ const audioContext=()=>audio??=new (window.AudioContext||window.webkitAudioContext)();
+ const clock=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
+ function drawWave(){
+  const wave=$('[data-wave]'),ctx=wave.getContext('2d'),w=wave.width,h=wave.height;wave.hidden=!music;if(!music)return;
+  ctx.clearRect(0,0,w,h);const scale=w/music.duration,x0=music.start*scale,x1=Math.min(w,(music.start+REEL_DURATION)*scale);
+  ctx.fillStyle='rgba(0,74,173,.12)';ctx.fillRect(x0,0,x1-x0,h);
+  music.peaks.forEach((peak,i)=>{const x=i*w/music.peaks.length;ctx.fillStyle=x>=x0&&x<=x1?'#004aad':'#b9b5ab';const bar=Math.max(1,peak*h*.9);ctx.fillRect(x,(h-bar)/2,Math.max(1,w/music.peaks.length-1),bar);});
+ }
+ function analyse(start){
+  music.start=clamp(start,0,Math.max(0,music.duration-REEL_DURATION));
+  const beat=detectBeat(music.samples,music.rate,music.start,Math.min(REEL_DURATION,music.duration-music.start));
+  music.bpm=beat.bpm;music.phase=beat.phase-music.start;
+  $('[data-music-info]').textContent=`${music.name} · ${Math.round(music.bpm)} BPM · ${clock(music.start)}부터 30초 · 파형을 눌러 시작점을 바꿀 수 있습니다.`;drawWave();
+ }
+ async function loadMusic(source,name,fallback){
+  const select=$('[data-music]'),info=$('[data-music-info]');select.disabled=true;info.textContent='음악을 불러오고 있습니다…';
+  try{
+   const buffer=await decodeMusic(audioContext(),source,fallback),samples=monoSamples(buffer);
+   music={buffer,name,samples,rate:buffer.sampleRate,duration:buffer.duration,peaks:waveformPeaks(samples,160),start:0};
+   analyse(loudestWindow(samples,buffer.sampleRate,REEL_DURATION));musicChoice=select.value;
+  }catch(error){music=null;musicChoice='';select.value='';info.textContent=error.message;drawWave();}
+  finally{select.disabled=busy;}
+ }
+ let tracks=[];
+ upTracks().then(list=>{tracks=list;$('[data-up]').innerHTML=list.map((track,i)=>`<option value="up:${i}">${e(track.title)}${track.artist?` · ${e(track.artist)}`:''}</option>`).join('');}).catch(()=>{$('[data-up]').remove();});
+ $('[data-music]').onchange=event=>{
+  const value=event.target.value;
+  if(!value){music=null;musicChoice='';drawWave();$('[data-music-info]').textContent='음악 없이 저장됩니다.';return;}
+  if(value==='file'){$('[data-music-file]').click();return;}
+  const track=tracks[Number(value.slice(3))];if(track)loadMusic(track.url,track.title,track.original);
+ };
+ $('[data-music-file]').onchange=event=>{const file=event.target.files[0];if(file)loadMusic(file,file.name.replace(/\.[^.]+$/,''));else $('[data-music]').value=musicChoice;event.target.value='';};
+ $('[data-wave]').onclick=event=>{if(!music||busy)return;const box=event.currentTarget.getBoundingClientRect();analyse((event.clientX-box.left)/box.width*music.duration-2);};
+ // Plays the chosen window with a short fade in and a 2 second fade out; also feeds the recording.
+ function playMusic(destination){
+  const context=audioContext(),source=context.createBufferSource(),gain=context.createGain(),at=context.currentTime+.08;
+  source.buffer=music.buffer;source.loop=music.duration<REEL_DURATION;source.connect(gain);gain.connect(context.destination);if(destination)gain.connect(destination);
+  gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(1,at+.3);gain.gain.setValueAtTime(1,at+REEL_DURATION-2);gain.gain.linearRampToValueAtTime(0,at+REEL_DURATION);
+  source.start(at,music.start);return {at,stop:()=>{try{source.stop();}catch{}source.disconnect();gain.disconnect();}};
+ }
  async function run(record){
   if(busy)return;const info=room.reelInfo(),works=selected.map(id=>info.works.find(work=>work.id===id)).filter(Boolean);
   if(!works.length){status.textContent='작품을 한 점 이상 선택해주세요.';return;}
   const unavailable=works.filter(work=>info.assets[work.id]!=='ready');if(unavailable.length){status.textContent=`작품을 불러오지 못했거나 아직 로딩 중입니다: ${unavailable.map(work=>work.title).join(', ')}. 잠시 후 다시 시도하거나 작품을 확인해주세요.`;return;}
   if(record&&(!supported||!canvas.captureStream)){status.textContent='이 브라우저는 영상 저장을 지원하지 않습니다. 최신 크롬이나 사파리에서 시도해주세요.';return;}
   const width=record?Number($('[data-size]').value):360;canvas.width=width;canvas.height=Math.round(width*16/9);
-  const text=fields(),style=$('[data-style]').value;
-  let recorder,stream,chunks=[],started=0,frame=0,cancelled=false;setBusy(true);progress.value=0;$('[data-preview-label]').textContent=record?'영상 촬영 중':'미리보기 재생 중';
+  const text=fields(),style=$('[data-style]').value,withMusic=!!music,timeline=withMusic&&$('[data-beat]').checked?beatTimeline(music.bpm,music.phase,works.length):DEFAULT_TIMELINE;
+  const mime=record?(withMusic?mimeType(true):supported):'',kind=mime?formatInfo(mime):format;
+  let recorder,stream,chunks=[],started=0,frame=0,cancelled=false,player=null;setBusy(true);progress.value=0;$('[data-preview-label]').textContent=record?'영상 촬영 중':'미리보기 재생 중';
   status.textContent='글꼴을 준비하고 있습니다…';
   await Promise.all([document.fonts.load(`600 44px ${SERIF}`),document.fonts.load(`400 23px ${SANS}`),document.fonts.load(`500 17px ${SANS}`)]).catch(()=>{});
   status.textContent=record?'영상 촬영 중입니다. 화면을 열어두세요.':'30초 미리보기 중입니다.';
   try{
    room.beginReel(canvas.width,canvas.height);
-   if(record){stream=canvas.captureStream(30);recorder=new MediaRecorder(stream,{mimeType:supported,videoBitsPerSecond:width===1080?8000000:4500000});recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};recorder.start();}
+   const destination=withMusic&&record?audioContext().createMediaStreamDestination():null;
+   if(withMusic)await audioContext().resume();
+   if(record){stream=new MediaStream([...canvas.captureStream(30).getVideoTracks(),...(destination?destination.stream.getAudioTracks():[])]);recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:width===1080?8000000:4500000,...(withMusic?{audioBitsPerSecond:192000}:{})});recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};recorder.start();}
+   // With music, the audio clock drives the pictures so the cuts stay on the beat.
+   if(withMusic)player=playMusic(destination);
    await new Promise((resolve,reject)=>{
     abort=()=>{cancelled=true;cancelAnimationFrame(frame);reject(new Error('취소했습니다.'));};
-    const tick=now=>{try{if(document.hidden)throw new Error('화면이 숨겨져 촬영을 중단했습니다. 이 화면을 열어둔 채 다시 시도해주세요.');if(!started)started=now;const time=Math.min(REEL_DURATION,(now-started)/1000),{shot,view}=reelCamera(time,works,info.room,style);room.renderReelFrame(canvas,view);overlay(canvas,shot,time,works.length,text);progress.value=time;if(time>=REEL_DURATION)resolve();else frame=requestAnimationFrame(tick);}catch(error){reject(error);}};frame=requestAnimationFrame(tick);
+    const tick=now=>{try{if(document.hidden)throw new Error('화면이 숨겨져 촬영을 중단했습니다. 이 화면을 열어둔 채 다시 시도해주세요.');if(!started)started=now;const time=Math.min(REEL_DURATION,player?Math.max(0,audio.currentTime-player.at):(now-started)/1000),{shot,view}=reelCamera(time,works,info.room,style,timeline);room.renderReelFrame(canvas,view);overlay(canvas,shot,time,works.length,text);progress.value=time;if(time>=REEL_DURATION)resolve();else frame=requestAnimationFrame(tick);}catch(error){reject(error);}};frame=requestAnimationFrame(tick);
    });
    if(record){
-    const blob=await new Promise((resolve,reject)=>{recorder.onstop=()=>resolve(new Blob(chunks,{type:supported}));recorder.onerror=()=>reject(new Error('영상 저장에 실패했습니다.'));recorder.stop();});
+    const blob=await new Promise((resolve,reject)=>{recorder.onstop=()=>resolve(new Blob(chunks,{type:mime}));recorder.onerror=()=>reject(new Error('영상 저장에 실패했습니다.'));recorder.stop();});
     if(!blob.size)throw new Error('영상이 비어 있습니다. 다시 시도해주세요.');
     if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(blob);const video=$('[data-video]'),download=$('[data-download]'),name=(text.title||'reel').replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,60);
-    video.src=url;video.hidden=false;download.href=url;download.download=`UNFRAME_${name}.${format.ext}`;download.textContent=format.instagram?'영상 다운로드 (MP4)':'영상 다운로드 (WebM · 인스타그램용은 MP4 변환 필요)';download.hidden=false;
-    status.textContent=format.instagram?'영상이 완성되었습니다. 재생해 확인한 뒤 다운로드하세요.':'영상이 완성되었습니다. 이 브라우저는 WebM으로 저장하므로 인스타그램에 올리기 전에 MP4로 변환해주세요.';
+    video.src=url;video.hidden=false;download.href=url;download.download=`UNFRAME_${name}.${kind.ext}`;download.textContent=kind.instagram?'영상 다운로드 (MP4)':'영상 다운로드 (WebM · 인스타그램용은 MP4 변환 필요)';download.hidden=false;
+    status.textContent=kind.instagram?'영상이 완성되었습니다. 재생해 확인한 뒤 다운로드하세요.':'영상이 완성되었습니다. 이 브라우저는 WebM으로 저장하므로 인스타그램에 올리기 전에 MP4로 변환해주세요.';
    }else status.textContent='미리보기가 끝났습니다. 설정을 바꾸거나 영상을 만들어보세요.';
   }catch(error){if(recorder&&recorder.state!=='inactive')recorder.stop();status.textContent=error.message||'촬영을 완료하지 못했습니다.';}
-  finally{abort=null;room.endReel();if(stream)stream.getTracks().forEach(track=>track.stop());setBusy(false);$('[data-preview-label]').textContent=cancelled?'촬영이 취소되었습니다.':'30초 · 9:16';}
+  finally{abort=null;player?.stop();room.endReel();if(stream)stream.getTracks().forEach(track=>track.stop());setBusy(false);$('[data-preview-label]').textContent=cancelled?'촬영이 취소되었습니다.':'30초 · 9:16';}
  }
  $('[data-preview]').onclick=()=>run(false);$('[data-record]').onclick=()=>run(true);$('[data-cancel]').onclick=()=>abort?.();dialog.showModal();
  try{const info=room.reelInfo(),shot=reelShot(2,[]);room.renderReelFrame(canvas,reelView(shot,info.room,'tour'));overlay(canvas,shot,2,0,fields());}catch{}
