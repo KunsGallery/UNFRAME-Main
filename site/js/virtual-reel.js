@@ -86,8 +86,9 @@ export function openReelStudio({room,artworks,exhibition,settings}){
  let selected=boxes.filter(x=>x.checked).map(x=>x.value),busy=false,abort=null,url='';
  const showOrder=()=>{$('[data-order]').textContent=selected.length?'촬영 순서: '+selected.map(id=>artworks.find(art=>art.id===id)?.title||'제목 없음').join(' → '):'선택한 작품이 없습니다.';};showOrder();
  boxes.forEach(box=>box.addEventListener('change',()=>{if(box.checked){if(selected.length>=3){box.checked=false;status.textContent='작품은 최대 3점까지 선택할 수 있습니다.';return;}selected.push(box.value);}else selected=selected.filter(id=>id!==box.value);showOrder();status.textContent=selected.length?`선택한 작품 ${selected.length}점`: '작품을 한 점 이상 선택해주세요.';}));
- const cleanup=()=>{if(abort)abort();room.endReel?.();if(url)URL.revokeObjectURL(url);dialog.remove();};
- $('[data-close]').onclick=()=>{if(!busy)dialog.close();};dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});dialog.addEventListener('close',cleanup);
+ // Runs once, from the close button directly or from the dialog's close event (Esc).
+ let cleaned=false;const cleanup=()=>{if(cleaned)return;cleaned=true;if(abort)abort();room.endReel?.();if(url)URL.revokeObjectURL(url);dialog.remove();};
+ $('[data-close]').onclick=()=>{if(busy)return;dialog.close();cleanup();};dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});dialog.addEventListener('close',cleanup);
  function setBusy(value){busy=value;dialog.querySelectorAll('input, select, [data-preview], [data-record], [data-close]').forEach(el=>el.disabled=value||(el.matches('[data-record]')&&!supported));$('[data-cancel]').hidden=!value;}
  const fields=()=>({title:$('[data-title]').value,subtitle:$('[data-subtitle]').value,dates:$('[data-dates]').value});
  async function run(record){
