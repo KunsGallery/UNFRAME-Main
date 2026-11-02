@@ -1593,7 +1593,7 @@ export function mountRoom(settings,works){
  let reel=null;
  const beginReel=(width,height)=>{
   const renderer=GalleryApp.renderer;if(reel)endReel();
-  reel={ratio:renderer.getPixelRatio(),camera:GalleryApp.camera.clone(),width,height};reel.camera.aspect=width/height;reel.camera.updateProjectionMatrix();
+  reel={ratio:renderer.getPixelRatio(),camera:GalleryApp.camera.clone(),width,height};reel.fov=reel.camera.fov;reel.camera.aspect=width/height;reel.camera.updateProjectionMatrix();
   GalleryApp.reelActive=true;renderer.setPixelRatio(1);renderer.setSize(width,height,false);
  };
  const endReel=()=>{
@@ -1602,7 +1602,7 @@ export function mountRoom(settings,works){
  };
  const renderReelFrame=(canvas,view)=>{
   const single=!reel||reel.width!==canvas.width||reel.height!==canvas.height;if(single)beginReel(canvas.width,canvas.height);
-  try{reel.camera.position.set(...view.position);reel.camera.lookAt(...view.target);GalleryApp.renderer.render(GalleryApp.scene,reel.camera);canvas.getContext('2d').drawImage(GalleryApp.renderer.domElement,0,0,canvas.width,canvas.height);}
+  try{const fov=view.fov??reel.fov;if(reel.camera.fov!==fov){reel.camera.fov=fov;reel.camera.updateProjectionMatrix();}reel.camera.position.set(...view.position);reel.camera.lookAt(...view.target);GalleryApp.renderer.render(GalleryApp.scene,reel.camera);canvas.getContext('2d').drawImage(GalleryApp.renderer.domElement,0,0,canvas.width,canvas.height);}
   finally{if(single)endReel();}
  };
  return {captureEntry,captureWall,reelInfo,beginReel,renderReelFrame,endReel,applyLook:({theme,wallColor})=>{GalleryApp.setTheme(theme);GalleryApp.materials.walls.color.set(wallColor);},close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
