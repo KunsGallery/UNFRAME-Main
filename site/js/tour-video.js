@@ -4,7 +4,7 @@ import {objectViewpoint} from './virtual-objects.js';
 // A tour is a list of scenes; each space becomes an "enter" scene, so a future multi-room hall
 // only adds scenes. Staff-only tool, so the copy is Korean like the admin.
 export const TOUR_MAX_WORKS=6;
-const DURATION={logo:3,title:4,enter:4,statement:4,wall:3,art:4,overview:4,outro:3,qr:5},TRANSITION=1.2,FOV=50;
+const DURATION={logo:3,title:4,enter:4,wall:3,art:4,overview:4,outro:3,qr:5},TRANSITION=1.2,FOV=50;
 // Close-up camera moves, used in turn so neighbouring works are filmed differently.
 export const SHOTS=['push','dollyZoom','truck','orbit','rise'];
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -19,7 +19,6 @@ export function tourScenes(works,{spaces=[{label:'전시장'}]}={}){
  for(const work of chosen){const key=wallKey(work);let group=groups.find(g=>g.key===key);if(!group)groups.push(group={key,works:[]});group.works.push(work);}
  const scenes=[{type:'logo'},{type:'title'}];
  for(const space of spaces)scenes.push({type:'enter',label:space.label});
- scenes.push({type:'statement'});
  let number=0;
  for(const group of groups){
   scenes.push({type:'wall',label:wallLabel(group.works[0]),works:group.works});
@@ -84,7 +83,6 @@ function sceneView(shot,room,aspect){
  if(scene.type==='logo'||scene.type==='qr')return null;
  if(scene.type==='title'){const pos=[eye[0]+.3*p,1.7,eye[2]];return {position:pos,target:ahead(pos,6)};}
  if(scene.type==='enter'){const pos=inside(ahead(eye,3*ease(p)),room);pos[1]=1.6+.1*p;return {position:pos,target:ahead(pos,6)};}
- if(scene.type==='statement'){const pos=inside(ahead(eye,3),room),a=(p-.5)*.6,yaw=entry.yaw+a;pos[1]=1.7;return {position:pos,target:[pos[0]-Math.sin(yaw)*6,1.6,pos[2]-Math.cos(yaw)*6]};}
  if(scene.type==='wall')return wallView(scene,p,room);
  // A crane shot: rising from the middle of the room while turning to look around it.
  if(scene.type==='overview'){const e=ease(p),a=Math.PI+p*1.4,pos=[0,1.3+1.6*e,0];return {position:pos,target:[Math.cos(a)*6,1.3,Math.sin(a)*6]};}
@@ -169,23 +167,7 @@ function kinetic(ctx,w,h,s,effect,word,face,base,local){
  });
  ctx.restore();
 }
-// The statement appears word by word, centred, with a kicker above and the artist below.
-function statement(ctx,w,h,s,box,shot,info){
- const words=(info.statement||info.title||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);if(!words.length)return;
- const size=Math.round(box.portrait?w*.075:h*.072),max=w*(box.portrait?.84:.76),lines=[[]];
- ctx.save();ctx.font=`600 ${size}px ${SANS}`;
- for(const word of words){const line=lines.at(-1);if(line.length&&ctx.measureText([...line,word].join(' ')).width>max){if(lines.length===4){line[line.length-1]+='…';break;}lines.push([word]);}else line.push(word);}
- const count=lines.flat().length,p=shot.progress,out=clamp((1-p)*(shot.end-shot.start)/.4,0,1),top=h/2-lines.length*size*1.3/2;
- ctx.textBaseline='top';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.globalAlpha=out*ease(clamp(p/.15,0,1));
- ctx.font=`700 ${Math.round(15*s)}px ${SANS}`;ctx.letterSpacing=`${Math.round(5*s)}px`;ctx.fillText('ARTIST NOTE',w/2,top-46*s);ctx.letterSpacing='0px';
- let n=0;lines.forEach((line,k)=>{
-  ctx.font=`600 ${size}px ${SANS}`;const width=ctx.measureText(line.join(' ')).width;let x=w/2-width/2;ctx.textAlign='left';
-  for(const word of line){const e=ease(clamp((p-.05-n/count*.55)/.12,0,1));ctx.globalAlpha=out*e;ctx.fillText(word,x,top+k*size*1.3+(1-e)*size*.4);x+=ctx.measureText(word+' ').width;n++;}
- });
- if(info.artist){ctx.textAlign='center';ctx.globalAlpha=out*ease(clamp((p-.6)/.15,0,1));ctx.font=`400 ${Math.round(22*s)}px ${SERIF}`;ctx.fillText(`— ${info.artist}`,w/2,top+lines.length*size*1.3+18*s);}
- ctx.restore();
-}
-// Draws the scene's text and cards over the frame. info: {title, artist, dates, statement, qr}.
+// Draws the scene's text and cards over the frame. info: {title, artist, dates, qr}.
 export function tourOverlay(canvas,shot,info){
  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,box=tourLayout(w,h),s=box.unit/720,{scene,progress:p}=shot;
  ctx.textBaseline='top';ctx.textAlign='left';ctx.letterSpacing='0px';
@@ -200,14 +182,13 @@ export function tourOverlay(canvas,shot,info){
   ctx.fillStyle='#fff';ctx.font=`600 ${Math.round(24*s)}px ${SANS}`;ctx.fillText('QR로 버추얼 갤러리 바로가기',tx,ty+160*s);
   ctx.font=`500 ${Math.round(22*s)}px ${SANS}`;ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillText('@unframe.kr',tx,ty+200*s);ctx.restore();return;
  }
- if(scene.type==='title'||scene.type==='statement'){ctx.fillStyle=`rgba(0,0,0,${.6*fade(shot,.4,.4)})`;ctx.fillRect(0,0,w,h);}
+ if(scene.type==='title'){ctx.fillStyle=`rgba(0,0,0,${.6*fade(shot,.4,.4)})`;ctx.fillRect(0,0,w,h);}
  if(scene.type==='title'){
   const words=['Introducing','Virtual Gallery',info.title,info.artist].filter(Boolean),slot=1/words.length,i=Math.min(words.length-1,Math.floor(p/slot));
   kinetic(ctx,w,h,s,i,String(words[i]),i<2?SANS:SERIF,Math.round((i<2?92:100)*s),(p-i*slot)/slot);return;
  }
  if(scene.type==='outro'){chrome(ctx,w,h,box,s,shot,info,1-ease(Math.min(1,p*2)));ctx.fillStyle=`rgba(0,0,0,${ease(p)})`;ctx.fillRect(0,0,w,h);wordmark(ctx,w,h,s,clamp((p-.5)/.3,0,1));return;}
  chrome(ctx,w,h,box,s,shot,info,1);
- if(scene.type==='statement'){statement(ctx,w,h,s,box,shot,info);return;}
  if(scene.type==='art'){const art=scene.work;lowerThird(ctx,box,s,shot,{kicker:`WORK ${pad(scene.number||1)}`,title:art.title||'제목 없음',sub:[art.artist,art.year,scene.label].filter(Boolean).join(' · '),counter:[scene.number||1,scene.count||1]});return;}
  if(scene.type==='wall'){lowerThird(ctx,box,s,shot,{kicker:'WALL',title:scene.label,sub:`작품 ${scene.works.length}점`});return;}
  if(scene.type==='overview'){lowerThird(ctx,box,s,shot,{kicker:'OVERVIEW',title:scene.label,sub:info.dates||info.title});return;}
