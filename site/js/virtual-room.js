@@ -1049,6 +1049,8 @@ let reelAssets=new Map();
         const self = this;
 
         window.addEventListener('resize', () => {
+          // A reel keeps the renderer at video size; endReel resizes to the window afterwards.
+          if(self.reelActive)return;
           self.camera.aspect = window.innerWidth / window.innerHeight;
           self.camera.updateProjectionMatrix();
           self.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -1386,6 +1388,8 @@ let reelAssets=new Map();
           this.updatePlayerMovement(delta);
         }
 
+        // While a reel records, the reel renders each frame itself and the room view pauses.
+        if(this.reelActive)return;
         this.renderer.render(this.scene, this.camera);
       },
 
@@ -1584,11 +1588,22 @@ export function mountRoom(settings,works){
  const captureEntry=()=>captureView(entryView(roomOf(gallerySettings)));
  const captureWall=wall=>{if(!['left','right'].includes(wall))throw new Error('Invalid wall');return captureView(wallViewpoint(wall,roomOf(gallerySettings)));};
  const reelInfo=()=>({works:artworksData.map(art=>({id:art.id,title:art.title,artist:art.artist,wall:art.wall,kind:art.kind,position:art.position,size:art.size,placement:art.placement})),room:roomOf(gallerySettings),assets:Object.fromEntries(reelAssets)});
- const renderReelFrame=(canvas,view)=>{
-  const renderer=GalleryApp.renderer,camera=GalleryApp.camera.clone(),size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio();
-  camera.position.set(...view.position);camera.lookAt(...view.target);camera.aspect=canvas.width/canvas.height;camera.updateProjectionMatrix();
-  try{renderer.setPixelRatio(1);renderer.setSize(canvas.width,canvas.height,false);renderer.render(GalleryApp.scene,camera);canvas.getContext('2d').drawImage(renderer.domElement,0,0,canvas.width,canvas.height);}
-  finally{renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(GalleryApp.scene,GalleryApp.camera);}
+ // Reels resize the renderer once to the video size for the whole take (resizing per frame stalls
+ // the GPU and drops frames), render only the reel camera, then restore the room view.
+ let reel=null;
+ const beginReel=(width,height)=>{
+  const renderer=GalleryApp.renderer;if(reel)endReel();
+  reel={ratio:renderer.getPixelRatio(),camera:GalleryApp.camera.clone(),width,height};reel.camera.aspect=width/height;reel.camera.updateProjectionMatrix();
+  GalleryApp.reelActive=true;renderer.setPixelRatio(1);renderer.setSize(width,height,false);
  };
- return {captureEntry,captureWall,reelInfo,renderReelFrame,applyLook:({theme,wallColor})=>{GalleryApp.setTheme(theme);GalleryApp.materials.walls.color.set(wallColor);},close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
+ const endReel=()=>{
+  if(!reel)return;const renderer=GalleryApp.renderer;renderer.setPixelRatio(reel.ratio);reel=null;GalleryApp.reelActive=false;
+  renderer.setSize(window.innerWidth,window.innerHeight);GalleryApp.camera.aspect=window.innerWidth/window.innerHeight;GalleryApp.camera.updateProjectionMatrix();renderer.render(GalleryApp.scene,GalleryApp.camera);
+ };
+ const renderReelFrame=(canvas,view)=>{
+  const single=!reel||reel.width!==canvas.width||reel.height!==canvas.height;if(single)beginReel(canvas.width,canvas.height);
+  try{reel.camera.position.set(...view.position);reel.camera.lookAt(...view.target);GalleryApp.renderer.render(GalleryApp.scene,reel.camera);canvas.getContext('2d').drawImage(GalleryApp.renderer.domElement,0,0,canvas.width,canvas.height);}
+  finally{if(single)endReel();}
+ };
+ return {captureEntry,captureWall,reelInfo,beginReel,renderReelFrame,endReel,applyLook:({theme,wallColor})=>{GalleryApp.setTheme(theme);GalleryApp.materials.walls.color.set(wallColor);},close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
 }
