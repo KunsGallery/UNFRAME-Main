@@ -3,7 +3,7 @@
 // If the model cannot load, the artwork photo stands on the plinth instead.
 export const PLINTH_HEIGHT={none:0,low:.1,high:.6};
 const GAP=.3;
-export function buildObjectGroup(THREE,placement,{loader,photoTexture,onError=()=>{}}){
+export function buildObjectGroup(THREE,placement,{loader,photoTexture,onError=()=>{},onReady=()=>{}}){
  const {spot,position,yaw,span}=placement,art={...placement.art,placement},group=new THREE.Group();
  group.position.set(position[0],0,position[1]);group.rotation.y=yaw;
  const tag=object=>{object.traverse(child=>{if(child.isMesh){child.castShadow=true;child.receiveShadow=true;child.userData={isArtwork:true,data:art};}});return object;};
@@ -17,19 +17,19 @@ export function buildObjectGroup(THREE,placement,{loader,photoTexture,onError=()
   const map=photoTexture();
   for(const x of offsets){const photo=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map,transparent:true,alphaTest:.5,toneMapped:false,side:THREE.DoubleSide}));photo.position.set(x,lift+height/2,0);tag(photo);group.add(photo);}
  };
- if(!loader||!art.model){showPhoto();return group;}
+ if(!loader||!art.model){onError();showPhoto();return group;}
  // Models download only when the room builds; blob URLs are released once parsed.
  Promise.resolve(art.model.load?art.model.load():art.model.url).then(url=>{
- if(!url){showPhoto();return;}
+ if(!url){onError();showPhoto();return;}
  const release=()=>{if(url.startsWith('blob:'))URL.revokeObjectURL(url);};
  loader.load(url,gltf=>{release();
   const source=gltf.scene,box=new THREE.Box3().setFromObject(source),size=box.getSize(new THREE.Vector3());
-  if(!(size.y>0)){showPhoto();return;}
+  if(!(size.y>0)){onError();showPhoto();return;}
   source.scale.setScalar(height/size.y);
   const scaled=new THREE.Box3().setFromObject(source),center=scaled.getCenter(new THREE.Vector3());
   source.position.set(-center.x,lift-scaled.min.y,-center.z);
   const holder=new THREE.Group();holder.add(source);
-  offsets.forEach((x,index)=>{const copy=index?holder.clone(true):holder;copy.position.x=x;tag(copy);group.add(copy);});
+  offsets.forEach((x,index)=>{const copy=index?holder.clone(true):holder;copy.position.x=x;tag(copy);group.add(copy);});onReady();
  },undefined,error=>{release();onError(error);showPhoto();});
  }).catch(error=>{onError(error);showPhoto();});
  return group;
