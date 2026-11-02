@@ -101,10 +101,10 @@ export function openReelStudio({room,artworks,exhibition,settings}){
  // ---- 영상 종류: 릴스(30초 세로) / 투어 영상(약 50초 가로) ----
  const tourMode=()=>$('[data-mode]').value==='tour',landscape=()=>tourMode()&&!$('[data-vertical]').checked;
  function maxWorks(){return tourMode()?TOUR_MAX_WORKS:3;}
- function videoLength(){return tourMode()?tourTimeline(tourScenes(selected.map(id=>({id,kind:'flat'})))).total:REEL_DURATION;}
+ function videoLength(){return tourMode()?tourTimeline(tourScenes(selected.map(id=>{const art=artworks.find(work=>work.id===id)||{};return {id,kind:art.kind||'flat',wall:art.wall};}))).total:REEL_DURATION;}
  function syncMode(){
   const tour=tourMode();$('[data-vertical-wrap]').hidden=!tour;$('[data-lead]').textContent=tour?'저장된 갤러리를 걸으며 안내하는 투어 영상을 만듭니다.':'저장된 갤러리로 30초 영상을 만듭니다.';$('[data-statement-wrap]').hidden=!tour;
-  $('[data-max]').textContent=`최대 ${maxWorks()}점 · 선택 순서대로 촬영합니다.`;
+  $('[data-max]').textContent=tour?`최대 ${maxWorks()}점 · 벽별로 묶어 선택 순서대로 촬영합니다.`:`최대 ${maxWorks()}점 · 선택 순서대로 촬영합니다.`;
   const size=$('[data-size]');size.options[0].textContent=landscape()?'1280 × 720 · 권장':'720 × 1280 · 권장';size.options[1].textContent=landscape()?'1920 × 1080 · 고화질':'1080 × 1920 · 고화질';
   if(selected.length>maxWorks()){for(const id of selected.slice(maxWorks())){const box=boxes.find(b=>b.value===id);if(box)box.checked=false;}selected=selected.slice(0,maxWorks());showOrder();}
   canvas.style.aspectRatio=landscape()?'16/9':'9/16';canvas.style.width=landscape()?'100%':'';
