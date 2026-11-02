@@ -1,6 +1,7 @@
 import {entryView,playerBounds} from './virtual-links.js';
 import {objectViewpoint} from './virtual-objects.js';
 import {escapeHTML as e} from './model.js';
+import {DEFAULT_TIMELINE} from './reel-music.js';
 
 // A 30 second 9:16 promotional reel recorded from the saved gallery. Staff-only, so the copy is
 // Korean like the admin. Shots: 0–5s intro, 5–26s the chosen works in order, 26–30s end card.
@@ -8,11 +9,16 @@ export const REEL_DURATION=30,REEL_TRANSITION=1.4;
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 const lerp=(a,b,k)=>a.map((value,i)=>value+(b[i]-value)*k);
-export function reelShot(time,works){
- if(time<5)return {type:'intro',progress:time/5,start:0,end:5};
- if(time>=26)return {type:'end',progress:(time-26)/4,start:26,end:30};
- const length=21/works.length,index=Math.min(works.length-1,Math.floor((time-5)/length));
- return {type:'art',work:works[index],index,progress:((time-5)-index*length)/length,start:5+index*length,end:5+(index+1)*length};
+// `timeline` sets where the intro ends, where each work ends and where the end card starts;
+// the default splits 5–26s evenly. A music beat timeline (reel-music.js) snaps them to bars.
+export function reelShot(time,works,timeline=DEFAULT_TIMELINE){
+ const {introEnd,endStart}=timeline;
+ if(time<introEnd)return {type:'intro',progress:time/introEnd,start:0,end:introEnd};
+ if(time>=endStart)return {type:'end',progress:(time-endStart)/(REEL_DURATION-endStart),start:endStart,end:REEL_DURATION};
+ const ends=timeline.artEnds||works.map((_,i)=>introEnd+(endStart-introEnd)*(i+1)/works.length);
+ let index=ends.findIndex(end=>time<end);if(index<0)index=works.length-1;
+ const start=index?ends[index-1]:introEnd,end=ends[index];
+ return {type:'art',work:works[index],index,progress:(time-start)/(end-start),start,end};
 }
 export function reelView(shot,room,style){
  const entry=entryView(room),bounds=playerBounds(room);
@@ -41,10 +47,10 @@ export function reelView(shot,room,style){
 // caption: 0.21 × distance centres the work about 27% from the top with the 50° lens.
 const aimBelow=(centre,distance)=>[centre[0],centre[1]-distance*.21,centre[2]];
 // The camera walks from where the last shot ended instead of cutting to the next work.
-export function reelCamera(time,works,room,style){
- const shot=reelShot(time,works),view=reelView(shot,room,style),into=time-shot.start;
- if(shot.type==='intro'||into>=REEL_TRANSITION)return {shot,view};
- const previous=reelShot(Math.max(0,shot.start-1e-6),works),from=reelView({...previous,progress:1},room,style),k=ease(into/REEL_TRANSITION);
+export function reelCamera(time,works,room,style,timeline=DEFAULT_TIMELINE){
+ const shot=reelShot(time,works,timeline),view=reelView(shot,room,style),into=time-shot.start,transition=timeline.transition??REEL_TRANSITION;
+ if(shot.type==='intro'||into>=transition)return {shot,view};
+ const previous=reelShot(Math.max(0,shot.start-1e-6),works,timeline),from=reelView({...previous,progress:1},room,style),k=ease(into/transition);
  return {shot,view:{position:lerp(from.position,view.position,k),target:lerp(from.target,view.target,k)}};
 }
 // Instagram covers the bottom ~20% (caption, account, audio) and the right edge (buttons), so
