@@ -97,7 +97,11 @@ export function tourOverlay(canvas,shot,info){
   // Four words in turn, each sliding in from the right and fading.
   const words=['Introducing','Virtual Gallery',info.title,info.artist].filter(Boolean),slot=1/words.length,i=Math.min(words.length-1,Math.floor(p/slot)),local=(p-i*slot)/slot;
   const a=clamp(Math.min(local/.25,(1-local)/.2),0,1);ctx.save();ctx.globalAlpha=a;ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.font=i<2?`500 ${Math.round(56*s)}px ${SANS}`:`600 ${Math.round(72*s)}px ${SERIF}`;ctx.fillText(fit(ctx,words[i],w*.86),w/2+(1-ease(Math.min(1,local/.35)))*60*s,h/2);ctx.restore();return;
+  // Long words (portrait, long titles) break onto two lines at the middle space, then shrink to fit.
+  const face=i<2?SANS:SERIF,base=Math.round((i<2?92:100)*s),max=w*.86,word=String(words[i]);ctx.font=`600 ${base}px ${face}`;
+  let lines=[word];if(ctx.measureText(word).width>max&&word.includes(' ')){const spaces=[...word.matchAll(/ /g)].map(m=>m.index),cut=spaces.reduce((a,b)=>Math.abs(b-word.length/2)<Math.abs(a-word.length/2)?b:a);lines=[word.slice(0,cut),word.slice(cut+1)];}
+  const wide=Math.max(...lines.map(line=>ctx.measureText(line).width)),size=wide>max?Math.max(Math.round(40*s),Math.floor(base*max/wide)):base;ctx.font=`600 ${size}px ${face}`;
+  const x=w/2+(1-ease(Math.min(1,local/.35)))*60*s;lines.forEach((line,k)=>ctx.fillText(fit(ctx,line,max),x,h/2+(k-(lines.length-1)/2)*size*1.2));ctx.restore();return;
  }
  if(scene.type==='statement'){
   // The statement crosses the frame in large type, two lines at different speeds.
