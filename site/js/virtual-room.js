@@ -11,6 +11,7 @@ import {buildObjectGroup,objectViewpoint} from './virtual-objects.js';
 import {showModalImage} from './virtual-gallery-view.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
 let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium';
+let reelAssets=new Map();
     const TextureGenerator = {
       createSeamlessHerringbone: function(isWood = false) {
         const S = 512;
@@ -421,7 +422,7 @@ let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium'
       },
 
       createArtworkTexture: function(art) {
-        const texture=new THREE.TextureLoader().load(art.dataUrl,loaded=>{for(const edge of loaded.userData?.edgeMaps||[]){edge.image=loaded.image;edge.needsUpdate=true;}loaded.userData?.onReady?.(loaded);},undefined,()=>GalleryApp.showToast(t('room3d.imagesFailed')));
+        const texture=new THREE.TextureLoader().load(art.dataUrl,loaded=>{for(const edge of loaded.userData?.edgeMaps||[]){edge.image=loaded.image;edge.needsUpdate=true;}loaded.userData?.onReady?.(loaded);if(art.kind!=='object')reelAssets.set(art.id,'ready');},undefined,()=>{reelAssets.set(art.id,'error');GalleryApp.showToast(t('room3d.imagesFailed'));});
         texture.encoding=THREE.sRGBEncoding;
         return {texture,dataUrl:art.dataUrl};
       }
@@ -1425,7 +1426,7 @@ GalleryApp.rebalanceArtworksOnWalls=function(){
 GalleryApp.buildObjects=function(){
  const loader=THREE.GLTFLoader?new THREE.GLTFLoader():null,preset=lightingPreset(environmentOptions(gallerySettings).lighting,gallerySettings.outdoor),spot=preset.objectSpot,pool=preset.pool?lightPoolTexture():null;
  for(const art of artworksData.filter(item=>item.placement)){
-  const group=buildObjectGroup(THREE,art.placement,{loader,photoTexture:()=>TextureGenerator.createArtworkTexture(art).texture,onError:()=>this.showToast(t('room3d.modelFailed',{title:art.titleEn&&lang()==='en'?art.titleEn:art.title}))});
+  const group=buildObjectGroup(THREE,art.placement,{loader,photoTexture:()=>TextureGenerator.createArtworkTexture(art).texture,onReady:()=>reelAssets.set(art.id,'ready'),onError:()=>{reelAssets.set(art.id,'error');this.showToast(t('room3d.modelFailed',{title:art.titleEn&&lang()==='en'?art.titleEn:art.title}));}});
   this.scene.add(group);this.artworkObjects.push(group);
   const [x,z]=art.placement.position,light=new THREE.SpotLight(spot.color,spot.intensity,9,spot.angle,spot.penumbra,1.2),target=new THREE.Object3D();
   // 다크 뮤지엄 lights the work from the front and above, like a gallery track light, so its face is lit.
@@ -1550,6 +1551,7 @@ export function mountRoom(settings,works){
   const room=roomOf(settings),entry=entryView(room);
   GalleryApp.player.bounds=playerBounds(room);GalleryApp.player.position.set(entry.position[0],1.75,entry.position[1]);GalleryApp.player.yaw=entry.yaw;
  }
+ reelAssets=new Map(works.map(work=>[work.id,'loading']));
  artworksData=sourceWorks=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:work.kind==='object'?t('art.objectSize',{w:work.widthCm,d:work.depthCm,h:work.heightCm})+(work.copies>1?' · '+t('art.copies',{count:work.copies}):''):work.shape==='circle'?t('art.diameter',{w:work.widthCm}):`${work.heightCm} × ${work.widthCm} cm`}));
  GalleryApp.init();
  bindTouchLook(GalleryApp.container,GalleryApp);
@@ -1581,5 +1583,12 @@ export function mountRoom(settings,works){
  };
  const captureEntry=()=>captureView(entryView(roomOf(gallerySettings)));
  const captureWall=wall=>{if(!['left','right'].includes(wall))throw new Error('Invalid wall');return captureView(wallViewpoint(wall,roomOf(gallerySettings)));};
- return {captureEntry,captureWall,applyLook:({theme,wallColor})=>{GalleryApp.setTheme(theme);GalleryApp.materials.walls.color.set(wallColor);},close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
+ const reelInfo=()=>({works:artworksData.map(art=>({id:art.id,title:art.title,artist:art.artist,wall:art.wall,kind:art.kind,position:art.position,size:art.size,placement:art.placement})),room:roomOf(gallerySettings),assets:Object.fromEntries(reelAssets)});
+ const renderReelFrame=(canvas,view)=>{
+  const renderer=GalleryApp.renderer,camera=GalleryApp.camera.clone(),size=renderer.getSize(new THREE.Vector2()),ratio=renderer.getPixelRatio();
+  camera.position.set(...view.position);camera.lookAt(...view.target);camera.aspect=canvas.width/canvas.height;camera.updateProjectionMatrix();
+  try{renderer.setPixelRatio(1);renderer.setSize(canvas.width,canvas.height,false);renderer.render(GalleryApp.scene,camera);canvas.getContext('2d').drawImage(renderer.domElement,0,0,canvas.width,canvas.height);}
+  finally{renderer.setPixelRatio(ratio);renderer.setSize(size.x,size.y,false);renderer.render(GalleryApp.scene,GalleryApp.camera);}
+ };
+ return {captureEntry,captureWall,reelInfo,renderReelFrame,applyLook:({theme,wallColor})=>{GalleryApp.setTheme(theme);GalleryApp.materials.walls.color.set(wallColor);},close:()=>GalleryApp.closeModal(),inspect:id=>{const art=artworksData.find(work=>work.id===id);if(art){document.getElementById('start-overlay').classList.add('hidden');GalleryApp.inspectArtwork(art);}},stop};
 }

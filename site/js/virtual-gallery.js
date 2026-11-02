@@ -1,4 +1,5 @@
 import {openShareCard} from './share-card.js';
+import {openReelStudio} from './virtual-reel.js';
 import {demo,listExhibitions,getExhibition,resolveImage,session,isStaff,uploadImage,removeImage} from './store.js';
 import {getVirtualGallery,listVirtualGalleries,saveGalleryPreview} from './virtual-store.js';
 import {submissionPreview,saveSubmissionPreview} from './submission-store.js';
@@ -110,6 +111,9 @@ async function show(id){
      data.settings.previewImage=image;if(old&&old!==image.path)await removeImage(old).catch(()=>{});alert(t('vg.captureSaved'));
     }catch(error){if(image?.path)await removeImage(image.path).catch(()=>{});alert(error.message||t('vg.captureFailed'));}finally{button.disabled=false;}
    };
+  }
+  if(!submissionId&&!embedded.embed&&(authorized||preview&&demo)){
+   const reel=document.createElement('button');reel.type='button';reel.className='glass-btn';reel.textContent=t('vg.makeReel');reel.disabled=!artworks.length;reel.onclick=()=>openReelStudio({room,artworks,exhibition:shownExhibition,settings});$('#start-info').after(reel);
   }
   bindArtworkLinks(artworks);
   if(embedded.embed){$('#start-overlay').classList.add('hidden');addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;const look=lookFromMessage(event.data);if(look)room.applyLook(look);});}

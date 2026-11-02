@@ -277,6 +277,7 @@ export const DICT={
  'vg.leftScene':{ko:'갤러리 좌측 벽',en:'Gallery left wall'},
  'vg.rightScene':{ko:'갤러리 우측 벽',en:'Gallery right wall'},
  'vg.preparingShare':{ko:'공유 카드 준비 중…',en:'Preparing share card…'},
+ 'vg.makeReel':{ko:'전시 릴스 만들기',en:'Create exhibition reel'},
  'vg.captureEntry':{ko:'링크 대표 이미지 만들기',en:'Create link preview image'},
  'vg.captureSaved':{ko:'갤러리 입구 장면을 저장했습니다.',en:'Gallery entrance image saved.'},
  'vg.captureFailed':{ko:'대표 이미지를 저장하지 못했습니다.',en:'Could not save the preview image.'},
