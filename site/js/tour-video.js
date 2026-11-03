@@ -4,7 +4,7 @@ import {objectViewpoint} from './virtual-objects.js';
 // A tour is a list of scenes; each space becomes an "enter" scene, so a future multi-room hall
 // only adds scenes. Staff-only tool, so the copy is Korean like the admin.
 export const TOUR_MAX_WORKS=6;
-const DURATION={logo:3,title:4,enter:4,wall:3,art:4,overview:4,outro:3,qr:5},TRANSITION=1.2,FOV=50;
+const DURATION={logo:3,title:4,enter:5,wall:3,art:4,overview:4,outro:3,qr:5},TRANSITION=1.2,FOV=50;
 // Close-up camera moves, used in turn so neighbouring works are filmed differently.
 export const SHOTS=['push','dollyZoom','truck','orbit','rise'];
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -43,13 +43,14 @@ const forward=yaw=>[-Math.sin(yaw),0,-Math.cos(yaw)];
 function inside(position,room){const b=playerBounds(room);return [clamp(position[0],b.minX,b.maxX),position[1],clamp(position[2],b.minZ,b.maxZ)];}
 const NORMAL={front:[1,0],left:[0,-1],right:[0,1]},TAN=Math.tan(FOV*Math.PI/360);
 // Where a work is filmed from: its centre, the horizontal direction out of it, and the distance
-// at which it fills about 55% of the frame height or 70% of the frame width.
+// at which the work dominates the frame: about 80% of its height or 86% of its width.
 function framing(art,aspect){
+ const fill=(height,width,min)=>Math.max(min,height/(.8*2*TAN),width/(.86*2*TAN*aspect));
  if(art.kind==='object'){
-  const view=objectViewpoint(art.placement),centre=view.lookAt,dx=view.position[0]-centre[0],dz=view.position[1]-centre[2],d=Math.hypot(dx,dz)||2;
-  return {centre,normal:[dx/d,dz/d],distance:d*(aspect<1?1.25:1)};
+  const view=objectViewpoint(art.placement),centre=view.lookAt,dx=view.position[0]-centre[0],dz=view.position[1]-centre[2],d=Math.hypot(dx,dz)||1,a=art.placement.art||{};
+  return {centre,normal:[dx/d,dz/d],distance:fill((a.heightCm||100)/100,Math.max(art.placement.span||0,(a.widthCm||100)/100),1.2)};
  }
- return {centre:art.position,normal:NORMAL[art.wall]||NORMAL.front,distance:Math.max(1.4,art.size[1]/(.55*2*TAN),art.size[0]/(.7*2*TAN*aspect))};
+ return {centre:art.position,normal:NORMAL[art.wall]||NORMAL.front,distance:fill(art.size[1],art.size[0],.9)};
 }
 // The close-up moves. Each settles square on the work, centred, and holds for the last 15%.
 function artView(scene,p,room,aspect){
@@ -61,7 +62,7 @@ function artView(scene,p,room,aspect){
   const position=at(d*(.7+.8*e)),real=Math.hypot(position[0]-c[0],position[2]-c[2])||d;
   return {position,target:c,fov:2*Math.atan(TAN*d/real)*180/Math.PI};
  }
- if(scene.shot==='truck'){const offset=(1-e)*1.8;return {position:at(d*1.05,offset),target:[c[0]+side[0]*offset*.6,c[1],c[2]+side[1]*offset*.6],fov:FOV};}
+ if(scene.shot==='truck'){const offset=(1-e)*d*.7;return {position:at(d*1.05,offset),target:[c[0]+side[0]*offset*.6,c[1],c[2]+side[1]*offset*.6],fov:FOV};}
  if(scene.shot==='orbit')return {position:at(d*(1.15-.15*e),0,c[1],(1-e)*.7),target:c,fov:FOV};
  if(scene.shot==='rise')return {position:at(d*(1.1-.1*e),0,Math.max(.6,c[1]-1.1)+(c[1]-Math.max(.6,c[1]-1.1))*e),target:c,fov:FOV};
  return {position:at(d*(1.55-.55*e)),target:c,fov:FOV};
@@ -77,12 +78,20 @@ function wallView(scene,p,room){
  return {position:inside([c[0]+n[0]*far+side[0]*offset,1.65,c[2]+n[1]*far+side[1]*offset],room),target:[c[0]+side[0]*offset*.4,c[1],c[2]+side[1]*offset*.4],fov:FOV};
 }
 // The camera for one scene at its progress, or null for the black logo and QR cards.
+// The entrance: from the corner where the back glass wall meets the left wall, looking diagonally
+// across the room with the outdoors on the right, then walking in while turning to face the front wall.
+function entranceView(p,room){
+ const b=playerBounds(room),start=[b.maxX,1.7,b.maxZ],end=[b.maxX-3.2,1.65,b.maxZ*.25],k=ease(p),turn=ease(clamp((p-.2)/.8,0,1));
+ // Headings turn clockwise (decreasing angle) from nearly along the glass to straight at the front wall.
+ const position=lerp(start,end,k),from=Math.atan2(-1,-.35),to=-Math.PI,a=from+(to-from)*turn;
+ return {position,target:[position[0]+Math.cos(a)*6,1.6,position[2]+Math.sin(a)*6]};
+}
 function sceneView(shot,room,aspect){
  const {scene,progress:p}=shot,entry=entryView(room),f=forward(entry.yaw),eye=[entry.position[0],1.7,entry.position[1]];
  const ahead=(from,distance)=>[from[0]+f[0]*distance,1.65,from[2]+f[2]*distance];
  if(scene.type==='logo'||scene.type==='qr')return null;
- if(scene.type==='title'){const pos=[eye[0]+.3*p,1.7,eye[2]];return {position:pos,target:ahead(pos,6)};}
- if(scene.type==='enter'){const pos=inside(ahead(eye,3*ease(p)),room);pos[1]=1.6+.1*p;return {position:pos,target:ahead(pos,6)};}
+ if(scene.type==='title'){const view=entranceView(0,room);return {position:[view.position[0],view.position[1],view.position[2]-.3*(1-p)],target:view.target};}
+ if(scene.type==='enter')return entranceView(p,room);
  if(scene.type==='wall')return wallView(scene,p,room);
  // A crane shot: rising from the middle of the room while turning to look around it.
  if(scene.type==='overview'){const e=ease(p),a=Math.PI+p*1.4,pos=[0,1.3+1.6*e,0];return {position:pos,target:[Math.cos(a)*6,1.3,Math.sin(a)*6]};}
