@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {heroExhibitions,createRoomSelection,exhibitionWorks,roomPreviews} from '../js/home-content-model.js';
+import {heroExhibitions,pastExhibitions,homeExhibitions,createRoomSelection,exhibitionWorks,roomPreviews} from '../js/home-content-model.js';
 import {currentExhibitionsView} from '../js/home-exhibition-artworks.js';
 import {viewingRoomsView} from '../js/home-viewing-rooms.js';
 const ex=(id,startDate='2020-01-01',endDate='2099-12-31')=>({id,title:id,artists:'작가',location:'언프레임',summary:'전시 소개',startDate,endDate,published:true,cover:{url:'/poster.jpg'}});
@@ -20,4 +20,18 @@ test('English home cards use English titles and fall back to Korean',()=>{
   assert.match(html,/Seoul/);assert.match(html,/href="\/en\/exhibition\/first"/);
   assert.ok(!/전시 자세히 보기/.test(html));
  }finally{if(saved===undefined)delete globalThis.location;else globalThis.location=saved;}
+});
+
+test('with nothing on view, the latest ended exhibitions stand in, newest first and published only',()=>{
+ const items=[ex('older','2026-01-01','2026-02-01'),ex('latest','2026-09-01','2026-10-31'),{...ex('draft','2026-10-01','2026-11-01'),published:false},ex('next','2026-12-01','2026-12-31')];
+ assert.deepEqual(pastExhibitions(items,'2026-11-07').map(x=>x.id),['latest','older']);
+ assert.deepEqual(homeExhibitions(items,'2026-11-07'),{items:[items[1]],past:true});
+ assert.deepEqual(homeExhibitions([...items,ex('now','2026-11-01','2026-11-30')],'2026-11-07').items.map(x=>x.id),['now']);
+ assert.equal(homeExhibitions([],'2026-11-07').items.length,0);
+});
+test('the home section shows the latest exhibition with a preparing note when nothing is on view',()=>{
+ const past=ex('latest','2020-01-01','2020-02-01'),html=currentExhibitionsView([past],[room('a',past)],x=>x);
+ assert.match(html,/home-past-note/);assert.match(html,/<h3>latest<\/h3>/);assert.match(html,/작품 a/);
+ assert.match(currentExhibitionsView([],[],x=>x),/home-empty/);
+ assert.doesNotMatch(currentExhibitionsView([ex('now')],[],x=>x),/home-past-note/);
 });

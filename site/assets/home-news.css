@@ -2,3 +2,4 @@
 @media(max-width:900px){.home-news-grid{gap:0 28px}.home-news-item{grid-template-columns:90px minmax(0,1fr);gap:16px}.home-news-copy h3{font-size:20px}.is-lead h3{font-size:30px}}
 @media(max-width:640px){.home-news-heading{display:block;margin-bottom:32px}.home-news-heading p{margin-top:16px}.home-news-grid{display:block}.home-news-item.is-lead{padding-bottom:32px;border-bottom:1px solid #d8d7d1}.home-news-item{grid-template-columns:100px minmax(0,1fr)}.home-news-copy h3{font-size:18px}.is-lead h3{font-size:28px}.home-news-action{margin-top:14px}}
 @media(prefers-reduced-motion:reduce){.home-news-image img{transition:none}.home-news-item:hover img,.home-news-item:focus-visible img{transform:none}}
+.home-news-past{margin:-24px 0 28px;font-size:14px;color:#6d6c66;letter-spacing:.02em}

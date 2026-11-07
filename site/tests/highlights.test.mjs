@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {selectedHighlights,selectedNews,validateHighlight} from '../js/highlight-model.js';
+import {selectedHighlights,selectedNews,pastNews,validateHighlight} from '../js/highlight-model.js';
 const item=extra=>({kind:'virtual',title:'갤러리',summary:'',project:'',url:'https://uau.unframe.kr',startDate:'',endDate:'',cover:{url:'/assets/zero.svg',path:'',alt:''},published:true,featured:true,order:0,...extra});
 test('hero excludes draft, unselected and expired highlights while keeping undated featured galleries',()=>{const values=[item({title:'선택'}),item({title:'임시',published:false}),item({title:'미선택',featured:false}),item({title:'종료',kind:'event',startDate:'2026-10-01',endDate:'2026-10-12'}),item({title:'진행',kind:'event',startDate:'2026-10-01',endDate:'2026-10-13',order:1}),item({title:'예정',kind:'event',startDate:'2026-11-01',endDate:'2026-11-10',order:2})];assert.deepEqual(selectedHighlights(values,'2026-10-13').map(x=>x.title),['선택','진행','예정']);});
 test('published event requires dates and destination, virtual gallery can be undated',()=>{assert.doesNotThrow(()=>validateHighlight(item({})));assert.throws(()=>validateHighlight(item({kind:'event'})));assert.throws(()=>validateHighlight(item({url:''})));assert.throws(()=>validateHighlight(item({kind:'event',startDate:'2026-02-30',endDate:'2026-03-01'})));assert.throws(()=>validateHighlight(item({url:'javascript:alert(1)'})));assert.throws(()=>validateHighlight(item({url:'//example.com'})));});
@@ -13,4 +13,12 @@ test('optional English highlight fields are bounded',()=>{
  assert.doesNotThrow(()=>validateHighlight(item({titleEn:'Gallery',summaryEn:''})));
  assert.throws(()=>validateHighlight(item({titleEn:'x'.repeat(201)})),/영문/);
  assert.throws(()=>validateHighlight(item({summaryEn:'x'.repeat(601)})),/영문/);
+});
+
+test('past records are ended project events and news with an image and link, newest first',()=>{
+ const values=[item({title:'오래전',kind:'event',project:'UP',startDate:'2026-01-01',endDate:'2026-01-02'}),item({title:'최근',kind:'news',project:'U#',startDate:'2026-10-01',endDate:'2026-10-30'}),
+  item({title:'진행 중',kind:'event',project:'UP',startDate:'2026-11-01',endDate:'2026-11-30'}),item({title:'비공개',kind:'event',project:'UP',startDate:'2026-10-01',endDate:'2026-10-02',published:false}),
+  item({title:'갤러리',kind:'virtual',startDate:'2026-10-01',endDate:'2026-10-02'}),item({title:'날짜 없음',kind:'news',project:'UP'}),item({title:'이미지 없음',kind:'event',project:'UP',startDate:'2026-10-01',endDate:'2026-10-02',cover:{url:'',path:''}})];
+ assert.deepEqual(pastNews(values,'2026-11-07').map(x=>x.title),['최근','오래전']);
+ assert.deepEqual(pastNews(values,'2026-11-07',1).map(x=>x.title),['최근']);
 });

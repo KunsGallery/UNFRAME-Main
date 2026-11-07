@@ -22,6 +22,10 @@ export function selectedHighlights(items,today=todaySeoul()){
  return items.filter(item=>item.published===true&&item.featured===true&&['event','virtual','news'].includes(item.kind)&&(!item.endDate||item.endDate>=today)).sort((a,b)=>a.order-b.order||a.title.localeCompare(b.title));
 }
 
+// Ended project events and news, newest first, for when nothing is current or coming.
+export function pastNews(items,today=todaySeoul(),limit=3){
+ return items.filter(item=>item.published===true&&['event','news'].includes(item.kind)&&HIGHLIGHT_PROJECTS.includes(item.project)&&item.endDate&&item.endDate<today&&(item.cover?.url||item.cover?.path)&&item.url).sort((a,b)=>b.endDate.localeCompare(a.endDate)||a.order-b.order).slice(0,limit);
+}
 export function selectedNews(items,today=todaySeoul()){
  return items.filter(item=>item.published===true&&item.nowFeatured===true&&['event','news'].includes(item.kind)&&HIGHLIGHT_PROJECTS.includes(item.project)&&(!item.endDate||item.endDate>=today)).sort((a,b)=>a.order-b.order||a.title.localeCompare(b.title)).slice(0,4);
 }
