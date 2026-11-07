@@ -7,7 +7,8 @@ import {heroExhibitions,pastExhibitions,homeExhibitions,createRoomSelection,exhi
 import {renderNews} from './home-news.js';
 import {demo,subscribeExhibitions,resolveImage} from './store.js';
 import {subscribeHighlights} from './highlights.js';
-import {selectedHighlights,pastNews} from './highlight-model.js';
+import {selectedHighlights,pastNews,activeOpenCalls,openCallDays} from './highlight-model.js';
+import {openCallLabel} from './open-call.js';
 import {dateRange,exhibitionState,sortExhibitions,todaySeoul} from './model.js';
 import {chrome} from './ui.js';
 import {t,localized,localHref} from './i18n.js';
@@ -29,7 +30,8 @@ const cover=image=>demo?image:publicHomeCover(image,CONFIG.mediaBaseUrl);
 async function updateHero(){
  if(!exhibitionsReady||!highlightsReady)return;
  const exhibitionSlide=(item,kind,badge='')=>({key:`exhibition-${item.id}`,kind,badge,title:localized(item,'title'),artists:item.artists,location:localized(item,'location'),summary:localized(item,'summary'),date:dateRange(item),cover:item.cover,url:localHref(`/exhibition/${encodeURIComponent(item.id)}`),action:t('home.viewExhibition'),secondaryUrl:galleryLinks[item.id]}),highlightSlide=(item,kind)=>({key:`highlight-${item.id}`,kind,title:localized(item,'title'),summary:localized(item,'summary'),date:item.startDate?dateRange(item):'',cover:item.cover,url:localHref(item.url),action:item.kind==='news'?t('home.viewNews'):t('home.viewEvent')});
- let entries=[...heroExhibitions(exhibitions).map(item=>exhibitionSlide(item,exhibitionState(item)==='upcoming'?t('home.upcomingExhibition'):t('home.currentExhibition'))),...selectedHighlights(highlights).filter(item=>item.kind!=='virtual').map(item=>highlightSlide(item,`${item.project?item.project+' · ':''}${item.startDate>todaySeoul()?t('home.upcomingEvent'):item.kind==='news'?t('home.projectNews'):t('home.projectEvent')}`))];
+ // A recruiting open call leads the banner.
+ let entries=[...activeOpenCalls(highlights).map(item=>({...highlightSlide(item,`${t('openCall.kicker')} · ${openCallLabel(openCallDays(item))}`),action:t('openCall.apply')})),...heroExhibitions(exhibitions).map(item=>exhibitionSlide(item,exhibitionState(item)==='upcoming'?t('home.upcomingExhibition'):t('home.currentExhibition'))),...selectedHighlights(highlights).filter(item=>item.kind!=='virtual').map(item=>highlightSlide(item,`${item.project?item.project+' · ':''}${item.startDate>todaySeoul()?t('home.upcomingEvent'):item.kind==='news'?t('home.projectNews'):t('home.projectEvent')}`))];
  // Nothing on or coming: the latest exhibitions and project records fill the banner instead of an empty slide.
  if(!entries.length&&!exhibitionsFailed&&!highlightsFailed)entries=[...pastExhibitions(exhibitions).map(item=>exhibitionSlide(item,t('home.pastExhibitionSlide'),t('home.pastExhibition'))),...pastNews(highlights,undefined,2).map(item=>highlightSlide(item,`${item.project} · ${t('home.pastRecord')}`))];
  if(!entries.length&&(exhibitionsFailed||highlightsFailed)){setHeroFailure();return;}
@@ -40,7 +42,7 @@ async function renderCurrent(items){
  const version=++generation,target=document.querySelector('#home-exhibitions'),announcement=document.querySelector('#home-announcement-link');
  const current=sortExhibitions(items.filter(item=>exhibitionState(item)==='current'))[0],shown=homeExhibitions(items);
  const heading=document.querySelector('#exhibition h2'),lead=heading?.nextElementSibling;if(heading){heading.textContent=t(shown.past?'home.recentExhibition':'index.t4');if(lead)lead.textContent=t(shown.past?'home.recentLead':'index.t5');}
- if(current){announcement.textContent=t('home.announceCurrent',{title:localized(current,'title'),date:dateRange(current)});announcement.href=localHref(`/exhibition/${encodeURIComponent(current.id)}`);}else{announcement.textContent=t('nav.announcement');announcement.href=localHref('/exhibition');}
+ if(announcement.dataset.openCall){}else if(current){announcement.textContent=t('home.announceCurrent',{title:localized(current,'title'),date:dateRange(current)});announcement.href=localHref(`/exhibition/${encodeURIComponent(current.id)}`);}else{announcement.textContent=t('nav.announcement');announcement.href=localHref('/exhibition');}
  target.innerHTML=currentExhibitionsView(items,[],cover,{loading:true});
  const newImages=[],cache=new Map();
  const hydrate=image=>{const key=image?.path||image?.url;if(!key)return Promise.resolve(image);if(!cache.has(key))cache.set(key,resolveImage(image).then(im=>{if(im.url?.startsWith('blob:'))newImages.push(im.url);return im;}));return cache.get(key);};

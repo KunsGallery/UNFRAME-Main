@@ -208,6 +208,12 @@ await expectStatus('event selected for NOW',200,saveNews({...news,kind:'event',p
 for(const projectName of ['UP','음','U#','U.A.U','UNFRAME SALON'])await expectStatus(`published news project ${projectName}`,200,saveNews({...news,project:projectName}));
 await expectStatus('SALON event in JOURNAL',200,saveNews({...news,kind:'event',project:'UNFRAME SALON',startDate:'2026-10-31',endDate:'2026-10-31'}));
 await expectStatus('SALON published news',200,saveNews({...news,project:'UNFRAME SALON'}));
+const openCall={...news,kind:'opencall',project:'',featured:false,nowFeatured:false,url:'https://forms.gle/example',startDate:'2026-11-10',endDate:'2026-11-30'};
+await expectStatus('published open call with dates and no project',200,saveNews(openCall));
+await expectStatus('open call with a project',200,saveNews({...openCall,project:'U.A.U'}));
+await expectStatus('published open call without dates denied',403,saveNews({...openCall,startDate:'',endDate:''}));
+await expectStatus('open call deadline before start denied',403,saveNews({...openCall,endDate:'2026-11-01'}));
+await expectStatus('draft open call without dates',200,saveNews({...openCall,published:false,startDate:'',endDate:''}));
 await expectStatus('draft news can omit project value',200,saveNews({...news,published:false,project:'',url:'',cover:{url:'',path:'',alt:''}}));
 const badNews=[
  ['invalid NOW type',{...news,nowFeatured:'true'}],

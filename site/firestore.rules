@@ -148,14 +148,14 @@ service cloud.firestore {
     && data.keys().hasAll(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','order','updatedAt'])
     && data.keys().hasOnly(['kind','title','summary','project','url','startDate','endDate','cover','published','featured','nowFeatured','order','updatedAt','titleEn','summaryEn'])
     && optText(data,'titleEn',200) && optText(data,'summaryEn',600)
-    && data.kind in ['event','virtual','news']
+    && data.kind in ['event','virtual','news','opencall']
     && data.title is string && data.title.size()>0 && data.title.size()<=200
     && data.summary is string && data.summary.size()<=600
     && data.project is string && data.project.size()<=100
     && data.url is string && data.url.size()<=2000
     && (data.url == '' || data.url.matches('^https?://[^/ ].*$') || data.url.matches('^/([^/].*)?$'))
     && validHighlightDate(data.startDate) && validHighlightDate(data.endDate)
-    && (data.kind == 'event' || ((data.startDate == '' && data.endDate == '')
+    && (data.kind in ['event','opencall'] || ((data.startDate == '' && data.endDate == '')
      || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate)))
     && validHighlightCover(data.cover,id)
     && data.published is bool && data.featured is bool
@@ -164,7 +164,7 @@ service cloud.firestore {
     && data.order is int && data.order>=0 && data.order<=1000000
     && data.updatedAt is string && data.updatedAt.size()<=100
     && (!data.published || (data.url.size()>0 && data.cover.path.size()>0
-     && (data.kind != 'event' || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate))
+     && (!(data.kind in ['event','opencall']) || (data.startDate != '' && data.endDate != '' && data.endDate >= data.startDate))
      && ((data.kind != 'news' && data.get('nowFeatured',false) == false) || data.project in ['UP','음','U#','U.A.U','UNFRAME SALON'])));
   }
   function virtualId(id) {

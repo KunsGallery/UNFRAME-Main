@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {selectedHighlights,selectedNews,pastNews,validateHighlight} from '../js/highlight-model.js';
+import {selectedHighlights,selectedNews,pastNews,activeOpenCalls,openCallDays,validateHighlight} from '../js/highlight-model.js';
 const item=extra=>({kind:'virtual',title:'갤러리',summary:'',project:'',url:'https://uau.unframe.kr',startDate:'',endDate:'',cover:{url:'/assets/zero.svg',path:'',alt:''},published:true,featured:true,order:0,...extra});
 test('hero excludes draft, unselected and expired highlights while keeping undated featured galleries',()=>{const values=[item({title:'선택'}),item({title:'임시',published:false}),item({title:'미선택',featured:false}),item({title:'종료',kind:'event',startDate:'2026-10-01',endDate:'2026-10-12'}),item({title:'진행',kind:'event',startDate:'2026-10-01',endDate:'2026-10-13',order:1}),item({title:'예정',kind:'event',startDate:'2026-11-01',endDate:'2026-11-10',order:2})];assert.deepEqual(selectedHighlights(values,'2026-10-13').map(x=>x.title),['선택','진행','예정']);});
 test('published event requires dates and destination, virtual gallery can be undated',()=>{assert.doesNotThrow(()=>validateHighlight(item({})));assert.throws(()=>validateHighlight(item({kind:'event'})));assert.throws(()=>validateHighlight(item({url:''})));assert.throws(()=>validateHighlight(item({kind:'event',startDate:'2026-02-30',endDate:'2026-03-01'})));assert.throws(()=>validateHighlight(item({url:'javascript:alert(1)'})));assert.throws(()=>validateHighlight(item({url:'//example.com'})));});
@@ -21,4 +21,16 @@ test('past records are ended project events and news with an image and link, new
   item({title:'갤러리',kind:'virtual',startDate:'2026-10-01',endDate:'2026-10-02'}),item({title:'날짜 없음',kind:'news',project:'UP'}),item({title:'이미지 없음',kind:'event',project:'UP',startDate:'2026-10-01',endDate:'2026-10-02',cover:{url:'',path:''}})];
  assert.deepEqual(pastNews(values,'2026-11-07').map(x=>x.title),['최근','오래전']);
  assert.deepEqual(pastNews(values,'2026-11-07',1).map(x=>x.title),['최근']);
+});
+
+test('open calls show only while recruiting, soonest deadline first, and need dates to publish',()=>{
+ const call=extra=>item({kind:'opencall',title:'오픈콜',project:'',url:'https://forms.gle/x',startDate:'2026-11-01',endDate:'2026-11-30',...extra});
+ const values=[call({title:'늦게 마감'}),call({title:'곧 마감',endDate:'2026-11-10'}),call({title:'예정',startDate:'2026-12-01',endDate:'2026-12-31'}),call({title:'끝남',startDate:'2026-10-01',endDate:'2026-10-31'}),call({title:'비공개',published:false}),call({title:'링크 없음',url:''})];
+ assert.deepEqual(activeOpenCalls(values,'2026-11-07').map(x=>x.title),['곧 마감','늦게 마감']);
+ assert.deepEqual(activeOpenCalls(values,'2026-11-30').map(x=>x.title),['늦게 마감'],'the deadline day still counts');
+ assert.equal(openCallDays(call(),'2026-11-27'),3);assert.equal(openCallDays(call(),'2026-11-30'),0);
+ assert.equal(selectedHighlights(values,'2026-11-07').length,0,'open calls are not ordinary hero highlights');assert.equal(selectedNews(values,'2026-11-07').length,0);
+ assert.doesNotThrow(()=>validateHighlight(call()));
+ assert.throws(()=>validateHighlight(call({startDate:'',endDate:''})),/모집 시작일과 마감일/);
+ assert.doesNotThrow(()=>validateHighlight(call({published:false,startDate:'',endDate:''})));
 });
