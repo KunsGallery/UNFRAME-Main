@@ -3,11 +3,11 @@ import './home-contact.js';
 import {renderViewingRooms,loadHomeRooms} from './home-viewing-rooms.js';
 import {getVirtualGallery} from './virtual-store.js';
 import {currentExhibitionsView} from './home-exhibition-artworks.js';
-import {heroExhibitions,createRoomSelection,exhibitionWorks,roomPreviews} from './home-content-model.js';
+import {heroExhibitions,pastExhibitions,homeExhibitions,createRoomSelection,exhibitionWorks,roomPreviews} from './home-content-model.js';
 import {renderNews} from './home-news.js';
 import {demo,subscribeExhibitions,resolveImage} from './store.js';
 import {subscribeHighlights} from './highlights.js';
-import {selectedHighlights} from './highlight-model.js';
+import {selectedHighlights,pastNews} from './highlight-model.js';
 import {dateRange,exhibitionState,sortExhibitions,todaySeoul} from './model.js';
 import {chrome} from './ui.js';
 import {t,localized,localHref} from './i18n.js';
@@ -28,24 +28,28 @@ addEventListener('pageshow',event=>{if(event.persisted&&exhibitionsReady)renderC
 const cover=image=>demo?image:publicHomeCover(image,CONFIG.mediaBaseUrl);
 async function updateHero(){
  if(!exhibitionsReady||!highlightsReady)return;
- const entries=[...heroExhibitions(exhibitions).map(item=>({key:`exhibition-${item.id}`,kind:exhibitionState(item)==='upcoming'?t('home.upcomingExhibition'):t('home.currentExhibition'),title:localized(item,'title'),artists:item.artists,location:localized(item,'location'),summary:localized(item,'summary'),date:dateRange(item),cover:item.cover,url:localHref(`/exhibition/${encodeURIComponent(item.id)}`),action:t('home.viewExhibition'),secondaryUrl:galleryLinks[item.id]})),...selectedHighlights(highlights).filter(item=>item.kind!=='virtual').map(item=>({key:`highlight-${item.id}`,kind:`${item.project?item.project+' · ':''}${item.startDate>todaySeoul()?t('home.upcomingEvent'):item.kind==='news'?t('home.projectNews'):t('home.projectEvent')}`,title:localized(item,'title'),summary:localized(item,'summary'),date:item.startDate?dateRange(item):'',cover:item.cover,url:localHref(item.url),action:item.kind==='news'?t('home.viewNews'):t('home.viewEvent')}))];
+ const exhibitionSlide=(item,kind,badge='')=>({key:`exhibition-${item.id}`,kind,badge,title:localized(item,'title'),artists:item.artists,location:localized(item,'location'),summary:localized(item,'summary'),date:dateRange(item),cover:item.cover,url:localHref(`/exhibition/${encodeURIComponent(item.id)}`),action:t('home.viewExhibition'),secondaryUrl:galleryLinks[item.id]}),highlightSlide=(item,kind)=>({key:`highlight-${item.id}`,kind,title:localized(item,'title'),summary:localized(item,'summary'),date:item.startDate?dateRange(item):'',cover:item.cover,url:localHref(item.url),action:item.kind==='news'?t('home.viewNews'):t('home.viewEvent')});
+ let entries=[...heroExhibitions(exhibitions).map(item=>exhibitionSlide(item,exhibitionState(item)==='upcoming'?t('home.upcomingExhibition'):t('home.currentExhibition'))),...selectedHighlights(highlights).filter(item=>item.kind!=='virtual').map(item=>highlightSlide(item,`${item.project?item.project+' · ':''}${item.startDate>todaySeoul()?t('home.upcomingEvent'):item.kind==='news'?t('home.projectNews'):t('home.projectEvent')}`))];
+ // Nothing on or coming: the latest exhibitions and project records fill the banner instead of an empty slide.
+ if(!entries.length&&!exhibitionsFailed&&!highlightsFailed)entries=[...pastExhibitions(exhibitions).map(item=>exhibitionSlide(item,t('home.pastExhibitionSlide'),t('home.pastExhibition'))),...pastNews(highlights,undefined,2).map(item=>highlightSlide(item,`${item.project} · ${t('home.pastRecord')}`))];
  if(!entries.length&&(exhibitionsFailed||highlightsFailed)){setHeroFailure();return;}
  setHeroSlides(entries.map(item=>({...item,image:cover(item.cover)?.url,alt:item.cover?.alt})));
 }
 async function renderCurrent(items){
  exhibitions=items;exhibitionsReady=true;exhibitionsFailed=false;updateHero();
  const version=++generation,target=document.querySelector('#home-exhibitions'),announcement=document.querySelector('#home-announcement-link');
- const current=sortExhibitions(items.filter(item=>exhibitionState(item)==='current'))[0];
+ const current=sortExhibitions(items.filter(item=>exhibitionState(item)==='current'))[0],shown=homeExhibitions(items);
+ const heading=document.querySelector('#exhibition h2'),lead=heading?.nextElementSibling;if(heading){heading.textContent=t(shown.past?'home.recentExhibition':'index.t4');if(lead)lead.textContent=t(shown.past?'home.recentLead':'index.t5');}
  if(current){announcement.textContent=t('home.announceCurrent',{title:localized(current,'title'),date:dateRange(current)});announcement.href=localHref(`/exhibition/${encodeURIComponent(current.id)}`);}else{announcement.textContent=t('nav.announcement');announcement.href=localHref('/exhibition');}
  target.innerHTML=currentExhibitionsView(items,[],cover,{loading:true});
  const newImages=[],cache=new Map();
  const hydrate=image=>{const key=image?.path||image?.url;if(!key)return Promise.resolve(image);if(!cache.has(key))cache.set(key,resolveImage(image).then(im=>{if(im.url?.startsWith('blob:'))newImages.push(im.url);return im;}));return cache.get(key);};
  try{
   const {rooms,failed}=await loadHomeRooms(items);if(version!==generation)return;
-  const chosen=selectRooms(rooms),needed=rooms.filter(room=>exhibitionState(room.exhibition)==='current'||chosen.some(choice=>choice.gallery.id===room.gallery.id));
+  const chosen=selectRooms(rooms),needed=rooms.filter(room=>shown.items.some(item=>item.id===room.exhibition.id)||chosen.some(choice=>choice.gallery.id===room.gallery.id));
   const results=await Promise.allSettled(needed.map(async room=>{const full=await getVirtualGallery(room.gallery.id,{artworkLimit:4});return full?.settings.published?{...room,gallery:{...room.gallery,settings:full.settings,artworks:full.artworks}}:null;}));
   const raw=results.filter(result=>result.status==='fulfilled'&&result.value).map(result=>result.value),wanted=new Set();
-  for(const exhibition of items.filter(item=>exhibitionState(item)==='current'))for(const {artwork} of exhibitionWorks(exhibition.id,raw))wanted.add(artwork.image.path||artwork.image.url);
+  for(const exhibition of shown.items)for(const {artwork} of exhibitionWorks(exhibition.id,raw))wanted.add(artwork.image.path||artwork.image.url);
   for(const {preview} of roomPreviews(chosen.map(choice=>raw.find(room=>room.gallery.id===choice.gallery.id)).filter(Boolean)))if(preview)wanted.add(preview.image.path||preview.image.url);
   let mediaFailed=false;
   const loaded=await Promise.all(raw.map(async room=>{const artworkResults=await Promise.allSettled(room.gallery.artworks.filter(work=>wanted.has(work.image?.path||work.image?.url)).map(async work=>({...work,image:await hydrate(work.image)})));if(artworkResults.some(x=>x.status==='rejected'))mediaFailed=true;return {...room,gallery:{...room.gallery,artworks:artworkResults.filter(x=>x.status==='fulfilled').map(x=>x.value)}};}));

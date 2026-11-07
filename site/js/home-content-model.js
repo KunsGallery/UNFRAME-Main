@@ -1,5 +1,9 @@
 import {exhibitionState,sortExhibitions} from './model.js';
 import {onePerArtist} from './artwork-mix.js';
+// Most recently ended published exhibitions, newest first: the home page shows these when nothing is on.
+export function pastExhibitions(items,today,limit=3){return items.filter(item=>item.published===true&&exhibitionState(item,today)==='past').sort((a,b)=>String(b.endDate).localeCompare(String(a.endDate))||String(b.startDate).localeCompare(String(a.startDate))).slice(0,limit);}
+// The exhibitions the home section shows: those on view, or else the latest one that ended.
+export function homeExhibitions(items,today){const current=sortExhibitions(items.filter(item=>item.published===true&&exhibitionState(item,today)==='current'));return current.length?{items:current,past:false}:{items:pastExhibitions(items,today,1),past:true};}
 export function heroExhibitions(items,today){const active=items.filter(item=>item.published===true&&exhibitionState(item,today)!=='past');return [...sortExhibitions(active.filter(item=>exhibitionState(item,today)==='current')),...sortExhibitions(active.filter(item=>exhibitionState(item,today)==='upcoming'))];}
 // Stable within this page visit; a fresh visit assigns new random priorities.
 export function createRoomSelection(random=Math.random){const priorities=new Map();return (rooms,limit=3)=>{const unique=[...new Map(rooms.filter(room=>room.gallery.settings.published===true&&room.exhibition.published===true).map(room=>[room.gallery.id,room])).values()];for(const room of unique)if(!priorities.has(room.gallery.id))priorities.set(room.gallery.id,random());return unique.sort((a,b)=>priorities.get(a.gallery.id)-priorities.get(b.gallery.id)).slice(0,limit);};}
