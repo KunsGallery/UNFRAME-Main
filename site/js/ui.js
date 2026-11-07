@@ -22,6 +22,7 @@ export function chrome(demo,home=false) {
  }
  $('#site-footer').innerHTML=footerHTML(l).replace('</footer>',`<a class="admin-footer-link" href="/admin">${t('footer.admin')}</a></footer>`);
  mountLanguageSwitch();
+ import('./open-call.js').then(module=>module.mountOpenCall()).catch(()=>{});
 }
 export function errorView(title,message) { $('#main').innerHTML=`<section class="error-view"><h1>${e(title)}</h1><p>${e(message)}</p><a class="button" href="${localHref('/exhibition')}">${t('error.backToList')}</a><button class="button secondary" onclick="location.reload()">${t('error.retry')}</button></section>`; }
 export function confirmDelete(title,text) { const dialog=$('#confirm-dialog'); $('#confirm-title').textContent=title; $('#confirm-text').textContent=text; dialog.returnValue='cancel'; dialog.showModal(); return new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true})); }
