@@ -9,9 +9,10 @@ import {QUALITY,deviceQuality,downgrade} from './virtual-quality.js';
 import {placeObjects,objectObstacles,resolveCollision} from './object-placement.js';
 import {buildObjectGroup,objectViewpoint} from './virtual-objects.js';
 import {showModalImage} from './virtual-gallery-view.js';
+import {bakedRequest,buildBakedRoom,lightPool as wallLightPool} from './virtual-baked.js';
 const THREE=window.THREE,TWEEN=window.TWEEN;
 let artworksData=[],sourceWorks=[],obstacles=[],gallerySettings,quality='medium';
-let reelAssets=new Map();
+let reelAssets=new Map(),baked=null;
     const TextureGenerator = {
       createSeamlessHerringbone: function(isWood = false) {
         const S = 512;
@@ -519,9 +520,12 @@ let reelAssets=new Map();
         this.setupRenderer();
         this.setupScene();
         this.setupCamera();
-        this.setupLights();
-        this.buildGalleryRoom();
-        if(gallerySettings.outdoor)this.buildOutdoorGarden();else{const blank=new THREE.Mesh(new THREE.PlaneGeometry(18,5),new THREE.MeshStandardMaterial({color:0xf6f4ee,roughness:1}));blank.position.set(8.2,2.1,0);blank.rotation.y=-Math.PI/2;this.scene.add(blank);}
+        // Preview: a room baked in Blender replaces the procedural room, its lights and the garden.
+        baked=bakedRequest(location.search,roomOf(gallerySettings).id,environmentOptions(gallerySettings).lighting);
+        if(baked)Object.assign(this.materials,buildBakedRoom(THREE,this.scene,this.renderer,baked));
+        else{this.setupLights();
+        this.buildGalleryRoom();}
+        if(baked){}else if(gallerySettings.outdoor)this.buildOutdoorGarden();else{const blank=new THREE.Mesh(new THREE.PlaneGeometry(18,5),new THREE.MeshStandardMaterial({color:0xf6f4ee,roughness:1}));blank.position.set(8.2,2.1,0);blank.rotation.y=-Math.PI/2;this.scene.add(blank);}
         this.buildArtworks();
         this.setupEvents();
 
@@ -977,7 +981,8 @@ let reelAssets=new Map();
           this.scene.add(group);
           this.artworkObjects.push(group);
 
-          // 5. Gallery Museum Track Spotlight
+          // 5. Gallery Museum Track Spotlight (a baked room uses a pre-rendered light pool instead)
+          if(baked){group.add(wallLightPool(THREE,baked,w,h));return;}
           const cfg = this.wallConfigs[art.wall] || this.wallConfigs['front'];
           const spotPos = cfg.getSpotPos(cfg.axis === 'Z' ? art.position[2] : art.position[0]);
 
