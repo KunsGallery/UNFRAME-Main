@@ -10,7 +10,7 @@ pre-rendered light pool behind each one, scaled to the work.
   site's own layout and tour camera code, so Blender matches the web.
 - `build_gallery.py` builds the room from that JSON (walls, beams, window, rails, bench, garden),
   with Poly Haven CC0 assets, and renders the camera views.
-  Options: `floor=concrete|parquet`, `lighting=general|museum`, `light=tight|frame|wide`,
+  Options: `floor=concrete|parquet`, `lighting=general|museum`, `light=frame|wide`,
   `views=a,b`, `prefix=name-`.
 - `bake_room.py` runs after it in the same Blender session and writes `room.glb`, `room.jpg`
   (lighting), `garden.jpg` (360° view for the window) and `pool-*.png` (artwork light shapes).
@@ -30,4 +30,4 @@ sh blender/bake_all.sh 256 4096
 
 Copy each `out/bake-<size>-<lighting>/` (room.glb, room.jpg, garden.jpg) to
 `site/assets/virtual/baked/<size>-<lighting>/`, and the `pool-*.png` once to
-`site/assets/virtual/baked/pools/`. Preview with `?room=baked&light=tight|frame|wide` on a gallery.
+`site/assets/virtual/baked/pools/`. Preview with `?room=baked&light=frame|wide` on a gallery.

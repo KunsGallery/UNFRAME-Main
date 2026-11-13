@@ -196,7 +196,7 @@ H = 4.2
 spot_pos = Vector((1.4, 0, H - 0.35))
 centre = Vector((0, 0, 2.0))
 beam = centre - spot_pos
-for style in ('tight', 'frame', 'wide'):
+for style in ('frame', 'wide'):
     for obj in [o for o in pools.collection.objects if o.type == 'LIGHT']:
         bpy.data.objects.remove(obj)
     if style == 'frame':
@@ -208,9 +208,9 @@ for style in ('tight', 'frame', 'wide'):
         data.energy = 70
     else:
         data = bpy.data.lights.new(style, 'SPOT')
-        reach = 0.5 * (1.15 if style == 'tight' else 2.1)
+        reach = 0.5 * 2.1
         data.spot_size = 2 * math.atan(reach / beam.length)
-        data.spot_blend = 0.3 if style == 'tight' else 0.85
+        data.spot_blend = 0.85
         data.shadow_soft_size = 0.05
         data.energy = 650
     light = bpy.data.objects.new(style, data)

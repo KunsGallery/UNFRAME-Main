@@ -2,20 +2,21 @@
 // the repository), shown unlit so phones draw it cheaply. Artwork lights are not baked into the room;
 // each work gets a pre-rendered light pool behind it, scaled to its size, so any upload is lit the same.
 // Every room size is baked twice: general lighting (also used for 'focused') and dark museum.
-// Preview only for now: ?room=baked[&light=tight|frame|wide].
+// Preview only for now: ?room=baked[&light=frame|wide].
 const ROOMS_BAKED=new Set(['small','medium','large']);
-export const LIGHT_STYLES=['tight','frame','wide'];
+// 'frame' is a rectangular framing projector cut to the work, 'wide' a generous round pool.
+export const LIGHT_STYLES=['frame','wide'];
 const POOLS='/assets/virtual/baked/pools/';
 // How strongly each style's pool adds to the wall (the pool images peak at white). In the dark museum
 // the walls are dim, so the pools carry most of the light and are warmer.
-const POOL_STRENGTH={general:{tight:.08,frame:.12,wide:.07},museum:{tight:.32,frame:.42,wide:.26}};
+const POOL_STRENGTH={general:{frame:.12,wide:.07},museum:{frame:.42,wide:.26}};
 const POOL_COLOR={general:[1,.9,.78],museum:[1,.82,.62]};
 
 export function bakedRequest(search,roomId,lighting){
  const params=new URLSearchParams(search);
  if(params.get('room')!=='baked'||!ROOMS_BAKED.has(roomId))return null;
  const light=params.get('light'),mode=lighting==='museum'?'museum':'general';
- return {base:`/assets/virtual/baked/${roomId}-${mode}/`,mode,light:LIGHT_STYLES.includes(light)?light:'tight'};
+ return {base:`/assets/virtual/baked/${roomId}-${mode}/`,mode,light:LIGHT_STYLES.includes(light)?light:'frame'};
 }
 
 // Loads the shell (room.glb + room.jpg), the garden seen through the window and the window glass.

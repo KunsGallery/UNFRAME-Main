@@ -3,7 +3,7 @@
 Run headless (does not touch any open Blender window):
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python blender/build_gallery.py -- \
       blender/scene.json blender/out [samples] [floor=concrete|parquet] [lighting=general|museum] \
-      [light=tight|frame|wide] [views=entrance,front-wall,close-up] [prefix=name-]
+      [light=frame|wide] [views=entrance,front-wall,close-up] [prefix=name-]
 
 The web gallery uses three.js coordinates (y up, the window wall at +x). Blender is z up, so a
 three.js point (x, y, z) becomes (x, -z, y). Walls, beams, window frame and artwork positions follow
@@ -21,9 +21,9 @@ OPTS = dict(arg.split('=', 1) for arg in argv[3:] if '=' in arg)
 FLOOR_KIND = OPTS.get('floor', 'concrete')
 MUSEUM = OPTS.get('lighting', 'general') == 'museum'
 VIEWS = OPTS['views'].split(',') if 'views' in OPTS else None
-# Artwork lighting: 'tight' round spot fitted to the work, 'frame' a rectangular framing projector
+# Artwork lighting: 'frame' a rectangular framing projector
 # matched to the canvas, 'wide' a generous round pool that also washes the wall around the work.
-LIGHT_STYLE = OPTS.get('light', 'tight')
+LIGHT_STYLE = OPTS.get('light', 'frame')
 PREFIX = OPTS.get('prefix', '')
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, 'assets', 'polyhaven')
@@ -340,14 +340,14 @@ for art in data['artworks']:
         light.data.spread = math.radians(2.5)
         light.data.energy = (70 if not MUSEUM else 40) * w * h
     else:
-        # Round spots: 'tight' just clears the work, 'wide' takes in the wall around it.
-        reach = max(w, h) / 2 * (1.15 if LIGHT_STYLE == 'tight' else 2.1)
+        # 'wide': a round spot that takes in the wall around the work.
+        reach = max(w, h) / 2 * 2.1
         bpy.ops.object.light_add(type='SPOT', location=spot_pos)
         light = bpy.context.active_object
         light.data.spot_size = 2 * math.atan(reach / distance)
-        light.data.spot_blend = 0.3 if LIGHT_STYLE == 'tight' else 0.85
+        light.data.spot_blend = 0.85
         light.data.shadow_soft_size = 0.05
-        light.data.energy = (300 if MUSEUM else 650) * (1.0 if LIGHT_STYLE == 'tight' else 1.15)
+        light.data.energy = (300 if MUSEUM else 650) * 1.15
     light.name = f"Light {art['id']}"
     light.data.color = warm
     light.rotation_mode = 'QUATERNION'
