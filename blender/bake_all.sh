@@ -12,5 +12,10 @@ for room in small medium large; do
       "scene-$room.json" "out/bake-$room-$lighting" "$SAMPLES" views=none bake_size="$SIZE" lighting="$lighting" \
       > "out/bake-$room-$lighting.log" 2>&1 || { echo "FAILED $room $lighting"; exit 1; }
     grep -E "BAKE DONE|DENOISE" "out/bake-$room-$lighting.log"
+    # Copy what the web loads into the site.
+    site="../site/assets/virtual/baked/$room-$lighting"
+    rm -rf "$site" && mkdir -p "$site"
+    (cd "out/bake-$room-$lighting" && cp room.glb room.jpg garden.jpg garden.glb garden-ground.jpg garden.json card-*.webp strip-*.webp "../../$site/")
   done
 done
+mkdir -p ../site/assets/virtual/baked/pools && cp out/bake-large-general/pool-*.png ../site/assets/virtual/baked/pools/

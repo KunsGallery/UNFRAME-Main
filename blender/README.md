@@ -28,6 +28,6 @@ node blender/export-scene.mjs large > blender/scene.json
 sh blender/bake_all.sh 256 4096
 ```
 
-Copy each `out/bake-<size>-<lighting>/` (room.glb, room.jpg, garden.jpg) to
-`site/assets/virtual/baked/<size>-<lighting>/`, and the `pool-*.png` once to
+`bake_all.sh` copies each bake into `site/assets/virtual/baked/<size>-<lighting>/` (room, garden
+ground and fence, tree cards, planting strips, panorama) and the `pool-*.png` into
 `site/assets/virtual/baked/pools/`. Preview with `?room=baked&light=frame|wide` on a gallery.

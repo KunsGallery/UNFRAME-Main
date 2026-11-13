@@ -212,8 +212,9 @@ tbox('Transom', (WX, H * 0.76, 0), (0.1, 0.08, WL), DARK)
 tbox('Glass', (WX - 0.02, H / 2, 0), (0.01, H - 0.2, WL), GLASS)
 tbox('Floor grate', (WX - 0.35, 0.004, 0), (0.7, 0.008, WL), DARK)
 # The garden outside: gravel, a horizontal oak-slat fence (as on the web), shrubs and a tree.
-tbox('Gravel', (WX + 7, -0.06, 0), (14, 0.1, 34), GRAVEL)
-tbox('Curb', (WX + 0.45, 0.06, 0), (0.25, 0.14, 34), OUTSIDE)
+# Gravel runs from the window to just under the fence; beyond the fence only the sky panorama is seen.
+tbox('Gravel', (WX + 2.7, -0.06, 0), (5.4, 0.1, 30), GRAVEL)
+tbox('Curb', (WX + 0.45, 0.06, 0), (0.25, 0.14, 30), OUTSIDE)
 FENCE_X = WX + 5.2
 for i in range(22):
     tbox(f'Fence slat {i + 1}', (FENCE_X, 0.08 + i * 0.112, 0), (0.03, 0.09, 30), FENCE)
@@ -341,7 +342,7 @@ for art in data['artworks']:
         light.data.energy = (70 if not MUSEUM else 40) * w * h
     else:
         # 'wide': a round spot that takes in the wall around the work.
-        reach = max(w, h) / 2 * 2.1
+        reach = max(w, h) / 2 * 1.6
         bpy.ops.object.light_add(type='SPOT', location=spot_pos)
         light = bpy.context.active_object
         light.data.spot_size = 2 * math.atan(reach / distance)
