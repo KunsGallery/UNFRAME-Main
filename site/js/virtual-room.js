@@ -453,9 +453,10 @@ let reelAssets=new Map(),baked=null;
       mouse: new THREE.Vector2(),
 
       player: {
-        height: 1.75,
+        // Eye height: close to the 2 m centre line works hang on, so they are met straight on.
+        height: 1.9,
         speed: 5.5,
-        position: new THREE.Vector3(0, 1.75, 0),
+        position: new THREE.Vector3(0, 1.9, 0),
         yaw: Math.PI / 2,
         pitch: 0,
         bounds: {
@@ -1337,7 +1338,7 @@ let reelAssets=new Map(),baked=null;
       resetCamera: function() {
         this.closeModal();
         const entry = entryView(roomOf(gallerySettings));
-        const defaultPos = new THREE.Vector3(entry.position[0], 1.75, entry.position[1]);
+        const defaultPos = new THREE.Vector3(entry.position[0], this.player.height, entry.position[1]);
         new TWEEN.Tween(this.camera.position)
           .to(defaultPos, window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:1000)
           .easing(TWEEN.Easing.Cubic.Out)
@@ -1558,7 +1559,7 @@ export function mountRoom(settings,works){
  gallerySettings=settings;quality=deviceQuality();
  { // Arrival and walkable area follow the chosen room size.
   const room=roomOf(settings),entry=entryView(room);
-  GalleryApp.player.bounds=playerBounds(room);GalleryApp.player.position.set(entry.position[0],1.75,entry.position[1]);GalleryApp.player.yaw=entry.yaw;
+  GalleryApp.player.bounds=playerBounds(room);GalleryApp.player.position.set(entry.position[0],GalleryApp.player.height,entry.position[1]);GalleryApp.player.yaw=entry.yaw;
  }
  reelAssets=new Map(works.map(work=>[work.id,'loading']));
  artworksData=sourceWorks=works.map(work=>({...work,titleEn:work.titleEn||work.title,titleKo:work.titleEn?work.title:'',frameStyle:work.frame,dataUrl:work.image.url,dimensions:work.kind==='object'?t('art.objectSize',{w:work.widthCm,d:work.depthCm,h:work.heightCm})+(work.copies>1?' · '+t('art.copies',{count:work.copies}):''):work.shape==='circle'?t('art.diameter',{w:work.widthCm}):`${work.heightCm} × ${work.widthCm} cm`}));
